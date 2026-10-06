@@ -1,256 +1,2515 @@
 %!TEX program = xelatex
-\documentclass[cn,hazy,blue,14pt,screen]{elegantnote}
-\title{功率控制算法与超级电容相关研究}
+%!TEX encoding = UTF-8
+% ============================================================================
+%  功率控制算法与超级电容技术文档
+%  模板：ElegantNote (https://github.com/ElegantLaTeX/ElegantNote)
+%  编译：XeLaTeX + Biber
+% ============================================================================
+\documentclass[cn,blue,11pt,device=normal]{elegantnote}
 
-\author{作者}
-\institute{TuxMonkey}
+%------------------------------------------------------------------ 页面
+% device=normal  ->  A4 纸张，1 英寸页边距
+% 模板的 geye / hazy / sepia 模式会给纸张上底色，这里显式恢复为纯白背景。
+\definecolor{paperwhite}{RGB}{255,255,255}
+\pagecolor{paperwhite}
+
+%------------------------------------------------------------------ 宏包
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,patterns}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{listings}
+
+%------------------------------------------------------------------ 版式微调
+% A4 正文较宽，适当收紧行距与段距，避免过于松散。
+\linespread{1.28}
+\setlength{\parskip}{2.2mm}
+\setlength{\abovedisplayskip}{5pt}
+\setlength{\belowdisplayskip}{5pt}
+\setlength{\abovedisplayshortskip}{3pt}
+\setlength{\belowdisplayshortskip}{3pt}
+
+% 一级标题（部分）使用模板主题色，居中显示
+\titleformat{\part}[display]
+  {\centering\normalfont\huge\bfseries\color{ecolor}}
+  {\Large\color{ecolor}Part \Roman{part}}
+  {1.4em}
+  {\Huge}
+\renewcommand{\thepart}{\Roman{part}}
+\titlespacing*{\part}{0pt}{2\baselineskip}{2\baselineskip}
+
+% 表注 / 图注字号
+\captionsetup{font=small}
+\captionsetup[table]{position=top}
+
+%------------------------------------------------------------------ 算法环境汉化
+\floatname{algorithm}{算法}
+\renewcommand{\algorithmicrequire}{\textbf{输入：}}
+\renewcommand{\algorithmicensure}{\textbf{输出：}}
+\renewcommand{\algorithmicreturn}{\textbf{返回}}
+\renewcommand{\algorithmicfor}{\textbf{for}}
+\renewcommand{\algorithmicdo}{\textbf{do}}
+\renewcommand{\algorithmicwhile}{\textbf{while}}
+\renewcommand{\algorithmicif}{\textbf{if}}
+\renewcommand{\algorithmicthen}{\textbf{then}}
+\renewcommand{\algorithmicelse}{\textbf{else}}
+\renewcommand{\algorithmicend}{\textbf{end}}
+
+%------------------------------------------------------------------ 代码样式
+\definecolor{codegray}{RGB}{245,246,248}
+\definecolor{codeframe}{RGB}{214,219,226}
+\definecolor{codegreen}{RGB}{0,120,80}
+\definecolor{codepurple}{RGB}{150,40,120}
+
+\lstdefinestyle{cstyle}{
+  language=C,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{eblue}\bfseries,
+  commentstyle=\color{codegreen}\itshape,
+  stringstyle=\color{codepurple},
+  numberstyle=\tiny\color{gray},
+  numbers=left,
+  numbersep=9pt,
+  frame=single,
+  framesep=5pt,
+  rulecolor=\color{codeframe},
+  backgroundcolor=\color{codegray},
+  breaklines=true,
+  breakatwhitespace=false,
+  postbreak=\mbox{\textcolor{gray}{$\hookrightarrow$}\space},
+  tabsize=4,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  upquote=true,
+  morekeywords={fp32,uint8_t,uint16_t,int32_t,chassis_move_t,cap_measure_t,RC_ctrl_t},
+  literate={　}{{\hspace{1em}}}1
+}
+
+\lstdefinestyle{matstyle}{
+  language=Matlab,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{eblue}\bfseries,
+  commentstyle=\color{codegreen}\itshape,
+  stringstyle=\color{codepurple},
+  numberstyle=\tiny\color{gray},
+  numbers=left,
+  numbersep=9pt,
+  frame=single,
+  framesep=5pt,
+  rulecolor=\color{codeframe},
+  backgroundcolor=\color{codegray},
+  breaklines=true,
+  tabsize=4,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+% 行内代码：避免与下划线冲突
+\newcommand{\code}[1]{\mbox{\lstinline[basicstyle=\ttfamily\small]|#1|}}
+
+%------------------------------------------------------------------ 记号宏
+\newcommand{\Pin}{P_{\mathrm{in}}}
+\newcommand{\Pmech}{P_{\mathrm{m}}}
+\newcommand{\Icmd}{I_{\mathrm{cmd}}}
+\newcommand{\Itau}{I_{\tau}}
+\newcommand{\KT}{K_{T}}
+\newcommand{\CT}{C_{T}}
+\newcommand{\Ebuf}{E_{\mathrm{buf}}}
+\newcommand{\Plim}{P_{\mathrm{lim}}}
+\newcommand{\Pmax}{P_{\max}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\fref}[1]{式~\eqref{#1}}
+
+%------------------------------------------------------------------ 其他
+\newcommand{\pending}[1]{%
+  \par\medskip\noindent
+  \begin{note}#1\end{note}\par\medskip}
+
+\graphicspath{{image/}{images/}{figures/}}
+
+% ============================================================================
+\title{功率控制算法与超级电容技术文档}
+
+\author{TuxMonkey}
+\institute{\href{https://github.com/TuxMonkey2004/Docs-of-PowerControl-and-SuperCap}{Docs-of-PowerControl-and-SuperCap}}
 
 \version{1.00}
 \date{\zhdate{2026/10/05}}
-
-\usepackage{array}
 
 \begin{document}
 
 \maketitle
 
-\centerline{
-  \includegraphics[width=0.2\textwidth]{logo-blue.png}
-}
+\centerline{\includegraphics[width=0.18\textwidth]{logo-blue.png}}
 
-\section{ElegantNote 使用说明}
+%------------------------------------------------------------------ 摘要
+\phantomsection
+\section*{摘要}
+\addcontentsline{toc}{section}{摘要}
 
-新版 ElegantNote 是基于标准的 \LaTeX{} 文类 article 重新设计的，格式更加简化的笔记模板！本模板支持两种编译方式，\hologo{pdfLaTeX} 和 \hologo{XeLaTeX}，英文模式下请使用 \hologo{pdfLaTeX} 进行编译，中文模式下务必使用 \hologo{XeLaTeX}。
+本文围绕 RoboMaster 超级电容（下称“超电”）车种的底盘功率控制问题展开。超电接入之后，
+传统的“缓冲能量闭环 + 力矩阈值”方案失去了可观测性：理想超电会无条件补偿超出功率上限的能量，
+缓冲能量不再反映电机真实需求，因而必须直接估计电机的输入功率。本文以 M3508 电机与 C620 电调为对象，
+完整推导了由控制量到力矩、再由力矩到输入功率的物理链路，建立了
+$\Pin = k_1\omega^2 + \CT\,\Icmd\,\omega + k_2\Icmd^2 + a$ 形式的电机功率模型，
+补齐了原资料中略去的\textbf{最小二乘参数辨识}的完整数学推导（含准则函数、一阶必要条件、
+正规方程、可解性条件、量纲与数值条件、加权与鲁棒回归的修正方法），
+并对“给定功率反解力矩”这一步做了逐项分析：判别式的含义、两根的物理来源（回馈制动）、
+根的选择规则，以及原实现中未覆盖的两类边界情形及其修复方案。
 
-新模板有下面几个特性：
+在此基础上，本文比较了均分功率、绝对值统一缩放与本文采用的\textbf{功率再分配}
+三种多电机分配策略，给出了各自的误差来源分析；随后分析了缓冲能量闭环的结构与
+参数整定方法，指出该闭环的被控对象是纯积分器，并给出闭环特征方程
+$s^2 + K_p s + K_i = 0$ 与阻尼比、自然频率的对应关系。最后逐行解读了开源实现，
+列出了其中若干处可能导致行为偏差的实现细节，并给出改进建议。
 
+全文分为两个部分：\textbf{Part I} 为功率控制，\textbf{Part II} 为超级电容，
+后者目前仅给出总体框架，详细内容待后续补充。
+
+\keywords{底盘功率控制；无刷电机功率模型；最小二乘参数辨识；功率再分配；缓冲能量闭环；超级电容}
+\medskip
+
+\newpage
+\phantomsection
+\tableofcontents
+\newpage
+
+% ============================================================================
+\part{功率控制}
+
+% ============================================================================
+\section{背景、问题与符号约定}
+
+\subsection{缓冲能量：一个会失效的“能量账户”}
+
+RoboMaster 裁判系统对底盘功率施加的约束并不是一个硬上限，而是一个带“账户”的软约束。
+系统向底盘提供一份\emph{缓冲能量}（buffer energy）$\Ebuf$，其动态为
+\begin{equation}\label{eq:buffer}
+  \frac{\dd \Ebuf}{\dd t} =
+  \begin{cases}
+    \Pmax - \Pin, & \Pin < \Pmax \quad(\text{盈余入账}),\\[2pt]
+    \Pmax - \Pin, & \Pin > \Pmax \quad(\text{超支扣减}),
+  \end{cases}
+\end{equation}
+其中 $\Pmax$ 为当前等级对应的底盘功率上限，$\Pin$ 为底盘从电池实际取用的功率。
+\fref{eq:buffer} 的两支其实可以合并写成同一个式子：$\dd \Ebuf/\dd t = \Pmax - \Pin$。
+换言之，缓冲能量就是\emph{功率误差对时间的积分}，它有一个由裁判系统设定的上限
+$E_{\max}$（常见取值为 $60\ \mathrm{J}$，随赛季与兵种等级可能不同）：
+当 $\Ebuf$ 触及上限后不再累积；当 $\Ebuf$ 被扣减到零并继续超功率时，裁判系统开始施加惩罚\cite{rm2024rules}。
+
+由此得到一个非常重要的推论：\textbf{缓冲能量是“底盘功率是否超标”的唯一观测量}。
+只要底盘长期稳定地工作在 $\Pmax$ 附近，$\Ebuf$ 就会被钉在某个不动点上游走。
+过去几年的功率控制方案，本质上都是围绕 $\Ebuf$ 设计一个外环：
+
+\begin{quote}
+用 PID 把 $\Ebuf$ 稳定在一个设定值（例如 $30\ \mathrm{J}$）上，PID 的输出被解释为
+“本控制周期允许底盘多花或少花多少功率”，于是底盘既不会长期超功率，
+又能在需要时动用账户余额实现短暂爆发。
+\end{quote}
+
+\subsection{超电为什么会让缓冲能量失效}
+
+超级电容通过双向 DC--DC 变换器并联在电池母线与电调输入端之间，其行为可以概括为：
 \begin{itemize}
-  \item 纸张模式：护眼模式（geye）和朦胧模式（hazy）；
-  \item 适配不同设备，包括 Pad（默认），Screen（幻灯片），Kindle，PC（双页），通用（A4 纸张）；
-  \item 5 套颜色主题，分别是：\textcolor{eblue}{blue}（默认）、\textcolor{egreen}{green}、\textcolor{ecyan}{cyan}、 \textcolor{sakura}{sakura} 和 \textcolor{black}{black}；
-  \item 语言支持：中文（默认），英文；
-  \item 支持 \hologo{pdfLaTeX} 和 \hologo{XeLaTeX} 编译；
-  \item 更加美观的图表标题格式，列表环境，数学字体等；
-  \item 全局字体大小支持：8pt, 9pt, 10pt, 11pt, 12pt, 14pt, 17pt, 和 20pt；
-  \item 支持 \lstinline{newtx} 以及 \lstinline{mtpro2} 数学字体设置； 
-  \item 中文字体支持方正字体或者自定义字体；
-  \item 英文模式通过 \lstinline{bibstyle} 选项（默认为 \lstinline{apalike}）支持参考文献格式修改；
-  \item 支持参考格式显示格式修改 \lstinline{cite} 可选为 \lstinline{authoryear}、\lstinline{numbers} （默认）和 \lstinline{super}。
+  \item 底盘需求功率 $\Pin^{\mathrm{req}} > \Pmax$ 时，电容放电补足差额，母线电压维持不变；
+  \item 底盘需求功率 $\Pin^{\mathrm{req}} < \Pmax$ 时，多余的能量被用于给电容充电。
 \end{itemize}
 
-\subsection{模板模式}
-
-本模板增加了模式选项，分别有护眼模式（\lstinline{mode=geye}）和朦胧模式（\lstinline{mode=hazy}）。其中护眼模式设置纸张底色为绿豆沙颜色，而朦胧模式为淡蓝色，开启的方法如下：
-\begin{lstlisting}[frame=none]  
-  \documentclass[geye]{elegantnote} % or
-  \documentclass[mode=geye]{elegantnote}
-  \documentclass[hazy]{elegantnote} % or
-  \documentclass[mode=hazy]{elegantnote}
-\end{lstlisting}
-
-\begin{remark}
-  如果你想为自己的文档添加底色，可以在导言区添加下面设置：
-  \begin{lstlisting}
-    \definecolor{geyecolor}{RGB}{255,255,255}
-    \pagecolor{geyecolor}
-  \end{lstlisting}
-\end{remark}
-
-
-\subsection{设备选择}
-
-为了让笔记方便在不同设备上阅读，免去切边，缩放等操作，本模板适配不同的设备，分别为 Pad（默认），Kindle，PC，A4。
-
-\textcolor{red}{\kaishu 新增}：为了方便展示笔记，2.20 版本新增了 \lstinline{device=screen} 设备选项，大小为 MS Powerpoint 的纸张大小，比例为 4:3（2019/12/06）。
-
-不同屏幕的选择为
-\begin{lstlisting}[frame=none]  
-  \documentclass[device=pad]{elegantnote}    % ipad screen size
-  \documentclass[device=kindle]{elegantnote} % kindle screen size
-  \documentclass[device=pc]{elegantnote}     % double pages for pc 
-  \documentclass[device=normal]{elegantnote} % a4 normal page
-  \documentclass[device=screen]{elegantnote} % 4:3 PPT size
-\end{lstlisting}
-\begin{note}
-也可以采取直接赋值的方法选择屏幕，比如：
-\end{note}
-\begin{lstlisting}[frame=none]  
-  \documentclass[pad]{elegantnote}
-  \documentclass[kindle]{elegantnote}
-  \documentclass[pc]{elegantnote}
-  \documentclass[normal]{elegantnote}
-  \documentclass[screen]{elegantnote}
-\end{lstlisting}
-
-\begin{note}
-  如果想要正常的 A4 大小的 PDF，需要选择 \lstinline{device=normal}。
-\end{note}
-
-
-\subsection{数学字体选项}
-
-本模板定义了一个数学字体选项（\lstinline{math}），可选项有三个：
-\begin{enumerate}
-  \item \lstinline{math=cm}（默认），使用 \LaTeX{} 默认数学字体（推荐，无需声明）；
-  \item \lstinline{math=newtx}，使用 \lstinline{newtxmath} 设置数学字体（潜在问题比较多）。
-  \item \lstinline{math=mtpro2}，使用 \lstinline{mtpro2} 宏包设置数学字体，要求用户已经成功安装此宏包。
-\end{enumerate}
-
-
-\subsection{中文字体选项}
-模板提供中文字体选项 \lstinline{chinesefont}，可选项有
-\begin{enumerate}
-\item \lstinline{ctexfont}：默认选项，使用 \lstinline{ctex} 宏包根据系统自行选择字体，可能存在字体缺失的问题，更多内容参考 \lstinline{ctex} 宏包\href{https://ctan.org/pkg/ctex}{官方文档}\footnote{可以使用命令提示符，输入 \lstinline{texdoc ctex} 调出本地 \lstinline{ctex} 宏包文档}。
-\item \lstinline{founder}：方正字体选项（需要用户安装字体），调用 \lstinline{ctex} 宏包并且使用 \lstinline{fontset=none} 选项，然后设置字体为方正四款免费字体，方正字体下载注意事项见后文。
-\item \lstinline{nofont}：调用 \lstinline{ctex} 宏包并且使用 \lstinline{fontset=none} 选项，不设定中文字体，用户可以自行设置中文字体，具体见后文。
-\end{enumerate}
-
-\noindent \textbf{注意：} 使用 \lstinline{founder} 选项或者 \lstinline{nofont} 时，必须使用 \hologo{XeLaTeX} 进行编译。
-
-\subsubsection{方正字体选项}
-由于使用 \lstinline{ctex} 宏包默认调用系统已有的字体，部分系统字体缺失严重，因此，用户希望能够使用其它字体，我们推荐使用方正字体。方正的{\songti 方正书宋}、{\heiti 方正黑体}、{\kaishu 方正楷体}、{\fangsong 方正仿宋}四款字体均可免费试用，且可用于商业用途。用户可以自行从\href{http://www.foundertype.com/}{方正字体官网}下载此四款字体，在下载的时候请\textbf{务必}注意选择 GBK 字符集，也可以使用 \href{https://www.latexstudio.net/}{\LaTeX{} 工作室}提供的\href{https://pan.baidu.com/s/1BgbQM7LoinY7m8yeP25Y7Q}{方正字体，提取码为：njy9} 进行安装。安装时，{\kaishu Win 10 用户请右键选择为全部用户安装，否则会找不到字体。}
-
-\begin{figure}[!htb]
-\centering
-\includegraphics[width=0.9\textwidth]{founder.png}
-\end{figure}
-
-\subsubsection{其他中文字体}
-如果你想完全自定义字体\footnote{这里仍然以方正字体为例。}，你可以选择 \lstinline{chinesefont=nofont}，然后在导言区设置，参考代码如下：
-\begin{lstlisting}
-  \setCJKmainfont[BoldFont={FZHei-B01},ItalicFont={FZKai-Z03}]{FZShuSong-Z01}
-  \setCJKsansfont[BoldFont={FZHei-B01}]{FZKai-Z03}
-  \setCJKmonofont[BoldFont={FZHei-B01}]{FZFangSong-Z02}
-  \setCJKfamilyfont{zhsong}{FZShuSong-Z01}
-  \setCJKfamilyfont{zhhei}{FZHei-B01}
-  \setCJKfamilyfont{zhkai}[BoldFont={FZHei-B01}]{FZKai-Z03}
-  \setCJKfamilyfont{zhfs}[BoldFont={FZHei-B01}]{FZFangSong-Z02}
-  \newcommand*{\songti}{\CJKfamily{zhsong}}
-  \newcommand*{\heiti}{\CJKfamily{zhhei}}
-  \newcommand*{\kaishu}{\CJKfamily{zhkai}}
-  \newcommand*{\fangsong}{\CJKfamily{zhfs}}
-\end{lstlisting}
-
-
-\subsection[颜色主题]{颜色主题\footnote{测试章节脚注。}}
-
-本模板内置 5 套颜色主题，分别是 \textcolor{eblue}{blue}（默认），\textcolor{egreen}{green}， \textcolor{ecyan}{cyan}， \textcolor{sakura}{sakura} 和 \textcolor{black}{black}。如果不需要颜色，可以选择黑色（black）主题。颜色主题的设置方法：
-\begin{lstlisting}[frame=none]  
-  \documentclass[green]{elegantnote}
-  \documentclass[color=green]{elegantnote}
-  ...
-  \documentclass[black]{elegantnote}
-  \documentclass[color=black]{elegantnote}
-\end{lstlisting}
-
-
-\subsection{语言模式}
-
-本模板内含两套语言环境，改变语言环境会改变图表标题的引导词（图，表），文章结构词（比如目录，参考文献等），以及定理环境中的引导词（比如定理，引理等）。不同语言模式的启用如下：
-\begin{lstlisting}[frame=none]  
-  \documentclass[cn]{elegantnote} 
-  \documentclass[lang=cn]{elegantnote} 
-  \documentclass[en]{elegantnote} 
-  \documentclass[lang=en]{elegantnote}
-\end{lstlisting}
-
-\begin{note}
-只有中文模式才可输入中文，如果需要在英文模式下输入中文，可以自行添加 \lstinline{ctex} 宏包\footnote{需要使用 \lstinline{scheme=plain} 选项才不会把标题改为中文。}或者使用 \lstinline{xeCJK} 宏包设置字体。另外如果在笔记中使用了抄录环境（\lstinline{lstlisting}），并且里面有中文字符，请务必使用 \hologo{XeLaTeX} 编译。
-\end{note}
-
-
-\subsection{定理类环境}
-
-此模板采用了 \lstinline{amsthm} 中的定理样式，使用了 4 类定理样式，所包含的环境分别为
-\begin{itemize}
-  \item \textbf{定理类}：theorem，lemma，proposition，corollary；
-  \item \textbf{定义类}：definition，conjecture，example；
-  \item \textbf{备注类}：remark，note，case；
-  \item \textbf{证明类}：proof。
-\end{itemize}
-
-\begin{remark}
-在选用 \lstinline{lang=cn} 时，定理类环境的引导词全部会改为中文。
-\end{remark}
-
-
-\section{写作示例}
-
-我们将通过三个步骤定义可测函数的积分。首先定义非负简单函数的积分。以下设 $E$ 是 $\mathcal{R}^n$ 中的可测集。
-
-\begin{definition}[可积性]
-设 $ f(x)=\sum\limits_{i=1}^{k} a_i \chi_{A_i}(x)$ 是 $E$ 上的非负简单函数，其中 $\{A_1,A_2,\ldots$, $A_k\}$ 是 $E$ 上的一个可测分割，$a_1,a_2,\ldots,a_k$ 是非负实数。定义 $f$ 在 $E$ 上的积分为 1. 3
+一个“理想”的超电会\textbf{无条件}地把差额补齐。于是从裁判系统的视角看，
+底盘的输入功率被削平在 $\Pmax$ 附近，而这个“削平”与四个电机到底想要多少功率已经无关了。
+\fref{eq:buffer} 因此退化为 $\dd \Ebuf/\dd t \approx 0$：缓冲能量不再随电机需求变化，
 \begin{equation}
-   \label{inter}
-   \int_{E} f dx = \sum_{i=1}^k a_i m(A_i).
+  \frac{\partial \Ebuf}{\partial \Pin^{\mathrm{req}}} \approx 0 .
 \end{equation}
-一般情况下 $0 \leq \int_{E} f dx \leq \infty$。若 $\int_{E} f dx < \infty$，则称 $f$ 在 $E$ 上可积。
-\end{definition}
+控制理论的语言是：被控量与控制量之间的通道被超电“短路”了，外环失去了对电机的可观性。
+继续用缓冲能量闭环去限制电机功率，只会得到“无论怎么调 PID 都限不住”的结果，
+而且会持续掏空电容电量。
 
-一个自然的问题是，Lebesgue 积分与我们所熟悉的 Riemann 积分有什么联系和区别？之后我们将详细讨论 Riemann 积分与 Lebesgue 积分的关系。这里只看一个简单的例子。设 $D(x)$ 是区间 $[0,1]$ 上的 Dirichlet 函数。即 $D(x)=\chi_{Q_0}(x)$，其中 $Q_0$ 表示 $[0,1]$ 中的有理数的全体。根据非负简单函数积分的定义，$D(x)$ 在 $[0,1]$ 上的 Lebesgue 积分为
-\begin{equation}\label{inter2}
-  \int_0^1 D(x)dx = \int_0^1 \chi_{Q_0} (x) dx = m(Q_0) = 0
+结论是明确的：一旦引入超电，就必须\textbf{直接获得电机的功率信息}，而不能再依赖缓冲能量。
+
+\subsection{两条技术路线}
+
+获得电机功率只有两条路。
+
+\begin{description}
+  \item[路线 A：直接测量。] 在每个电调输入端串入电流采样（如 INA226 配合分流电阻），
+  测量母线电流与电压。优点是无需建模、结果直接；缺点是硬件复杂度与成本上升，
+  采样链路（分流电阻、隔离、ADC 带宽、共地）引入新的失效点，且需要为四个电机各配一路。
+  更麻烦的是，电流波形含大量开关纹波，要得到“平均功率”还需要合理的滤波，
+  滤波又会带来相位滞后，反过来恶化控制品质。
+  \item[路线 B：模型估计。] 利用电调已经回传的两个量——\emph{力矩电流控制值} $\Icmd$
+  与\emph{转子转速} $\omega$——通过一个电机功率模型估算 $\Pin$。优点是不增加任何硬件，
+  复用已有反馈；缺点是完全依赖模型的准确性。
+\end{description}
+
+本文采用的是路线 B（官方例程中的功率控制实现可参考文献~\cite{rmdevboard}）。它成立的前提是一个可以被验证的假设：\textbf{C620 电调的力矩电流环
+足够快}，以至于“发送的电流指令”与“电机实际流过的力矩电流”在同一控制周期内是等价的。
+原作者通过对比电调回传的 \code{given_current} 与发送的 \code{give_current} 印证了这一假设，
+我们将在第~\ref{sec:cmd2torque} 节中给出这一环节的完整量纲推导。
+
+\subsection{问题的本质：从“力矩约束”到“功率约束”}
+
+在得到模型之前，工程上最朴素的做法是限制总力矩：把四个电机的目标力矩求和，
+若超过某个预设阈值，就等比缩小。这个做法有一个结构性缺陷。
+电机的输入功率近似为
+\begin{equation}
+  \Pin \approx \frac{\tau\,\omega}{9.55} + P_{\mathrm{loss}}(\tau,\omega),
 \end{equation}
-即 $D(x)$ 在 $[0,1]$ 上是 Lebesgue 可积的并且积分值为零。但 $D(x)$ 在 $[0,1]$ 上不是 Riemann 可积的。
+它\emph{同时}依赖力矩 $\tau$ 与转速 $\omega$。因此：
+
+\begin{itemize}
+  \item \textbf{低速时}，同一个力矩对应的功率很小。用固定的力矩阈值去限制，
+  相当于在低速段给了一个“过紧”的约束，底盘起步疲软、加速缓慢；
+  \item \textbf{高速时}，同一个力矩对应的功率很大，力矩阈值反而\emph{过松}，
+  会造成严重超功率。
+\end{itemize}
+
+换言之，力矩阈值与功率上限之间不存在一个与工况无关的换算关系。
+正确的做法是反过来问：
+
+\begin{quote}
+\textbf{在当前转速下，为了恰好消耗给定功率 $P^\ast$，我应该发送多大的力矩指令？}
+\end{quote}
+
+把这个问题回答清楚，就能实现一个理想的功率控制目标——\emph{恒功率运行}：
+从起步到大加速度的整个过程中，电机始终工作在 $\Pmax$ 上，从而获得功率受限条件下
+理论上的最大加速度。这一目标也解释了为什么必须建模：它要求的是“功率到力矩”的\emph{反函数}。
+
+\subsection{符号与正方向约定}\label{sec:convention}
+
+全文严格遵守下表约定，并且\textbf{在整个推导过程中不使用绝对值}。
+这一点看似琐碎，实际上是理解第~\ref{sec:inverse} 节“两个根”问题的前提。
 
 \begin{table}[htbp]
   \centering
   \small
-  \caption{燃油效率与汽车价格}
-    \begin{tabular}{lcc}
+  \caption{符号与正方向约定}
+  \label{tab:symbols}
+  \begin{tabular}{@{}lll@{}}
     \toprule
-                  &       (1)         &        (2)      \\
+    符号 & 含义 & 约定 \\
     \midrule
-    燃油效率      &   -238.90***      &      -49.51     \\
-                  &    (53.08)        &      (86.16)    \\
-    汽车重量      &                   &        1.75***  \\
-                  &                   &       (0.641)   \\
-    常数项        &  11253.00***      &    1946.00      \\
-                  &  (1171.00)        &   (3597.00)     \\
-    观测数        &     74            &      74         \\
-    $R^2$         &      0.220        &       0.293     \\
+    $\tau$          & 电机转子输出力矩（N$\cdot$m） & 顺时针为正，逆时针为负 \\
+    $\omega$        & 电机转子转速（rpm）           & 顺时针为正，逆时针为负 \\
+    $\Pin$          & 电机输入功率（W）             & 消耗功率为正，回馈功率为负 \\
+    $\Pmech$        & 机械功率（W）                 & $= \tau\omega/9.55$ \\
+    $\Icmd$         & 力矩电流控制值（发送值）      & 无量纲，范围 $[-16384,\,16384]$ \\
+    $\Itau$         & 力矩电流（A）                 & $= \tfrac{20}{16384}\Icmd$ \\
+    $\KT$           & 转子侧力矩常数（N$\cdot$m/A） & $= 0.01562$ \\
+    $\CT$           & 力矩电流系数                  & $= 1.9969\times 10^{-6}$ \\
+    $\Ebuf$         & 缓冲能量（J）                 & 裁判系统观测量 \\
+    $\Pmax$         & 底盘功率上限（W）             & 裁判系统给定 \\
     \bottomrule
-    \end{tabular}%
-  \label{tab:reg}%
-\end{table}%
+  \end{tabular}
+\end{table}
 
-\begin{theorem}[Fubini 定理]\label{thm:fubi}
-若 $f(x,y)$ 是 $\mathcal{R}^p\times\mathcal{R}^q$ 上的非负可测函数，则对几乎处处的 $x\in \mathcal{R}^p$，$f(x,y)$ 作为 $y$ 的函数是 $\mathcal{R}^q$ 上的非负可测函数，$g(x)=\int_{\mathcal{R}^q}f(x,y) dy$ 是 $\mathcal{R}^p$ 上的非负可测函数。并且
-\begin{equation}\label{eq:461}
-  \int_{\mathcal{R}^p\times\mathcal{R}^q} f(x,y) dxdy=\int_{\mathcal{R}^p}\left(\int_{\mathcal{R}^q}f(x,y)dy\right)dx.
+\begin{remark}
+“正功率表示消耗、负功率表示输出”这一条约定，在第~\ref{sec:redistribute} 节讨论
+多电机功率再分配时起着决定性作用：当一个电机处于回馈制动状态时，
+它的功率是\emph{负}的，可以把其他电机的功率预算“腾”出来。
+任何在建模阶段取绝对值的做法，都会永久性地丢失这一部分信息。
+\end{remark}
+
+% ============================================================================
+\section{从控制量到力矩：C620 与 M3508 的物理链路}\label{sec:cmd2torque}
+
+这一节回答一个困扰初学者的具体问题：\emph{我发下去的那个数字，究竟代表什么？}
+
+\subsection{三个容易混淆的“电流”}
+
+\begin{description}
+  \item[Give current（发送值）$\Icmd$：] 主控通过 CAN 报文发给 C620 电调的\emph{控制量}，
+  取值范围 $-16384 \sim 0 \sim 16384$。它是一个无量纲的整型数，物理含义是
+  “目标力矩电流”的归一化表示。
+  \item[Given current（回馈值）：] C620 在状态报文里回传的\emph{反馈量}，量纲与取值范围
+  和发送值相同。它反映了电调内部电流环的实际跟踪情况。两者在稳态下应当基本重合；
+  如果长期偏离，说明力矩电流环带宽不足，路线 B 的前提假设不成立。
+  \item[真实母线电流：] 电调从母线抽取的实际电流，需要用 INA226 之类的采样电路测量。
+  \textbf{它与前两者不是一回事}，不能用它乘母线电压去反推力矩。
+\end{description}
+
+\subsection{力矩电流不是相电流}
+
+一个非常常见的误解是“力矩电流乘母线电压就是功率”。事实并非如此。
+
+无刷电机采用磁场定向控制（FOC）时，定子电流被分解为 $d$ 轴分量 $i_d$ 与 $q$ 轴分量 $i_q$。
+在 $i_d = 0$ 控制下，$i_q$ 与电磁转矩成正比，而\emph{相电流}是三相绕组中实际流过的
+瞬时电流，其幅值与 $i_q$ 相关但相位随转子位置旋转；\emph{母线电流}则还要经过逆变桥的
+开关调制，与相电流之间差一个与调制度、功率因数有关的比例因子。
+
+因此：
+\begin{itemize}
+  \item 力矩电流 $\Itau \leftrightarrow i_q$：与转矩成正比，可以线性换算；
+  \item $\Itau \times U_{\mathrm{bus}}$ \textbf{没有}功率的物理意义。
+\end{itemize}
+
+真正把两者联系起来的是\emph{损耗}：铜损正比于电流的平方，这正是后文模型中
+$k_1\Icmd^2$ 项的来源（见第~\ref{sec:loss} 节）。
+
+\subsection{力矩电流的量纲换算}
+
+C620 的力矩电流控制值满量程 $\pm 16384$ 对应输出力矩电流 $\pm 20\ \mathrm{A}$（手册~\cite{c620manual}），
+因此
+\begin{equation}\label{eq:itau}
+  \Itau = \frac{20}{16384}\,\Icmd \qquad [\mathrm{A}].
 \end{equation}
-\end{theorem}
+这是一个纯粹的线性标度变换，使用时要注意 $20/16384 = 1.2207\times 10^{-3}$ 这一系数
+在整条链路中会反复出现。
 
-\begin{proof}
-Let $z$ be some element of $xH \cap yH$.  Then $z = xa$ for some $a \in H$, and $z = yb$ for some $b \in H$. If $h$ is any element of $H$ then $ah \in H$ and $a^{-1}h \in H$, since $H$ is a subgroup of $G$. But $zh = x(ah)$ and $xh = z(a^{-1}h)$ for all $h \in H$. Therefore $zH \subset xH$ and $xH \subset zH$, and thus $xH = zH$.  Similarly $yH = zH$, and thus $xH = yH$, as required.
-\end{proof}
+\subsection{力矩常数与减速比}
 
+电机手册~\cite{m3508manual} 给出的转矩常数是以\emph{减速箱输出轴}为基准的常数
+$K_T^{\mathrm{out}} = 0.3\ \mathrm{N\cdot m/A}$。而 C620 回传的转速是\emph{转子}转速，
+力矩也必须统一到转子侧，所以需要按减速比折算。
 
-回归分析（regression analysis) 是确定两种或两种以上变量间相互依赖的定量关系的一种统计分析方法。根据定理~\ref{thm:fubi}，其运用十分广泛，回归分析按照涉及的变量的多少，分为一元回归和多元回归分析；按照因变量的多少，可分为简单回归分析和多重回归分析；按照自变量和因变量之间的关系类型，可分为线性回归分析和非线性回归分析。
+M3508 搭配的 P19 行星减速箱减速比为
+\begin{equation}
+  i = \frac{3591}{187} \approx 19.203 .
+\end{equation}
 
+设输出轴力矩为 $\tau_{\mathrm{out}}$、转子力矩为 $\tau$，忽略齿轮传动损失（效率 $\eta \approx 1$），
+由功率守恒或杠杆关系有 $\tau_{\mathrm{out}} = i\,\tau$，即
+\begin{equation}\label{eq:kt}
+  \KT = \frac{K_T^{\mathrm{out}}}{i}
+      = 0.3 \times \frac{187}{3591}
+      \approx 0.01562\ \mathrm{N\cdot m/A}.
+\end{equation}
+于是转子侧力矩与力矩电流的关系为
+\begin{equation}\label{eq:tau-itau}
+  \tau = \KT\,\Itau = \KT \cdot \frac{20}{16384}\,\Icmd .
+\end{equation}
 
-\section{致谢}
+\begin{remark}
+这里把齿轮效率取为 $1$ 并不是因为它真的等于 $1$（实际上行星减速箱效率约在 $0.9$ 上下），
+而是因为该效率带来的偏差最终会被第~\ref{sec:model} 节中拟合出来的系数整体吸收。
+在做这类“经验模型 + 数据拟合”的工作时，把无法精确知道的物理量交给拟合参数处理，
+比强行套用一个不准的常数更划算。
+\end{remark}
 
-特别感谢 \href{https://github.com/sikouhjw}{sikouhjw} 和 \href{https://github.com/syvshc}{syvshc}  长期以来对于 Github 上 issue 的快速回应，以及各个社区论坛对于 Elegant\LaTeX{} 相关问题的回复。特别感谢 China\TeX{} 以及 \href{http://www.latexstudio.net/}{\LaTeX{} 工作室} 对于本系列模板的宣传与推广。
+\subsection{完整的量纲链路}
 
-如果你喜欢我们的模板，你可以在 Github 上收藏我们的模板。
+把上面几步串起来，就得到了从“发送的整型数”到“力矩”的完整映射：
+\begin{equation}\label{eq:chain}
+  \underbrace{\Icmd}_{\text{整型控制量}}
+  \;\xrightarrow{\;\times \frac{20}{16384}\;}\;
+  \underbrace{\Itau}_{\text{力矩电流 [A]}}
+  \;\xrightarrow{\;\times \KT\;}\;
+  \underbrace{\tau}_{\text{转子力矩 [N}\cdot\text{m]}} .
+\end{equation}
+\fref{eq:chain} 每一步都是一次线性标度，因此也可以合并成一个常数：
+\begin{equation}
+  \tau = \KT \cdot \frac{20}{16384}\,\Icmd = 1.9069\times 10^{-5}\,\Icmd \quad [\mathrm{N\cdot m}].
+\end{equation}
+即发送值每变化 $1$，转子力矩变化约 $1.91\times 10^{-5}\ \mathrm{N\cdot m}$；
+满量程 $16384$ 对应约 $0.3124\ \mathrm{N\cdot m}$ 的转子力矩（乘回减速比即 $6.0\ \mathrm{N\cdot m}$ 输出力矩）。
 
-\section{常见问题 FAQ}
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{C620 + M3508 链路中的常数}
+  \label{tab:constants}
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    量 & 符号 & 数值 & 来源 \\
+    \midrule
+    满量程力矩电流      & $I_{\tau,\max}$ & $20\ \mathrm{A}$           & C620 手册 \\
+    控制量满量程        & $\Icmd^{\max}$  & $16384$                    & C620 手册 \\
+    输出轴转矩常数      & $K_T^{\mathrm{out}}$ & $0.3\ \mathrm{N\cdot m/A}$ & M3508 手册 \\
+    减速比              & $i$             & $3591/187 \approx 19.203$  & M3508 P19 \\
+    转子侧力矩常数      & $\KT$           & $0.015622\ \mathrm{N\cdot m/A}$ & 式~\eqref{eq:kt} 折算 \\
+    力矩电流系数        & $\CT$           & $1.99688994\times 10^{-6}$ & 式~\eqref{eq:ct} 折算 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-\begin{enumerate}[label=\arabic*).]
-  \item \textit{如何删除版本信息？}\\
-    导言区不写 \lstinline|\version{x.xx}| 即可。
-  \item \textit{如何删除日期？}\\
-    与版本 \lstinline{\version} 不同的是，导言区不写或注释 \lstinline{\date} 的话，仍然会打印出当日日期，原因是 \lstinline{\date} 有默认参数。如果不需要日期的话，日期可以留空即可，也即 \lstinline|\date{}|。
-  \item \textit{如何获得中文日期？}\\
-    为了获得中文日期，必须在中文模式下，使用 \lstinline|\date{\zhdate{2019/12/09}}|，如果需要当天的汉化日期，可以使用 \lstinline|\date{\zhtoday}|，这两个命令都来源于 \href{https://ctan.org/pkg/zhnumber}{\lstinline{zhnumber}} 宏包。
-  \item \textit{如何添加多个作者？}\\
-    在 \lstinline{\author} 里面使用 \lstinline{\and}，作者单位可以用 \lstinline{\\} 换行。
-    \begin{lstlisting}
-      \author{author 1\\ org. 1 \and author 2 \\ org. 2 }
-    \end{lstlisting}
+% ============================================================================
+\section{电机功率模型}\label{sec:model}
+
+\subsection{输入功率的构成}
+
+无刷电机的输入功率可以按损耗机制拆成四项：
+\begin{equation}\label{eq:composition}
+  \Pin = \Pmech + P_{\mathrm{cu}} + P_{\mathrm{fe}} + P_{\mathrm{ctrl}},
+\end{equation}
+\begin{itemize}
+  \item $\Pmech = \tau\Omega$：轴端输出的机械功率（$\Omega$ 为机械角速度）；
+  \item $P_{\mathrm{cu}}$：绕组铜损，由力矩电流在相电阻上产生；
+  \item $P_{\mathrm{fe}}$：铁损（磁滞损耗与涡流损耗），以及轴承摩擦、齿轮搅油、风阻等机械阻尼损耗；
+  \item $P_{\mathrm{ctrl}}$：控制器静态功耗（MCU、栅极驱动、传感器、电调待机）。
+\end{itemize}
+在典型工况下机械功率占绝对主导，但其余三项正是决定“功率上限能否被精确命中”的部分，
+因此必须建模而不能省略。
+
+\subsection{机械功率与常数 9.55}
+
+C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要求角速度单位为 rad/s：
+\begin{equation}
+  \Omega = \frac{2\pi}{60}\,\omega = \frac{\omega}{9.5493}.
+\end{equation}
+于是
+\begin{equation}\label{eq:pm}
+  \Pmech = \tau\Omega = \frac{\tau\,\omega}{9.55} \qquad [\mathrm{W}],
+\end{equation}
+其中 $9.55 = 60/(2\pi)$ 是 rpm 到 rad/s 的换算系数。
+需要注意，\fref{eq:pm} 是\emph{精确}的物理关系而\emph{不是}经验公式，
+其系数 $1/9.55$ 既不需要也不可能通过数据拟合确定。这一点在第~\ref{sec:identifiability} 节会再次用到。
+
+\subsection{损耗项：为什么是转速平方与电流平方}\label{sec:loss}
+
+广工方案给出的经验模型形如 $\Pin = \Pmech + k_1\omega^2 + k_2\tau^2 + a$（见文献~\cite{gdutpowerformula}；需要说明的是，该公式的一手公开出处已难以查证，本文所引为其转述），
+原作者也说明“查看很多资料并没有找到该式子的来源，推测为经验公式”。
+事实上，这两个二次项都有清晰的物理出处，理解它们有助于判断模型何时会失效。
+
+\paragraph{(a) 电流平方项来自铜损。}
+在 $i_d = 0$ 的磁场定向控制下，电磁转矩与 $q$ 轴电流成正比：
+\begin{equation}
+  T_e = \tfrac{3}{2}\,p\,\psi_f\,i_q \;\equiv\; \KT\,i_q ,
+\end{equation}
+其中 $p$ 为极对数，$\psi_f$ 为永磁磁链（峰值约定）。三相绕组的总铜损为
+\begin{equation}
+  P_{\mathrm{cu}} = 3\left(\frac{i_q}{\sqrt{2}}\right)^2 R_s
+  = \frac{3}{2}\,i_q^2 R_s
+  = \frac{3}{2}\,\frac{R_s}{\KT^2}\,\tau^2 ,
+\end{equation}
+其中 $R_s$ 为单相绕组电阻。把 $\tau = \KT\Itau$ 与 \fref{eq:itau} 代入，就得到以\emph{发送值}为自变量的形式：
+\begin{equation}\label{eq:k1phys}
+  P_{\mathrm{cu}} = \underbrace{\frac{3}{2}\,R_s\left(\frac{20}{16384}\right)^{2}}_{k_1}\;\Icmd^2 .
+\end{equation}
+\fref{eq:k1phys} 说明 $k_1$ 不只是“一个拟合出来的数”，它可以反过来解读。
+把部署参数 $k_1 = 1.453\times10^{-7}$ 代回，可反解出等效相电阻
+\begin{equation}\label{eq:reff}
+  R_{\mathrm{eff}} = \frac{k_1}{\tfrac{3}{2}\left(\frac{20}{16384}\right)^{2}}
+  = \frac{1.453\times10^{-7}}{1.5\times(1.2207\times10^{-3})^{2}}
+  \approx 0.065\ \Omega ,
+\end{equation}
+与 M3508 这类小功率无刷电机的绕组电阻量级相符。这是一个非常好用的模型自检手段：
+若拟合出的 $k_1$ 反解出的电阻高达几欧姆，那一定是数据或模型出了问题，
+而不是“电机比较特殊”。同时注意 $R_{\mathrm{eff}}$ 里还含着逆变桥 MOS 管的导通电阻，
+所以它比手册上的纯绕组电阻略大是正常的。
+
+\paragraph{(b) 转速平方项来自铁损与机械阻尼。}
+空载（$\tau = 0$）时电机依旧要消耗功率，且该功率随转速迅速上升，来源包括：
+\begin{itemize}
+  \item 磁滞损耗，与频率和磁密有关，近似 $\propto f B^{n}$（$n$ 约 $1.6\sim2.2$）；
+  \item 涡流损耗，$\propto f^2 B^2$；
+  \item 轴承与齿轮箱的粘滞摩擦，摩擦力矩近似 $b\,\omega$，对应损耗功率 $\propto \omega^2$；
+  \item 风阻与搅油损耗 $\propto \omega^3$，仅在高转速下才显著。
+\end{itemize}
+在 M3508 的工作转速区间内，把上述各项合并近似成一条 $\omega^2$ 抛物线是合理且方便的：
+\begin{equation}\label{eq:k2phys}
+  P_{\mathrm{fe}} + P_{\mathrm{damp}} \approx k_2\,\omega^2 .
+\end{equation}
+这也解释了开源报告中提到的一个现象——不同电机的 $k_2$ 参数不同。
+原因是不同电机齿轮箱的阻尼系数不同，而阻尼力矩恰好贡献 $\omega^2$ 项。
+换句话说，$k_2$ 是\emph{个体参数}，而不是整个动力套件的通用常数。
+
+\paragraph{(c) 常数项来自控制器静态功耗。}
+即使电机堵转且不输出力矩，MCU、栅极驱动、编码器、CAN 收发器与电调内部基准仍在耗电。
+这部分与 $\omega$、$\Icmd$ 都无关，因此表现为常数偏置 $a$。
+实测拟合得到 $a$ 在 $2\sim4\ \mathrm{W}$ 量级，与上述器件的静态功耗相符。
+
+\subsection{模型的最终形式}
+
+约定全文以“发送值”为自变量（与部署代码保持一致），得到
+\begin{equation}\label{eq:model}
+  \boxed{\;\Pin \;=\; k_2\,\omega^2 \;+\; \CT\,\Icmd\,\omega \;+\; k_1\,\Icmd^2 \;+\; a\;}
+\end{equation}
+其中 $\CT\Icmd\omega$ 就是 \fref{eq:pm} 的机械功率项，其系数由物理常数唯一确定：
+\begin{equation}\label{eq:ct}
+  \CT = \frac{\KT}{9.55}\times\frac{20}{16384}
+      = \frac{0.015622}{9.55}\times1.2207\times10^{-3}
+      = 1.99688994\times10^{-6}\ \ [\mathrm{W/rpm}].
+\end{equation}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{功率模型参数及其记号对照}
+  \label{tab:params}
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    本文记号 & 物理含义 & 部署代码中的变量名 & 数值（本文算例）\\
+    \midrule
+    $k_2$   & $\omega^2$ 的系数（铁损 $+$ 阻尼） & \code{k2}                 & $1.453\times10^{-7}$ \\
+    $k_1$   & $\Icmd^2$ 的系数（铜损）          & \code{a}                  & $1.230\times10^{-7}$ \\
+    $a$     & 控制器静态功耗                    & \code{constant}           & $4.081$ \\
+    $\CT$   & 力矩电流系数                      & \code{toque\_coefficient} & $1.99688994\times10^{-6}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{remark}[记号警示]
+这里有两处极易踩坑的记号问题，阅读任何一份 RM 功率控制资料时都值得先确认一遍。
+\begin{enumerate}
+  \item 广工资料与开源报告的式 (5) 写作 $\Pin = \Pmech + k_1\omega^2 + k_2\tau^2 + a$，
+  但同一份报告中后续的式 (6)(7) 与部署代码却把 $\omega^2$ 的系数记作 $k_2$、
+  把电流平方项的系数记作 $k_1$——两处下标是互换的。
+  本文采用与代码及式 (6)(7) 一致的那一套：$k_2$ 配 $\omega^2$，$k_1$ 配 $\Icmd^2$。
+  \item 代码中被注释为 \code{// k1} 的变量 \code{a} 实际是 $\Icmd^2$ 的系数，
+  被注释为 \code{// k2} 的变量实际是 $\omega^2$ 的系数。
+  也就是说，代码里的 \code{a} 与公式里的常数项 $a$ \emph{不是}同一个东西。
+  对照关系见表~\ref{tab:params}。
+\end{enumerate}
+\end{remark}
+
+\subsection{为什么机械功率项的系数不用拟合}\label{sec:identifiability}
+
+一个自然的问题是：既然 $k_1,k_2,a$ 都能拟合出来，为什么不把机械功率的系数也交给数据？
+
+答案是\textbf{不可辨识}。机械功率项 $\CT\Icmd\omega$ 已由物理常数完全确定；
+如果额外引入一个自由系数 $c$ 去乘 $\Icmd\omega$，那么 $c$ 与 $\CT$ 在数学上是同一个量，
+数据无法区分“$\CT$ 正确、$c=1$”和“$\CT$ 偏小 $10\%$、$c=1.1$”。
+更麻烦的是，$\Icmd\omega$ 与 $\Icmd^2$、$\omega^2$ 在同一批数据上往往相关性很强，
+强行增加自由参数会让设计矩阵趋于病态，把本该干净的物理项误差“漏”进经验项里。
+
+因此正确做法是：\textbf{把能精确知道的部分固定死，只让数据决定不知道的部分}。
+本文模型相对早期方案最大的改进，正是把 $\tau\omega/9.55$ 按物理精确计算，
+而不是用一堆二次项去“凑”出机械功率。
+
+\subsection{模型的适用边界}
+
+任何经验模型都有其不成立之处。以下边界在工程上必须心里有数，
+其中前两条会直接导致第~\ref{sec:inverse} 节的反解失效。
+
+\begin{enumerate}
+  \item \textbf{准静态假设。} 模型描述的是稳态或慢变工况下的平均功率，
+  忽略了绕组电感动态（$L\,\dd i/\dd t$）与电流环带宽限制。
+  当力矩指令突变时，模型给出的瞬时功率会有偏差。
+  好在控制周期（$1\ \mathrm{ms}$ 量级）远大于电流环时间常数，
+  该误差在积分意义下很小。
+  \item \textbf{母线电压恒定假设。} 模型没有显式包含母线电压 $U_{\mathrm{bus}}$。
+  实际上同样的力矩电流，在母线电压下降时可达到的转速与功率都会变化，
+  电池放电到后段时尤为明显。这一点在第~\ref{sec:future} 节作为改进方向再讨论。
+  \item \textbf{温度。} 铜的电阻温度系数约为 $+0.39\%/\mathrm{K}$。
+  绕组从 $25\,^{\circ}\mathrm{C}$ 升到 $100\,^{\circ}\mathrm{C}$ 时 $R_s$ 增加约 $30\%$，
+  即 $k_1$ 会随温度漂移。这正是外层缓冲能量闭环必须存在的原因之一。
+  \item \textbf{参数个体差异。} 如前所述，$k_2$ 与齿轮箱阻尼相关，不同电机之间不可互换；
+  $k_1$ 也会因绕组批次而异。最佳实践是逐台标定，
+  或至少保证用于标定的电机与装车电机同批、同保养状态。
+  \item \textbf{未建模项。} 若数据中出现了无法用 $\omega^2$、$\Icmd\omega$、$\Icmd^2$ 解释的系统性偏差，
+  说明模型缺少某项物理机制。此时应当去查物理，而不是继续加更高次的项。
 \end{enumerate}
 
-%\printbibliography[heading=bibintoc, title=\ebibname]
+% ============================================================================
+\section{参数辨识：最小二乘法的完整推导}\label{sec:lsq}
+
+本节把开源资料中一笔带过的“使用 Matlab 的 \code{fit} 与 \code{fittype} 函数进行拟合”
+展开成完整的数学过程。即使你今后只调用现成函数，理解这一节也能让你知道
+“拟合什么时候会骗人”。
+
+\subsection{把辨识问题写成线性回归}
+
+\fref{eq:model} 中待定的参数只有三个：$k_2,k_1,a$。
+把它们记成参数向量 $\theta = (k_2,\,k_1,\,a)^{\mathsf T}$。模型对 $\theta$ 是\emph{线性}的，
+这是一个非常好的性质：线性模型的最小二乘问题有闭式解，不需要迭代（标准参考见文献~\cite{golub2013matrix,bjorck1996numerical}）。
+
+先把已知的机械功率项移到左边。定义
+\begin{equation}
+  y_i \;\triangleq\; \Pin^{(i)} - \CT\,\Icmd^{(i)}\,\omega^{(i)},
+\end{equation}
+即“实测输入功率减去已知的机械功率”，其物理含义就是\emph{总损耗功率}。
+于是对第 $i$ 组样本（$i=1,\dots,N$）有
+\begin{equation}\label{eq:regmodel}
+  y_i = k_2\bigl(\omega^{(i)}\bigr)^2 + k_1\bigl(\Icmd^{(i)}\bigr)^2 + a + \varepsilon_i ,
+\end{equation}
+其中 $\varepsilon_i$ 表示模型误差与测量噪声之和。写成矩阵形式：
+\begin{equation}\label{eq:designmat}
+  X = \begin{bmatrix}
+    (\omega^{(1)})^2 & (\Icmd^{(1)})^2 & 1\\[2pt]
+    (\omega^{(2)})^2 & (\Icmd^{(2)})^2 & 1\\[2pt]
+    \vdots & \vdots & \vdots\\[2pt]
+    (\omega^{(N)})^2 & (\Icmd^{(N)})^2 & 1
+  \end{bmatrix}\in\mathbb{R}^{N\times 3},
+  \quad
+  y=\begin{bmatrix} y_1\\ \vdots\\ y_N\end{bmatrix},
+  \quad
+  \varepsilon=\begin{bmatrix} \varepsilon_1\\ \vdots\\ \varepsilon_N\end{bmatrix},
+\end{equation}
+则 \fref{eq:regmodel} 整体就是 $y = X\theta + \varepsilon$。
+矩阵 $X$ 的每一列称为一个\emph{回归量}（regressor）。
+
+\begin{remark}[为什么要先减掉机械功率]
+这一步常被忽略，但很关键。若直接对总功率 $\Pin$ 拟合，
+目标函数中占绝对主导的是 $\CT\Icmd\omega$（典型工况下可达几十瓦），
+而三个待估参数对应的损耗只有几瓦。优化器会把绝大部分“注意力”花在拟合机械功率上，
+损耗参数的相对精度会差得离谱。先减去已知的物理项，
+等价于把待拟合量的动态范围压缩了一个数量级，
+是这类“灰箱辨识”中的标准技巧。
+\end{remark}
+
+\subsection{最小二乘准则}
+
+最小二乘的思想很朴素：选一组参数，使所有样本的\emph{误差平方和}最小。定义准则函数
+\begin{equation}\label{eq:cost}
+  S(\theta) \;=\; \sum_{i=1}^{N}\varepsilon_i^2
+  \;=\;\sum_{i=1}^{N}\Bigl(y_i - k_2\bigl(\omega^{(i)}\bigr)^2 - k_1\bigl(\Icmd^{(i)}\bigr)^2 - a\Bigr)^{2}.
+\end{equation}
+为什么用平方而不是绝对值？有四个理由：
+\begin{enumerate}
+  \item 平方处处可导，可以用微积分求极值，从而得到闭式解；
+  \item $S(\theta)$ 关于 $\theta$ 是凸二次函数，\emph{局部极小就是全局极小}，
+  不存在陷入局部最优的风险；
+  \item 平方对大的偏差惩罚更重；
+  \item 当 $\varepsilon_i$ 独立同分布且服从高斯分布时，最小化 $S$ 等价于极大似然估计，
+  即在这种噪声假设下最小二乘是最优估计。
+\end{enumerate}
+
+\subsection{用求导求极值：一阶必要条件}\label{sec:firstorder}
+
+下面把求导过程一步步写清楚，全程只用三条基本法则：
+\begin{align}
+  \frac{\partial}{\partial x}\bigl[u(x)+v(x)\bigr] &= \frac{\partial u}{\partial x}+\frac{\partial v}{\partial x},\label{eq:rule1}\\
+  \frac{\partial}{\partial x}\bigl[c\,u(x)\bigr] &= c\,\frac{\partial u}{\partial x}\quad(c\ \text{为常数}),\label{eq:rule2}\\
+  \frac{\partial}{\partial x}\bigl[u(x)^2\bigr] &= 2u\,\frac{\partial u}{\partial x}.\label{eq:rule3}
+\end{align}
+
+把 $S$ 中的每一项看成待求导的复合函数。记第 $i$ 项的残差为
+\begin{equation}
+  r_i(\theta) \;\triangleq\; y_i - k_2\bigl(\omega^{(i)}\bigr)^2 - k_1\bigl(\Icmd^{(i)}\bigr)^2 - a ,
+\end{equation}
+则 $S=\sum_i r_i^2$。对任一参数 $\theta_j\in\{k_2,k_1,a\}$，由 \fref{eq:rule1}--\fref{eq:rule3} 得
+\begin{equation}
+  \frac{\partial S}{\partial \theta_j}
+  = \sum_{i=1}^{N}\frac{\partial}{\partial \theta_j}\bigl(r_i^2\bigr)
+  = \sum_{i=1}^{N} 2\,r_i\,\frac{\partial r_i}{\partial \theta_j},
+\end{equation}
+而 $r_i$ 对三个参数的偏导数分别是
+\begin{equation}
+  \frac{\partial r_i}{\partial k_2} = -\bigl(\omega^{(i)}\bigr)^2,\qquad
+  \frac{\partial r_i}{\partial k_1} = -\bigl(\Icmd^{(i)}\bigr)^2,\qquad
+  \frac{\partial r_i}{\partial a} = -1 .
+\end{equation}
+在极小值处三个偏导数必须同时为零（多元函数取极值的必要条件）。
+把公共常数 $-2$ 约去，得到三个条件：
+\begin{equation}\label{eq:orth}
+  \boxed{\;
+  \sum_{i=1}^{N} r_i\bigl(\omega^{(i)}\bigr)^2 = 0,\qquad
+  \sum_{i=1}^{N} r_i\bigl(\Icmd^{(i)}\bigr)^2 = 0,\qquad
+  \sum_{i=1}^{N} r_i = 0 .
+  \;}
+\end{equation}
+
+\fref{eq:orth} 有一个漂亮的几何意义：\textbf{最优残差向量与每一个回归量都正交}。
+也就是说，最小二乘解把数据中“能被这三个回归量解释的部分”全部榨干了，
+剩下的残差与它们毫无关系。这个“正交性”正是最小二乘理论的骨架。
+
+把 $r_i$ 的定义代回 \fref{eq:orth} 并展开，就得到三个关于 $(k_2,k_1,a)$ 的\emph{线性}方程。
+为书写简洁，下面把 $(\cdot)^{(i)}$ 简写为 $(\cdot)_i$：
+\begin{align}
+  k_2\sum_i \omega_i^4 \;+\; k_1\sum_i \omega_i^2\Icmd_i^2 \;+\; a\sum_i \omega_i^2
+    &= \sum_i \omega_i^2\,y_i,\label{eq:ne1}\\
+  k_2\sum_i \omega_i^2\Icmd_i^2 \;+\; k_1\sum_i \Icmd_i^4 \;+\; a\sum_i \Icmd_i^2
+    &= \sum_i \Icmd_i^2\,y_i,\label{eq:ne2}\\
+  k_2\sum_i \omega_i^2 \;+\; k_1\sum_i \Icmd_i^2 \;+\; N\,a
+    &= \sum_i y_i .\label{eq:ne3}
+\end{align}
+\fref{eq:ne1}--\fref{eq:ne3} 称为\textbf{正规方程}（normal equations）。
+注意它的结构：左边是“回归量之间的内积”乘参数，右边是“回归量与观测量之间的内积”。
+只要把数据代入算出这 6 个求和量，就得到一个三元一次方程组，
+用消元法或克拉默法则即可解出 $\hat k_2,\hat k_1,\hat a$。
+
+\subsection{矩阵形式：几行推导代替一页求和}
+
+用矩阵记号可以把上面的过程压缩到三行，并且顺便得到更一般的结论。
+把 \fref{eq:cost} 写成向量范数的形式：
+\begin{equation}\label{eq:costmat}
+  S(\theta) = \lVert y - X\theta\rVert^2 = (y-X\theta)^{\mathsf T}(y-X\theta).
+\end{equation}
+展开括号。注意 $\theta^{\mathsf T}X^{\mathsf T}y$ 与 $y^{\mathsf T}X\theta$ 都是标量且互为转置，
+因此两者相等，可以合并为一项：
+\begin{equation}\label{eq:expand}
+  S(\theta) = y^{\mathsf T}y - 2\,\theta^{\mathsf T}X^{\mathsf T}y + \theta^{\mathsf T}X^{\mathsf T}X\,\theta .
+\end{equation}
+标量对向量求导有两条常用公式：
+\begin{equation}\label{eq:matrixderiv}
+  \frac{\partial\,(a^{\mathsf T}\theta)}{\partial\theta} = a,
+  \qquad
+  \frac{\partial\,(\theta^{\mathsf T}A\theta)}{\partial\theta} = (A+A^{\mathsf T})\,\theta
+  \;\overset{A=A^{\mathsf T}}{=}\; 2A\theta .
+\end{equation}
+把它用到 \fref{eq:expand} 的三项上：第一项 $y^{\mathsf T}y$ 与 $\theta$ 无关，导数为零；
+第二项给出 $-2X^{\mathsf T}y$；第三项给出 $2X^{\mathsf T}X\theta$。于是
+\begin{equation}\label{eq:gradS}
+  \frac{\partial S}{\partial\theta}
+  = -2X^{\mathsf T}y + 2X^{\mathsf T}X\,\theta .
+\end{equation}
+令 \fref{eq:gradS} 为零，立即得到
+\begin{equation}\label{eq:normal}
+  \boxed{\;X^{\mathsf T}X\,\hat\theta = X^{\mathsf T}y\;}
+  \qquad\Longrightarrow\qquad
+  \boxed{\;\hat\theta = (X^{\mathsf T}X)^{-1}X^{\mathsf T}y\;}
+\end{equation}
+这与 \fref{eq:ne1}--\fref{eq:ne3} 完全等价，只是写法更紧凑、更容易推广到更多参数的情形。
+
+顺带说明为什么这个驻点一定是极小值：对 \fref{eq:gradS} 再求一次导，得到海森矩阵
+\begin{equation}
+  \frac{\partial^2 S}{\partial\theta\,\partial\theta^{\mathsf T}} = 2X^{\mathsf T}X \succeq 0 ,
+\end{equation}
+它是半正定的（因为二次型
+$\theta^{\mathsf T}X^{\mathsf T}X\theta=\lVert X\theta\rVert^2\ge0$ 恒非负），
+所以 $S(\theta)$ 是凸函数，驻点即全局最小点。
+
+\subsection{解是否存在、是否唯一}
+
+\fref{eq:normal} 中的求逆只在 $X^{\mathsf T}X$ 可逆时成立。而
+\begin{equation}
+  X^{\mathsf T}X\ \text{可逆} \iff X\ \text{列满秩} \iff
+  \text{三个回归量在这批数据上线性无关}.
+\end{equation}
+下面是两个典型的“不可辨识”场景：
+\begin{itemize}
+  \item 如果所有实验都在\emph{同一个恒定转速}下完成，那么 $\omega_i^2$ 对所有 $i$ 都等于同一个常数，
+  第一列就是第三列（全 $1$ 列）的倍数。此时 $k_2$ 与 $a$ 无法分开：
+  把 $k_2$ 调大、$a$ 调小可以给出完全相同的预测，数据没有能力区分它们。
+  \item 如果整个实验过程中力矩指令始终不变，则 $\Icmd_i^2$ 恒定，$k_1$ 与 $a$ 同样不可分。
+\end{itemize}
+因此\textbf{实验设计必须让两个回归量都充分变化}。
+这正好解释了数据集里为什么既要有变转速的正弦、斜坡激励，又要有随机负载：
+这不是为了把数据量做大，而是为了让 $X$ 的各列去相关，从而让参数可辨识。
+
+即使 $X$ 严格列满秩，若列之间高度相关（近似共线），参数的方差也会被放大。
+在噪声独立同分布、方差为 $\sigma^2$ 的假设下，最小二乘估计的协方差为
+\begin{equation}\label{eq:cov}
+  \operatorname{Cov}(\hat\theta) = \sigma^2 (X^{\mathsf T}X)^{-1}.
+\end{equation}
+列相关性越强，$(X^{\mathsf T}X)^{-1}$ 的对角元越大，估计越不可信。
+工程上可以计算方差膨胀因子（VIF）或 $X^{\mathsf T}X$ 的条件数来做体检。
+
+\subsection{数值条件：一个容易被忽视的坑}
+
+$X$ 的三列在量纲上差异巨大：$\omega$ 可达 $10^4\ \mathrm{rpm}$，故 $\omega^2$ 可达 $10^8$；
+$\Icmd$ 可达 $16384$，故 $\Icmd^2$ 可达 $2.7\times10^8$；而第三列恒为 $1$。
+于是 $X^{\mathsf T}X$ 的元素跨越十几个数量级，其条件数是 $X$ 的条件数的平方：
+\begin{equation}
+  \kappa(X^{\mathsf T}X) = \kappa(X)^{2}.
+\end{equation}
+在双精度（相对精度约 $10^{-16}$）下这通常还能求解，但若用单精度做同样的事，
+有效数字会被吃掉大半。三条实用的改进措施：
+
+\begin{enumerate}
+  \item \textbf{无量纲化。} 取参考量 $\omega_{\mathrm{ref}}$、$I_{\mathrm{ref}}$
+  （例如各自的最大值），令 $\tilde\omega=\omega/\omega_{\mathrm{ref}}$、
+  $\tilde I=\Icmd/I_{\mathrm{ref}}$，在新变量上拟合出 $\tilde k_2,\tilde k_1,\tilde a$，
+  再按量纲换算回去：
+  \begin{equation}\label{eq:rescaling}
+    k_2 = \frac{\tilde k_2}{\omega_{\mathrm{ref}}^{2}},\qquad
+    k_1 = \frac{\tilde k_1}{I_{\mathrm{ref}}^{2}},\qquad
+    a = \tilde a .
+  \end{equation}
+  这样 $X^{\mathsf T}X$ 的所有元素都落在同一量级上。
+  \item \textbf{中心化。} 改用 $\omega_i^2-\overline{\omega^2}$ 与
+  $\Icmd_i^2-\overline{\Icmd^2}$ 作为回归量，使它们与截距列正交，
+  $k_2,k_1$ 的估计与 $a$ 解耦。代价是此时 $a$ 的含义变为“平均工况下的损耗”，
+  需要按定义换算回来。
+  \item \textbf{用矩阵分解而不是显式求逆。} 数值上应当通过 QR 分解或奇异值分解求解
+  \fref{eq:normal}，而不是先算 $(X^{\mathsf T}X)^{-1}$ 再乘 $X^{\mathsf T}y$。
+  MATLAB 的 \code{\\} 运算符与 \code{fit} 内部正是这样做的，
+  所以在 MATLAB 里通常不会遇到精度问题；但把同样的公式手写进单片机就是另一回事了。
+\end{enumerate}
+
+\subsection{当最小二乘不够用：加权、鲁棒与误差变量}
+
+实际数据很少满足最小二乘的理想假设。以下三种修正值得知道。
+
+\paragraph{加权最小二乘（异方差噪声）。}
+若不同样本的噪声方差不同，应当给更可靠的样本更大的权重。极小化
+\begin{equation}
+  S_W(\theta)=\sum_{i=1}^{N} w_i\,r_i^{2}
+\end{equation}
+得到的解为
+\begin{equation}\label{eq:wls}
+  \hat\theta_W = (X^{\mathsf T}WX)^{-1}X^{\mathsf T}Wy ,
+  \qquad W=\operatorname{diag}(w_1,\dots,w_N).
+\end{equation}
+取 $w_i = 1/\sigma_i^{2}$ 时，该估计在所有线性无偏估计中方差最小（高斯--马尔可夫定理）。
+在本问题中一个很实际的做法是：把 INA226 采样接近满量程而出现削顶的样本
+（开源报告图 1 的注记正说明了这一现象）以及转速接近零的样本权重取 $0$，直接剔除。
+
+\paragraph{鲁棒回归（异常值）。}
+最小二乘的“崩溃点”为零，少数几个离谱样本就能把整条曲线拽偏。
+若怀疑存在异常值，可用 Huber 损失~\cite{huber2009robust} 或迭代重加权最小二乘（IRLS）：
+\begin{equation}
+  \theta^{(t+1)} = \bigl(X^{\mathsf T}W^{(t)}X\bigr)^{-1}X^{\mathsf T}W^{(t)}y,
+  \qquad w_i^{(t)} = \frac{\psi\bigl(r_i^{(t)}\bigr)}{r_i^{(t)}},
+\end{equation}
+Huber 的 $\psi$ 在 $|r|\le\delta$ 时等于 $r$、超出后饱和，因此异常点的权重会被自动压小。
+形式上它和加权最小二乘是同一个公式，只是权重在迭代中不断更新。
+
+\paragraph{误差变量（回归量本身含噪声）。}
+本问题中 $\Icmd$ 是我们自己发出去的数，精确已知；但 $\omega$ 来自编码器，
+存在量化与测量噪声。带噪声的回归量会破坏“噪声与回归量不相关”这一前提，
+使最小二乘出现\textbf{衰减偏置}：由于
+$\mathbb{E}\bigl[\omega_{\mathrm{meas}}^{2}\bigr]=\omega^{2}+\sigma_\omega^{2}$，
+$\omega^2$ 这一列被系统性地抬高，估计出的 $k_2$ 会偏小，
+并且该偏置会顺着正规方程污染 $k_1$ 与 $a$。
+可行的缓解手段包括：提高测速精度（滑动平均、或降低采样率换取分辨率）、
+使用总体最小二乘／正交距离回归，或先估计出 $\sigma_\omega^{2}$ 再做偏置修正。
+对本文这种“够用就行”的工程场景，保证标定时的测速条件与实车一致即可。
+
+\subsection{拟合优度与交叉验证}
+
+拟合完成后至少应报告两个指标：
+\begin{equation}
+  R^{2} = 1-\frac{\sum_i (y_i-\hat y_i)^2}{\sum_i (y_i-\bar y)^2},
+  \qquad
+  \mathrm{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^{N}(y_i-\hat y_i)^{2}} .
+\end{equation}
+但要注意，只有三个参数的模型 $R^2$ 几乎必然“好看”，
+它并不能说明模型在没见过的工况下是否成立。
+更有意义的是\emph{交叉验证}：把若干组独立采集的数据
+（不同激励形式、不同负载）轮流作为训练集与验证集，
+观察参数是否稳定、验证集 RMSE 是否与训练集接近。
+开源实现正是通过“不同组数据交叉验证仿真效果”来挑选最终参数的，
+这一步比单纯看 $R^2$ 重要得多。
+
+\subsection{拟合结果与自检}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{两组参数辨识结果对比（$\omega$ 单位 rpm，$\Icmd$ 为无量纲控制量）}
+  \label{tab:fit}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    来源 & $\omega^2$ 系数 $k_2$ & $\Icmd^2$ 系数 $k_1$ & 常数项 $a$ \\
+    \midrule
+    \code{power\_model.m} 中的拟合示例 & $2.110\times10^{-7}$ & $9.805\times10^{-8}$ & $2.138$ \\
+    部署代码 \code{chassis\_power\_control.c} & $1.453\times10^{-7}$ & $1.230\times10^{-7}$ & $4.081$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+表~\ref{tab:fit} 中两组参数差异可见，这是完全正常的：它们来自不同的电机样本、
+不同的负载条件与不同的数据组。这也再次印证了关于 $k_2$ 个体差异的讨论。
+真正需要保证的是——\textbf{部署用的参数必须来自同一台（或同批同状态）的电机}。
+
+用 \fref{eq:k1phys} 反解等效电阻可以给这两组参数做一次廉价的自检：
+第一组 $R_{\mathrm{eff}}\approx0.044\ \Omega$，第二组 $R_{\mathrm{eff}}\approx0.065\ \Omega$，
+都落在合理区间内。若某次拟合给出 $k_1$ 为 $10^{-5}$ 量级，
+那对应的等效电阻将是几欧姆，此时应当优先怀疑数据而不是电机。
+
+% ============================================================================
+\section{给定功率反解力矩}\label{sec:inverse}
+
+有了模型，就可以回答第~\ref{sec:convention} 节提出的核心问题：
+\emph{在当前转速下，为了恰好消耗给定功率 $P^{\ast}$，应该发送多大的控制量？}
+这一步是整个算法的执行环节，也是开源资料中讨论最充分、却也最容易踩坑的地方。
+
+\subsection{反解方程的建立}
+
+设当前转速为 $\omega$，目标功率为 $P^{\ast}$，未知量为发送值 $x=\Icmd$。
+把 $x$ 代入 \fref{eq:model} 并令 $\Pin = P^{\ast}$：
+\begin{equation}\label{eq:invsetup}
+  k_2\omega^2 + \CT\omega\,x + k_1x^2 + a = P^{\ast}.
+\end{equation}
+整理成标准的一元二次方程
+\begin{equation}\label{eq:invquad}
+  \boxed{\;A x^2 + B x + C = 0\;}
+  \qquad\text{其中}\qquad
+  \begin{cases}
+    A = k_1,\\[2pt]
+    B = \CT\,\omega,\\[2pt]
+    C = k_2\omega^2 + a - P^{\ast}.
+  \end{cases}
+\end{equation}
+注意 $B$ 与 $\omega$ 成正比、符号相同；$A=k_1>0$ 恒成立（它是电阻，必然为正）。
+$C$ 的符号则取决于目标功率与该转速下\emph{空载损耗}的比较。
+
+为后文方便，定义两个辅助量。\textbf{空载损耗}（$x=0$ 时的输入功率）
+\begin{equation}\label{eq:noload}
+  P_0(\omega) \;\triangleq\; k_2\omega^2 + a ,
+\end{equation}
+以及\textbf{最小可达功率}（抛物线顶点处的功率）
+\begin{equation}\label{eq:pmin}
+  P_{\min}(\omega) \;\triangleq\; P_0(\omega) - \frac{B^2}{4A}
+  = P_0(\omega) - \frac{\CT^2\omega^2}{4k_1}.
+\end{equation}
+
+\subsection{判别式与解的几何图像}
+
+一元二次方程的判别式为
+\begin{equation}\label{eq:disc}
+  \Delta = B^2 - 4AC .
+\end{equation}
+实根存在的条件是 $\Delta\ge0$，把它翻译回物理量：
+\begin{equation}\label{eq:cond}
+  \Delta \ge 0
+  \iff P^{\ast} \ge P_{\min}(\omega)
+  \iff P^{\ast} \ge \Bigl(k_2 - \frac{\CT^2}{4k_1}\Bigr)\omega^{2} + a .
+\end{equation}
+把数值代进去会看到一个有意思的结果。按表~\ref{tab:params} 的参数，
+\begin{equation}
+  \frac{\CT^{2}}{4k_1} = \frac{(1.9969\times10^{-6})^{2}}{4\times1.23\times10^{-7}}
+  \approx 8.105\times10^{-6}
+  \;\gg\; k_2 = 1.453\times10^{-7},
+\end{equation}
+因此 \fref{eq:pmin} 中 $\omega^2$ 的系数为负，且绝对值远大于 $k_2$：
+\begin{equation}\label{eq:pminnum}
+  P_{\min}(\omega) \approx 4.081 - 7.96\times10^{-6}\,\omega^{2}\quad[\mathrm{W}].
+\end{equation}
+令 $P_{\min}(\omega)=0$ 得到 $\omega\approx716\ \mathrm{rpm}$。也就是说：
+
+\begin{itemize}
+  \item 当 $\omega>716\ \mathrm{rpm}$ 时，$P_{\min}<0$。由于我们只关心非负的功率预算，
+  \textbf{判别式恒为非负，反解永远有解}；
+  \item 只有\emph{低速且功率预算极低}（几百转、几瓦）时，才可能出现 $\Delta<0$。
+\end{itemize}
+这个结论很实用：很多实现里那个“判别式小于零就跳过”的分支，
+在正常行驶工况下几乎永远不会被触发；真正的风险不在判别式，而在下面要讲的\emph{根的符号}。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=0.88\textwidth, height=6.4cm,
+      xlabel={力矩电流控制值 $\Icmd$},
+      ylabel={电机输入功率 $\Pin$ (W)},
+      xmin=-4000, xmax=12000, ymin=-60, ymax=190,
+      grid=both, grid style={gray!18},
+      legend style={at={(0.98,0.03)}, anchor=south east, draw=gray!40,
+                    fill=white, fill opacity=0.9, text opacity=1, font=\small},
+      tick label style={font=\small},
+      label style={font=\small},
+      axis line style={gray!60}
+    ]
+      \addplot[domain=-4000:12000, samples=120, thick, eblue]
+        {1.23e-7*x^2 + 0.0119813*x + 9.3118};
+      \addlegendentry{$\omega = 6000$ rpm}
+      \addplot[domain=-4000:12000, samples=120, thick, codegreen, dashed]
+        {1.23e-7*x^2 + 0.0059907*x + 5.3887};
+      \addlegendentry{$\omega = 3000$ rpm}
+      \addplot[gray, thick, dotted] coordinates {(-4000,40) (12000,40)};
+      \addlegendentry{功率预算 $P^{\ast} = 40$ W}
+      \addplot[only marks, mark=*, mark size=1.8pt, black]
+        coordinates {(2497,40) (5898,40)};
+      \node[anchor=south west, font=\scriptsize, text=black] at (axis cs:2550,42)
+        {$x_+\!\approx\!2497$};
+      \node[anchor=south east, font=\scriptsize, text=black] at (axis cs:5880,42)
+        {$x_+\!\approx\!5898$};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{同一功率预算在不同转速下对应的控制量。转速越低，允许的控制量越大，
+  这正是“固定力矩阈值”方案失效的根本原因：功率与控制量的换算关系随转速剧烈变化。}
+  \label{fig:powercurve}
+\end{figure}
+
+\subsection{两个根都有物理意义}
+
+当 $\Delta>0$ 时，方程有两个实根
+\begin{equation}\label{eq:roots}
+  x_{\pm} = \frac{-B \pm \sqrt{\Delta}}{2A}
+          = \frac{-\CT\omega \pm \sqrt{\Delta}}{2k_1}.
+\end{equation}
+由韦达定理可以得到两个非常有用的关系：
+\begin{equation}\label{eq:vieta}
+  x_+ + x_- = -\frac{B}{A} = -\frac{\CT\omega}{k_1},
+  \qquad
+  x_+ x_- = \frac{C}{A} = \frac{k_2\omega^2 + a - P^{\ast}}{k_1}.
+\end{equation}
+把 \fref{eq:vieta} 与 \fref{eq:noload} 结合起来看，可以完整刻画根的情况。
+设 $\omega>0$（否则整体取负号即可），则 $B>0$，因而两根之和恒为负。
+
+\begin{description}
+  \item[情形 1：$P^{\ast} > P_0(\omega)$，即目标功率高于空载损耗。]
+  此时 $C<0$，两根之积为负，说明\textbf{一正一负}。
+  正根对应“驱动”，负根对应“回馈制动”。这是正常行驶时的情形。
+  \item[情形 2：$P^{\ast} = P_0(\omega)$。] 此时 $C=0$，一个根为 $0$，另一个为 $-B/A<0$。
+  零根意味着“不发力，让电机自由空转”。
+  \item[情形 3：$P_{\min}(\omega) \le P^{\ast} < P_0(\omega)$。]
+  此时 $C>0$，两根之积为正，而和恒为负，说明\textbf{两根都为负}——
+  只有两个制动解，不存在正向驱动解。
+  \item[情形 4：$P^{\ast} < P_{\min}(\omega)$。] $\Delta<0$，无实根，目标功率不可达。
+\end{description}
+
+情形 3 的物理含义值得单独说明。空载损耗 $P_0(\omega)$ 是电机“不发力”时的固有消耗：
+即使输出力矩为零，铁损、齿槽阻尼与控制器静态功耗也照样存在。
+因此，若要求电机把消耗降到 $P_0(\omega)$ 以下，唯一的办法是让它\emph{轻微回馈制动}——
+用一个小的负力矩把机械能送回母线。这就是为什么会出现两个负根。
+
+这也解释了开源报告中观察到的现象：
+
+\begin{quote}
+“在某一时刻若转速为正，若让它消耗同一功率，其输出的正的加速力矩绝对值
+要小于负的减速力矩的绝对值。也就是说，在减速时，相同功率，我们可以输出更高的减速力矩，
+这和电动机反电动势的原理是一致的。”
+\end{quote}
+
+用 \fref{eq:vieta} 可以直接给出这个结论：两根异号且和恒为负，
+因此负根的绝对值必然大于正根的绝对值，即 $|x_-|>|x_+|$。
+
+\subsection{根的选择规则}
+
+既然两根都是方程的合法解，就必须有一个选择准则。这里最容易犯的错误，
+恰恰是开源报告作者最初踩过的坑：
+
+\begin{quote}
+\itshape
+“在起初笔者直接使用正号的解作为目标力矩的大小，
+然后依据原始力矩的正负符号对其重新赋值，在实际效果表现很差。”
+\end{quote}
+
+\emph{先取正根再用原始符号强行赋值}这种做法是错的，
+因为它把一个本该由模型决定的信息（应该在驱动侧还是制动侧工作）交给了符号翻转，
+而不是让模型去判断。正确的准则是：
+
+\begin{quote}
+\textbf{以缩放前的原始控制量 $\Icmd$ 的符号为准，选择与之同号的那一个根。}
+\end{quote}
+
+即
+\begin{equation}\label{eq:rootselect}
+  x' =
+  \begin{cases}
+    \dfrac{-B + \sqrt{\Delta}}{2A}, & \Icmd > 0 \quad(\text{原始意图为驱动}),\\[10pt]
+    \dfrac{-B - \sqrt{\Delta}}{2A}, & \Icmd < 0 \quad(\text{原始意图为制动}).
+  \end{cases}
+\end{equation}
+这样做的理由很直白：它保证功率限制\textbf{只改变力矩的大小、不改变力矩的方向}。
+若不这样做，就可能把驱动指令变成制动指令，或者反过来，
+在实车上直接表现为车身抖动与方向突变。
+
+\subsection{数值算例}
+
+下面把一次完整的反解过程手算一遍，参数取自表~\ref{tab:params}。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{反解算例（$k_1=1.23\times10^{-7}$，$k_2=1.453\times10^{-7}$，$a=4.081$，$\CT=1.9969\times10^{-6}$）}
+  \label{tab:example}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    步骤 & 算例 A（常规） & 算例 B（低于空载损耗） & 算例 C（低速不可达） \\
+    \midrule
+    转速 $\omega$ (rpm)              & $6000$ & $1000$ & $400$ \\
+    目标功率 $P^{\ast}$ (W)          & $40$   & $4$    & $2$ \\
+    空载损耗 $P_0(\omega)$ (W)       & $9.312$ & $4.226$ & $4.104$ \\
+    $B=\CT\omega$                    & $0.011981$ & $0.001997$ & $0.000799$ \\
+    $C=k_2\omega^2+a-P^{\ast}$       & $-30.688$ & $0.2263$ & $2.1042$ \\
+    $\Delta=B^2-4AC$                 & $1.587\times10^{-4}$ & $3.876\times10^{-6}$ & $-3.973\times10^{-7}$ \\
+    判别结论                          & 一正一负 & 两根皆负 & 无实根 \\
+    $x_+$                            & $2497$ & $-114.1$ & --- \\
+    $x_-$                            & $-9.99\times10^{4}$ & $-1.612\times10^{4}$ & --- \\
+    原始控制量 $\Icmd$ 符号          & $+$ & $+$ & $+$ \\
+    按 \fref{eq:rootselect} 取值     & $x_+=2497$ & $x_+=-114$（\textcolor{red}{异常}） & --- \\
+    \midrule
+    回代校验 $\Pin(x')$ (W)          & $39.99$ & $4.00$ & --- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+算例 A 是常规情形：目标功率高于空载损耗，正根有意义，
+回代后功率为 $39.99\ \mathrm{W}$，与目标 $40\ \mathrm{W}$ 相差 $0.03\%$，
+误差来自计算过程中的舍入。负根高达 $-9.99\times10^4$，
+远超 C620 的控制量范围 $[-16384,16384]$，因此实际上根本不可达。
+这说明对高转速工况而言，负根在\emph{数学上}存在、在\emph{执行器上}却不可达。
+
+算例 B 和 C 暴露了 \fref{eq:rootselect} 的两个失效场景，下一节详细讨论。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=0.88\textwidth, height=6.6cm,
+      xlabel={转子转速 $\omega$ (rpm)},
+      ylabel={允许的发送值上限},
+      xmin=0, xmax=9000, ymin=0, ymax=19500,
+      scaled y ticks=false,
+      ytick={0,4000,8000,12000,16000},
+      grid=both, grid style={gray!18},
+      legend style={at={(0.97,0.97)}, anchor=north east, draw=gray!40,
+                    fill=white, fill opacity=0.9, text opacity=1, font=\small},
+      tick label style={font=\small},
+      label style={font=\small},
+      axis line style={gray!60}
+    ]
+      \addplot[thick, codegreen, dashed] coordinates {
+        (0,18240) (500,14619) (1000,11817) (1500,9693) (2000,8086) (2500,6856)
+        (3000,5898) (4000,4517) (5000,3577) (6000,2892) (7000,2369) (8000,1950) (9000,1604)};
+      \addlegendentry{模型解（未受执行器限制）}
+      \addplot[thick, eblue] coordinates {
+        (0,16384) (500,14619) (1000,11817) (1500,9693) (2000,8086) (2500,6856)
+        (3000,5898) (4000,4517) (5000,3577) (6000,2892) (7000,2369) (8000,1950) (9000,1604)};
+      \addlegendentry{恒功率包络（实际可发送上限）}
+      \addplot[gray, thick, dotted] coordinates {(0,10000) (9000,10000)};
+      \addlegendentry{某一固定力矩阈值（示意）}
+      \addplot[red!70!black, thick, dashdotted] coordinates {(0,16384) (9000,16384)};
+      \addlegendentry{C620 控制量上限}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{单台电机在功率预算 $45\ \mathrm{W}$ 下的恒功率包络。
+  固定力矩阈值在低速段偏松、在高速段偏紧，而恒功率包络随转速单调下降；
+  两者只在某一个转速附近偶然相交。}
+  \label{fig:envelope}
+\end{figure}
+
+\subsection{两类边界情形及其修复}
+
+\paragraph{情形 I：目标功率低于空载损耗，正根变为负数。}
+算例 B 中 $P^{\ast}=4\ \mathrm{W} < P_0=4.226\ \mathrm{W}$，
+此时“正号根” $x_+=-114$ 是\emph{负数}。
+若原始控制量为正，程序就会输出一个负的控制量，即\textbf{力矩方向被反转}。
+表现在实车上就是：驾驶员在加速，底盘却给了一脚轻微刹车。
+
+\paragraph{情形 II：判别式为负，目标功率不可达。}
+算例 C 中 $P^{\ast}=2\ \mathrm{W} < P_{\min}=2.807\ \mathrm{W}$，方程无实根。
+
+\paragraph{统一的修复方案。}
+两类情形的根源是同一个：\textbf{目标功率落在了 $P_0(\omega)$ 以下，
+而电机在这个转速下不可能靠正向驱动消耗这么少的功率}。
+因此可以给出一个简洁而统一的处理规则：
+\begin{equation}\label{eq:clip}
+  P^{\ast} \;\longleftarrow\; \max\bigl(P^{\ast},\; P_0(\omega)\bigr)
+  \quad\text{之后再解方程} .
+\end{equation}
+当 $P^{\ast}=P_0(\omega)$ 时 $C=0$，正根恰好为 $0$——即
+“不发力，让电机自由转动”，这正是物理上唯一正确的选择。
+\fref{eq:clip} 的好处是它同时消灭了情形 I 与情形 II，
+而且代价可以忽略：被抬高的那部分功率最多就是几瓦的空载损耗，本来也无法避免。
+
+对比之下，原实现在判别式为负时选择“跳过、维持原指令”，
+这会把一个已经超功率的指令原样放行；而在情形 I 下会输出反向力矩。
+两者都不是致命的（出现概率低、量值小），但在追求平顺性的底盘上是值得修掉的。
+
+\paragraph{一个额外的数值技巧。}
+当 $\Delta$ 接近零、或 $|B|$ 与 $\sqrt{\Delta}$ 量级接近时，
+\fref{eq:roots} 中会出现“两个相近的大数相减”，有效数字被严重抵消。
+数值分析中的标准做法~\cite{press2007numerical} 是先算
+\begin{equation}\label{eq:stabq}
+  q = -\frac{1}{2}\Bigl(B + \operatorname{sgn}(B)\sqrt{\Delta}\Bigr),
+\end{equation}
+再由 $x_1 = q/A$、$x_2 = C/q$ 得到两个根。
+其中 $x_2$ 借助乘积关系得到，避开了相减抵消。
+在 STM32 上用单精度浮点计算时，这个技巧能明显改善临界工况下的精度。
+对本文这个方程，$B$ 大约在 $10^{-3}\sim10^{-2}$ 量级、
+$\sqrt\Delta$ 与之同量级，属于\emph{恰好}容易抵消的区间，因此并非可有可无的优化。
+
+% ============================================================================
+\section{多电机功率再分配}\label{sec:redistribute}
+
+前面解决了单台电机的问题。真正的底盘上有四台电机，
+需要在“总功率不超过预算”这一约束下，把有限的功率分给四台电机。
+这一步是本文所讨论的算法与以往方案分野的地方。
+
+\subsection{问题的提法}
+
+设四台电机的原始控制量为 $\Icmd_i$、转速为 $\omega_i$（$i=1,\dots,4$），
+当前控制周期可用的总功率预算为 $\Plim$。要求：
+\begin{enumerate}
+  \item $\sum_{i=1}^{4} P_i \le \Plim$（硬约束）；
+  \item 尽可能保留驾驶员的原始意图（各轮之间的相对关系），
+  否则底盘会失去方向性、走不直；
+  \item 在满足前两条的前提下尽可能把预算用满，以获得最大动力。
+\end{enumerate}
+
+\subsection{方案一：功率均分}
+
+最直接的想法是每个电机分 $\Plim/4$，各自独立反解。这个方案很快就被排除，原因有二：
+
+\begin{itemize}
+  \item \textbf{与转速耦合，破坏方向性。} 由 图~\ref{fig:powercurve} 可见，
+  同样的功率预算在不同转速下对应完全不同的控制量。
+  四个轮子只要转速略有差异，得到的力矩上限就不同，
+  而力矩差又会产生额外的偏航力矩，进一步加剧转速差，形成正反馈。
+  直线行驶时表现为“跑偏”，转向时会与驾驶意图打架。
+  \item \textbf{预算无法转移。} 若某个电机本来就用不到它那一份预算
+  （例如对角轮载荷很小），剩余预算不能被其他电机使用，白白浪费。
+\end{itemize}
+
+\subsection{方案二：取绝对值后统一缩放}
+
+广工方案的做法是：把模型中的各量取绝对值，计算出“总消耗功率”，
+再求一个统一缩放系数 $k$ 去缩放力矩。这个方案比均分好得多，
+因为它保留了各轮之间的相对比例，方向性得到保证。但它有两个结构性缺陷。
+
+\paragraph{缺陷一：丢失符号，把回馈制动误判为耗电。}
+当一个电机的力矩与转速反向时（减速工况），它在向母线回馈能量，实际功率为负。
+取绝对值之后，这一项变成一个\emph{正的}大功率，被计入总消耗。
+于是控制器以为底盘比实际耗电更多，从而过度收缩力矩。用开源报告的话说：
+
+\begin{quote}
+\itshape
+“因为在负功情况下根本不消耗功率，但是使用该式子计算依然会得到一个较大的‘正’功率，
+这会导致对于功率利用的严重不充分。”
+\end{quote}
+
+\paragraph{缺陷二：力矩的等比缩放不等于功率的等比缩放。}
+这是更本质的问题。设某电机的原始功率为 $P$，力矩缩放系数为 $k$，则缩放后的功率为
+\begin{align}
+  P(k\,\Icmd) &= k_2\omega^2 + k\,\CT\Icmd\omega + k^{2}k_1\Icmd^{2} + a ,\\
+  k\,P(\Icmd) &= k\,k_2\omega^2 + k\,\CT\Icmd\omega + k\,k_1\Icmd^{2} + k\,a .
+\end{align}
+两者之差为
+\begin{equation}\label{eq:scalegap}
+  P(k\Icmd) - k\,P(\Icmd)
+  = (1-k)\Bigl[k_2\omega^2 + a - k\,k_1\Icmd^{2}\Bigr] .
+\end{equation}
+只要 $k\ne1$，这个差值就一般不为零，而且它随 $\omega$、$\Icmd$ 变化。
+因此\textbf{事后得到的实际总功率并不等于预算 $\Plim$，偏差大小取决于工况}：
+低速高力矩时 $\Icmd^2$ 项占优，高速时 $\omega^2$ 项占优，误差偏向两侧。
+结果是功率控制精度随工况漂移，只能靠外层反馈去兜底。
+
+\subsection{方案三：功率再分配（本文方案）}
+
+本文方案的思路是把缩放做在\emph{功率}上而不是力矩上：
+
+\begin{enumerate}
+  \item \textbf{正向计算}：对每台电机，用模型算出它当前的输入功率
+  \begin{equation}\label{eq:forward}
+    P_i = k_2\omega_i^{2} + \CT\Icmd_i\omega_i + k_1\Icmd_i^{2} + a ,
+  \end{equation}
+  并求和 $P_{\mathrm{tot}} = \sum_i P_i$。注意这里的 $P_i$ \emph{保留符号}。
+  \item \textbf{判断是否需要干预}：若 $P_{\mathrm{tot}} \le \Plim$，说明没有超限，
+  一台电机也不动，直接返回。这一点很重要——不干预意味着不引入任何模型误差。
+  \item \textbf{计算功率缩放系数}
+  \begin{equation}\label{eq:kscale}
+    k = \frac{\Plim}{P_{\mathrm{tot}}} \qquad (0<k<1).
+  \end{equation}
+  \item \textbf{反解}：对每台电机令目标功率 $P_i^{\ast} = kP_i$，
+  代入第~\ref{sec:inverse} 节的方法求出新的控制量 $\Icmd_i'$，
+  并按原始控制量的符号选择根。
+\end{enumerate}
+
+这个方案有三个值得强调的性质。
+
+\paragraph{性质一：精确命中预算。}
+若四台电机都参与缩放，则
+\begin{equation}\label{eq:exact}
+  \sum_i P_i^{\ast} = \sum_i kP_i = k\sum_i P_i = \frac{\Plim}{P_{\mathrm{tot}}}\cdot P_{\mathrm{tot}} = \Plim .
+\end{equation}
+也就是说，\emph{目标功率之和}恰好等于预算。
+在模型准确的假设下，实际总功率就等于预算——这是力矩缩放方案做不到的。
+\fref{eq:scalegap} 与 \fref{eq:exact} 的对比，正是“功率再分配”这个名字的由来。
+
+\paragraph{性质二：按消耗比例分担削减。}
+每台电机的功率按同一个比例 $k$ 削减，
+因此“本来消耗多的电机削减得多、本来消耗少的削减得少”，
+各轮之间的功率关系保持等比。这比均分公平，也比固定力矩阈值合理。
+
+\paragraph{性质三：负功率电机不缩放。}
+对于一个正在回馈制动的电机（$P_i<0$），把它再缩小没有意义——
+它本来就没有消耗功率，缩放它只会削弱制动能力。
+因此实现中直接跳过它，保留原始控制量。这还顺带带来一点收益：
+负功率项在 $P_{\mathrm{tot}}$ 中本来就以负号参与，
+不缩放它相当于让其他电机多分摊一点，总功率会更接近而不超过预算。
+下一小节给出严格的代数分析。
+
+\subsection{负功率电机的处理：一个容易写错的细节}
+
+设正向消耗的电机功率之和为 $S>0$，回馈电机的功率之和为 $-N$（$N>0$），
+因此 $P_{\mathrm{tot}} = S - N$。我们只在 $S-N>\Plim$ 时才缩放。
+
+\paragraph{实现 A：负功率计入分母（等价于代码的实际行为）。}
+$k = \Plim/(S-N)$。缩放后正向电机总功率为 $kS$，回馈电机不变，于是实际总功率
+\begin{equation}\label{eq:caseA}
+  P_{\mathrm{tot}}^{A} = \frac{\Plim\,S}{S-N} - N
+  = \Plim + \underbrace{\Bigl(\frac{\Plim\,N}{S-N} - N\Bigr)}_{\text{偏差}} .
+\end{equation}
+由于进入缩放分支意味着 $S-N>\Plim$，故 $\Plim/(S-N)<1$，偏差项为负，即
+$P_{\mathrm{tot}}^{A} \le \Plim$。
+所以这种做法是\emph{安全}的，只是会略微少用一点预算。
+
+\paragraph{实现 B：负功率排除在分母之外。}
+$k = \Plim/S$，缩放后正向电机总功率恰为 $\Plim$，实际总功率
+\begin{equation}\label{eq:caseB}
+  P_{\mathrm{tot}}^{B} = \Plim - N .
+\end{equation}
+两种做法的差为
+\begin{equation}
+  P_{\mathrm{tot}}^{A} - P_{\mathrm{tot}}^{B}
+  = \Plim\Bigl(\frac{S}{S-N}-1\Bigr) - N + N
+  = \frac{\Plim\,N}{S-N} > 0 ,
+\end{equation}
+即实现 A 用掉的功率更多、更接近预算。
+这与开源报告中的说法一致——“该方法的好处是不光可以减少输出负功的电机功率带来的误差，
+还可以相应的使总输出功率略微变大，尝试令其他电机吸收这部分负功”。
+
+\paragraph{一处需要留意的实现细节。}
+原代码中这一句是
+\begin{lstlisting}[style=cstyle, numbers=none]
+float initial_give_power[4];
+...
+    initial_give_power[i] = ...;
+    if (initial_give_power < 0)   // negative power not included (transitory)
+        continue;
+    initial_total_power += initial_give_power[i];
+\end{lstlisting}
+\code{initial\_give\_power} 是数组名，在表达式里会退化为指针，
+因此 \code{initial\_give\_power < 0} 是\textbf{指针与零的比较}，恒为假。
+结果是：负功率电机实际上\emph{始终被计入}了总和，
+真正生效的是上面的“实现 A”。
+若要严格实现注释所描述的语义，应当写成 \code{initial\_give\_power[i] < 0}。
+好在由前面的推导可知实现 A 是安全的，所以这处笔误没有造成超功率，
+只是让实际行为与注释不一致，给调试带来困惑。
+
+\subsection{三种方案的对比}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{三种多电机功率分配方案对比}
+  \label{tab:compare}
+  \begin{tabular}{@{}p{0.19\textwidth}p{0.23\textwidth}p{0.23\textwidth}p{0.24\textwidth}@{}}
+    \toprule
+     & 方案一：功率均分 & 方案二：绝对值统一缩放 & 方案三：功率再分配 \\
+    \midrule
+    分配依据 & 每轮固定 $\Plim/4$ & 力矩等比（全局 $k$） & 功率等比（全局 $k$） \\
+    是否保留功率符号 & 保留，但因均分而失效 & 不保留 & 保留 \\
+    总功率是否精确命中 & 否（受负载影响） & 否（见 \fref{eq:scalegap}） & 是（见 \fref{eq:exact}） \\
+    方向性（走直） & 差 & 好 & 好 \\
+    回馈能量利用 & 无法利用 & 完全丢弃 & 可部分利用 \\
+    计算量 & 低 & 低 & 中 \\
+    主要误差来源 & 转速差异 & 符号丢失 $+$ 缩放非线性 & 模型精度 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{算法伪代码}
+
+\begin{algorithm}[htbp]
+  \caption{基于功率再分配的底盘功率控制（单控制周期）}
+  \label{alg:redistribute}
+  \begin{algorithmic}[1]
+    \Require 四台电机的原始控制量 $\Icmd_i$、转速 $\omega_i$；功率预算 $\Plim$
+    \Ensure 四台电机的最终控制量 $\Icmd_i'$
+    \State $P_{\mathrm{tot}} \gets 0$
+    \For{$i = 1$ to $4$}
+      \State $P_i \gets k_2\omega_i^{2} + \CT\Icmd_i\omega_i + k_1\Icmd_i^{2} + a$
+      \State $P_{\mathrm{tot}} \gets P_{\mathrm{tot}} + P_i$
+    \EndFor
+    \If{$P_{\mathrm{tot}} \le \Plim$}
+      \State \Return $\Icmd_i' \gets \Icmd_i$ \Comment{未超限，不干预}
+    \EndIf
+    \State $k \gets \Plim / P_{\mathrm{tot}}$
+    \For{$i = 1$ to $4$}
+      \If{$P_i < 0$}
+        \State $\Icmd_i' \gets \Icmd_i$ \Comment{回馈制动，不缩放}
+      \Else
+        \State $P_i^{\ast} \gets \max\bigl(kP_i,\; k_2\omega_i^{2}+a\bigr)$
+        \Comment{式~\eqref{eq:clip}}
+        \State $B \gets \CT\omega_i$;\quad $C \gets k_2\omega_i^{2} + a - P_i^{\ast}$
+        \State $\Delta \gets B^{2} - 4k_1C$
+        \If{$\Delta < 0$}
+          \State $\Icmd_i' \gets 0$
+        \ElsIf{$\Icmd_i > 0$}
+          \State $\Icmd_i' \gets \min\bigl((-B+\sqrt{\Delta})/(2k_1),\; 16384\bigr)$
+        \Else
+          \State $\Icmd_i' \gets \max\bigl((-B-\sqrt{\Delta})/(2k_1),\; -16384\bigr)$
+        \EndIf
+      \EndIf
+    \EndFor
+  \end{algorithmic}
+\end{algorithm}
+
+\subsection{两个可选的改进方向}
+
+\paragraph{一轮修正。}
+由于 \fref{eq:clip} 的钳位以及负功率电机不缩放，
+实际总功率通常会略低于预算。若希望把预算用得更满，
+可以在第 5 步之后重新正向计算一次实际总功率 $P_{\mathrm{tot}}'$，
+若 $P_{\mathrm{tot}}' < \Plim$ 且余量可观（例如超过 $5\%$），
+再用 $k' = \Plim/P_{\mathrm{tot}}'$ 做一次补偿。
+由于模型对控制量是单调的，这种迭代会快速收敛，通常一到两轮就足够。
+
+\paragraph{按余量而非按比例分配。}
+比例分配在“某一台电机已经接近其物理极限”时并不理想。
+更精细的做法是把预算看作一个资源分配问题：
+按各电机在当前位置上“单位功率能换来多少力矩”的边际效率来分配，
+即求解一个小规模的凸优化问题。代价是计算量上升，
+在 STM32F4 上需要谨慎评估。这项工作留待第~\ref{sec:future} 节讨论。
+
+% ============================================================================
+\section{缓冲能量闭环}\label{sec:bufferloop}
+
+前面的推导给出了一个“给定功率预算 $\Plim$，把力矩压到预算之内”的开环执行机构。
+但预算本身从哪里来？如果直接把裁判系统的功率上限 $\Pmax$ 当作预算，
+那么模型误差、母线电压波动、绕组升温都会让实际功率偏离预算，
+底盘要么长期超功率、要么长期浪费。因此还需要一层外环。
+本节说明这一层外环的物理背景、控制结构与参数整定。
+
+\subsection{缓冲能量的官方结算规则}
+
+RoboMaster 规则手册对缓冲能量的描述可以概括为一个离散积分器。
+裁判系统以 $10\ \mathrm{Hz}$（每 $100\ \mathrm{ms}$）结算一次：
+\begin{equation}\label{eq:officialbuffer}
+  Z \;\leftarrow\; Z - (P_r - P_l)\times 0.1,
+  \qquad Z\in[0,\,60]\ \mathrm{J},
+\end{equation}
+其中 $P_r$ 为底盘的瞬时功率，$P_l$ 为该等级对应的上限功率。
+把它写成连续时间形式\cite{rm2024rules} 就是
+\begin{equation}
+  \dot Z = (P_l - P_r)\times 10 \quad [\mathrm{J/s}],
+\end{equation}
+即\emph{盈余时以与超支完全相同的速率回充}。这一点值得特别指出：
+规则手册并没有单独规定一个“恢复速率”，网上流传的所谓 $24\ \mathrm{J/s}$、
+$36\ \mathrm{J/s}$ 等具体数值并无可查证的官方依据，不应作为设计输入。
+
+此外还有两条容易被忽略的规则细节：
+\begin{itemize}
+  \item 触发“飞坡增益”后，缓冲能量上限临时提高到 $250\ \mathrm{J}$；
+  但一旦被消耗到 $60\ \mathrm{J}$ 以下，此后最多只能恢复到 $60\ \mathrm{J}$。
+  \item 缓冲能量耗尽后进入扣血阶段，扣血量按超限比例分档：
+  \begin{equation}
+    K = \frac{P_r - P_l}{P_l}\times100\%,
+    \qquad
+    N = \begin{cases}
+      10\%, & K \le 10\%,\\
+      20\%, & 10\% < K \le 20\%,\\
+      40\%, & K > 20\%.
+    \end{cases}
+  \end{equation}
+  每检测周期扣血 $=$ 上限血量 $\times N\% \times 0.1$。
+  也就是说，超限一倍（$K=100\%$）时每秒扣掉 $40\%$ 的血量——
+  这解释了为什么“宁可保守也不要超功率”。
+\end{itemize}
+
+\subsection{为什么需要闭环}
+
+设本周期实际执行时，电机功率与指令之间存在一个偏差 $\delta$（模型误差、电压波动、
+温度漂移、机械负载变化都会贡献到 $\delta$），即
+\begin{equation}
+  \Pin = \Plim + \delta .
+\end{equation}
+于是缓冲能量的动态变为
+\begin{equation}\label{eq:plant}
+  \dot\Ebuf = \Pmax - \Pin = \Pmax - (\Pmax - u) - \delta = u - \delta,
+\end{equation}
+其中 $u$ 是外环控制器的输出。\fref{eq:plant} 说明\textbf{被控对象是一个纯积分器}：
+控制量 $u$（单位 W）积分后得到 $\Ebuf$（单位 J），直流增益为 $1$，
+而模型误差 $\delta$ 相当于作用在积分器\emph{输入端}的常值扰动。
+
+这个结构决定了外环的设计：
+
+\begin{itemize}
+  \item 若只用比例控制（$u = K_p e$，$e=\Ebuf^{\ast}-\Ebuf$），
+  闭环为 $\dot e = -K_p e + \delta$，稳态误差为
+  \begin{equation}
+    e_{\mathrm{ss}} = \frac{\delta}{K_p} .
+  \end{equation}
+  也就是说，\emph{模型误差会直接变成一个缓存的静差}。
+  由于对象本身含积分器，闭环对参考值阶跃是无静差的；
+  但对“作用在对象输入端的扰动”，纯比例控制只能把误差压缩 $K_p$ 倍而不能消除——
+  这是系统类型（system type）理论的标准结论。
+  \item 引入积分项后，开环从 I 型升为 II 型，常值扰动被完全抑制，静差归零。
+  代价是多了一个自由度需要整定，且积分饱和会带来超调。
+\end{itemize}
+
+结论是：\textbf{外环应当用 PI（或 PID）控制，且积分项不可省}。
+
+\subsection{控制器结构与闭环分析}
+
+取
+\begin{equation}\label{eq:outerloop}
+  e = \Ebuf^{\ast} - \Ebuf,
+  \qquad
+  u = K_p e + K_i\!\int e\,\dd t,
+  \qquad
+  \boxed{\;\Plim = \Pmax - u\;}
+\end{equation}
+把 \fref{eq:outerloop} 代入 \fref{eq:plant}：
+\begin{equation}
+  \dot e = -\dot\Ebuf = -u + \delta = -K_p e - K_i\!\int e\,\dd t + \delta .
+\end{equation}
+两边再对时间求导，$\delta$ 的导数为零（常值扰动），得到齐次方程
+\begin{equation}\label{eq:closedloop}
+  \boxed{\;\ddot e + K_p\,\dot e + K_i\,e = 0\;}
+\end{equation}
+其闭环特征方程为
+\begin{equation}\label{eq:chareq}
+  s^{2} + K_p s + K_i = 0 ,
+\end{equation}
+与标准二阶系统 $s^2 + 2\zeta\omega_n s + \omega_n^2 = 0$ 对照（见文献~\cite{franklin2002feedback}），立刻得到整定公式：
+\begin{equation}\label{eq:tuning}
+  \boxed{\;\omega_n = \sqrt{K_i}, \qquad \zeta = \frac{K_p}{2\sqrt{K_i}}\;}
+  \quad\Longleftrightarrow\quad
+  K_p = 2\zeta\omega_n,\quad K_i = \omega_n^{2}.
+\end{equation}
+
+\fref{eq:chareq} 还澄清了一个常见误解：这个环是\emph{二阶}的，
+它的稳定性与响应速度完全由 $K_p,K_i$ 决定，与电机模型、底盘质量无关。
+这一点让整定变得非常可控。
+
+\begin{note}[关于积分项与采样周期]
+很多 RM 工程代码里的 PID 实现是
+\code{integral += err; out = Kp*err + Ki*integral;}，
+即积分项\emph{不显式乘以 $\dd t$}。在这种约定下，
+代码里的 $K_i^{\mathrm{code}}$ 与 \fref{eq:tuning} 中的连续域 $K_i$ 相差一个采样周期：
+\begin{equation}
+  K_i^{\mathrm{code}} = K_i\cdot T_s .
+\end{equation}
+因此\textbf{一旦改变了调用周期 $T_s$，必须同步重算 $K_i$}，
+否则同样的参数会得到完全不同的动态。
+\end{note}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{缓冲能量闭环整定示例（$T_s = 1\ \mathrm{ms}$，积分项不乘 $\dd t$）}
+  \label{tab:tuning}
+  \begin{tabular}{@{}cccccc@{}}
+    \toprule
+    设计目标 & $\zeta$ & $\omega_n$ (rad/s) & $K_p$ & $K_i$（连续） & $K_i^{\mathrm{code}}$ \\
+    \midrule
+    缓慢、无超调 & $1.0$ & $1.0$  & $2.0$  & $1.0$  & $0.001$ \\
+    折中（推荐） & $0.8$ & $3.0$  & $4.8$  & $9.0$  & $0.009$ \\
+    较快 & $0.7$ & $6.0$  & $8.4$  & $36.0$ & $0.036$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+带宽的上限受两个因素约束：裁判系统的结算频率（$10\ \mathrm{Hz}$）
+与执行机构的更新频率。把闭环带宽取到结算频率的 $1/10$ 以下（约 $1\ \mathrm{Hz}$ 以内）
+是比较稳妥的做法，\fref{eq:tuning} 中 $\omega_n=3\ \mathrm{rad/s}$（约 $0.5\ \mathrm{Hz}$）
+就落在这个区间里。
+
+\subsection{极性：一个必须核对的问题}
+
+\fref{eq:outerloop} 中的减号不是可有可无的记号。它的物理含义是：
+
+\begin{quote}
+当缓冲能量\emph{偏低}（$e>0$）时，控制器必须\emph{收紧}功率预算（$\Plim<\Pmax$），
+让底盘少用一点功率，缓冲能量才能回充；反之当缓冲能量偏高时才放宽预算。
+\end{quote}
+
+如果极性写反，闭环变成正反馈：缓冲能量低 $\to$ 放宽预算 $\to$ 更超功率 $\to$
+缓冲能量更低，很快触发扣血。
+\begin{equation}
+  \text{判据：}\quad
+  \frac{\partial \Plim}{\partial \Ebuf} > 0 .
+\end{equation}
+即“缓冲能量越多，允许的功率预算越大”。任何实现都应先按这条判据自检一遍。
+
+\begin{remark}
+开源报告中的控制框图把 PID 输出到求和点的符号画成了正号，
+而对应的代码写的是 \code{input_power = max_power_limit - buffer_pid.out}，
+两者在符号上是不一致的。按照上面的判据，\textbf{代码是正确的一方}。
+在阅读任何一份功率控制框图时，都建议先用这条判据验一遍极性。
+\end{remark}
+
+\subsection{工程上的若干改进}
+
+\paragraph{(a) 用 $\sqrt{\cdot}$ 误差映射代替线性误差。}
+一个被多个队伍采用的技巧~\cite{hkustpowermodule} 是把误差定义在“能量平方根”上：
+\begin{equation}\label{eq:sqrterror}
+  e = \sqrt{\Ebuf^{\ast}} - \sqrt{\Ebuf},
+  \qquad
+  \Plim = \Pmax - K_p e - K_d\frac{e - e_{\mathrm{last}}}{\Delta t}.
+\end{equation}
+由于 $\dfrac{\dd\sqrt{E}}{\dd E} = \dfrac{1}{2\sqrt{E}}$，
+同一个能量偏差在能量较高时对应更小的 $e$，因此这是一个\emph{增益随能量上升而减小}的
+非线性映射：在接近满电时环路更柔和，避免功率上限在 $E$ 靠近上限时剧烈振荡；
+在能量偏低时增益更大，能更快地收紧预算。
+实现上只是把两次开方换个位置，代价极小，收益明显。
+
+\paragraph{(b) 微分项要慎用。}
+微分项有助于抑制超调，但由于缓冲能量的更新是 $10\ \mathrm{Hz}$ 的阶梯信号，
+直接差分会放大量化噪声，实际效果往往是引入振荡。
+工程经验是“宁可不用 D，也不要调不好的 D”；若一定要用，
+必须先对 $\Ebuf$ 做低通滤波再差分。
+
+\paragraph{(c) 积分饱和与抗饱和。}
+$\Plim$ 不能为负，$\Ebuf$ 也在 $[0,E_{\max}]$ 内被限幅，
+因此积分器会在限幅期间持续累积（windup），造成解除限幅后的大幅超调。两条对策：
+\begin{itemize}
+  \item 对积分项显式限幅：$|u_I| \le u_I^{\max}$；
+  \item 对输出做条件积分（conditional integration）：当 $\Plim$ 已经触到 $0$ 或触到上限时，
+  停止积分。
+\end{itemize}
+
+\paragraph{(d) 通信异常时的兜底。}
+若在预期时间内没有收到裁判系统的缓冲能量数据，或者解析出的数值明显不合理，
+应当\emph{把预算严格设为 $\Pmax$}（保守策略），而不是沿用旧值或直接放行。
+这是一条来自官方圆桌~\cite{rmroundtable006} 与多个开源实现的一致建议。
+
+\subsection{与超级电容的协同}
+
+在超电系统中，外环输出的 $\Plim$ 不再直接等于底盘电机可以消耗的功率上限，
+而是“允许底盘从电池侧取用的功率”。超电控制器负责补足差额，
+因此主控还需要把这一信息通过 CAN 告知超电控制器。
+开源实现中的做法是：
+
+\begin{lstlisting}[style=cstyle, numbers=none]
+input_power = max_power_limit - chassis_power_control->buffer_pid.out;
+CAN_CMD_CAP(input_power);            // 告知超电：本周期计划从电池取多少功率
+...
+if (cap_measure.cap_percent > 5) {
+    if (cap_state == 0) chassis_max_power = input_power + 5;    // 常规档
+    else                chassis_max_power = input_power + 200;  // 爆发档
+} else {
+    chassis_max_power = input_power;                            // 电容电量低，不借力
+}
+\end{lstlisting}
+
+这段代码里有三个值得说明的设计点。
+
+\begin{enumerate}
+  \item \textbf{常规档额外放宽 $5\ \mathrm{W}$。}
+  让底盘长期“略微超支”，从而持续小额消耗电容能量。
+  这样电容不会长期处于满电状态，一旦出现回馈制动就有空间吸收能量。
+  原代码注释把这一做法的目的表述为“提高能量利用率”。
+  \item \textbf{爆发档额外放宽 $200\ \mathrm{W}$。}
+  由遥控器按键切换到主动释放电容能量的模式。它与港科开源实现中
+  “补电模式”的思路一致——把功率上限设成远高于裁判限制，
+  由超电长时间补偿差额，从而在一段时间内“以低等级的功率限制打出高等级的动力”。
+  需要注意的是这种模式的可持续时间完全由电容储量决定，
+  且电容电压越低，可补偿的功率越小，因此必须配合电量保护。
+  \item \textbf{电量保护。}
+  当电容剩余电量低于 $5\%$ 时，取消一切额外放宽，回到严格的 $\Pmax$。
+  这是必要的：电容电压降低后，同样的放电电流能提供的功率下降，
+  继续下达超功率指令既不安全也会直接超功率。
+\end{enumerate}
+
+\begin{note}
+超电接入之后，“缓冲能量由谁负责”这件事本身发生了变化。
+一个被广泛接受的分工~\cite{zjuwiki} 是：\emph{缓冲能量的观测与能量调度下沉到超电控制器}，
+主控只负责把功率预算分发到四个电机。
+因此当出现“电容还有电却仍然超功率”的现象时，
+应当优先检查超电侧的功率环与硬件，而不是继续拧主控的 PID。
+第~\ref{sec:supercap} 节会对这一分层关系展开讨论。
+\end{note}
+
+\subsection{整体控制框图}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\small,
+      >={Stealth[length=1.8mm]},
+      block/.style={draw=eblue, thick, fill=eblue!4, rounded corners=1.5pt,
+                    minimum height=8mm, minimum width=14mm, align=center, inner sep=2pt},
+      bigblock/.style={block, minimum width=26mm},
+      sum/.style={draw=eblue, thick, circle, inner sep=0pt, minimum size=5mm, fill=white},
+      line/.style={draw, thick, -{Stealth[length=1.8mm]}},
+      pline/.style={draw, thick}
+    ]
+    \node[sum] (s1) {};
+    \node[block, right=8mm of s1] (pid) {PID$(t)$};
+    \node[sum, right=9mm of pid] (s2) {};
+    \node[bigblock, right=9mm of s2] (gc) {功率再分配\\$G_c(t)$};
+    \node[block, right=11mm of gc] (gm) {电机\\$G_{\mathrm{motor}}$};
+    \node[bigblock, below=9mm of pid] (int) {缓冲能量结算\\$\int(P_{\max}-\Pin)\dd t$};
+
+    \draw[line] (-1.9,0) -- node[above, pos=0.62]{$30$ J} node[below, pos=0.62, font=\scriptsize]{$+$} (s1);
+    \draw[line] (s1) -- (pid);
+    \draw[line] (pid) -- node[above, font=\scriptsize]{$-$} (s2);
+    \draw[line] (s2) -- node[above]{$\Plim$} (gc);
+    \draw[line] (gc) -- node[above]{$\Icmd$} (gm);
+    \draw[line] (gm.east) -- ++(1.0,0) coordinate (pout);
+    \node[right=1mm of pout] {$\Pin$};
+
+    \node[above=6mm of s2] (pmax) {$\Pmax$};
+    \draw[line] (pmax) -- node[right, font=\scriptsize]{$+$} (s2);
+
+    \draw[line] (pout) |- (int.east);
+    \draw[line] (int.west) -- ++(-1.0,0) coordinate (fb);
+    \draw[line] (fb) |- (s1.south);
+    \node[font=\scriptsize, anchor=south east] at ([xshift=-1mm, yshift=1mm]s1.south)
+      {$\Ebuf$（$-$）};
+
+    \node[draw=gray, dashed, rounded corners=3pt, inner sep=7pt,
+          fit=(s1)(pid)(s2)(gc)(int), label={[gray, font=\scriptsize]above:软件部分}] {};
+  \end{tikzpicture}
+  \caption{底盘功率控制的完整框图。虚线内为软件部分，包含一个缓冲能量外环
+  与一个功率再分配环节；$G_{\mathrm{motor}}$ 为电机真实的物理模型。
+  注意 PID 输出在求和点处为\emph{负}号，即 $\Plim = \Pmax - u$，
+  这与上一小节讨论的极性判据一致。}
+  \label{fig:blockdiagram}
+\end{figure}
+
+% ============================================================================
+\section{代码实现逐行解读}\label{sec:code}
+
+本节对开源实现 \code{chassis\_power\_control.c} 做一次逐行解读，
+指出其中若干处可能导致行为偏差的实现细节。
+代码来自文献~\cite{lin2023report,lin2023code}（MIT 许可），为便于阅读，
+保留了原注释并统一了缩进。
+
+\subsection{参数与数据结构}
+
+\begin{lstlisting}[style=cstyle, numbers=none]
+uint16_t max_power_limit = 40;
+fp32  toque_coefficient = 1.99688994e-6f;  // (20/16384)*(0.3)*(187/3591)/9.55
+fp32  a        = 1.23e-07;                 // 文档中的 k1（I_cmd^2 的系数）
+fp32  k2       = 1.453e-07;                // 文档中的 k2（omega^2 的系数）
+fp32  constant = 4.081f;                   // 文档中的常数项 a
+\end{lstlisting}
+
+这里第一处需要注意的就是\emph{命名}。如第~\ref{sec:model} 节所述，
+代码中被注释为 \code{k1} 的 \code{a} 实际是 $\Icmd^2$ 的系数，
+而 \code{k2} 是 $\omega^2$ 的系数；同时 \code{constant} 才是公式里的常数项 $a$。
+把这段代码与任何文档对照时，都应先做一次记号映射（见表~\ref{tab:params}），
+否则很容易在调参时改错对象。
+
+\code{max\_power\_limit = 40} 是裁判系统给出的功率上限，单位 W，
+由 \code{get\_chassis\_max\_power()} 覆盖。
+
+\subsection{主循环}
+
+\begin{lstlisting}[style=cstyle, label={lst:main}]
+void chassis_power_control(chassis_move_t *chassis_power_control)
+{
+    fp32 chassis_max_power = 0;
+    float input_power = 0;        // input power from battery (referee system)
+    float initial_give_power[4];
+    float initial_total_power = 0;
+    fp32  scaled_give_power[4];
+
+    get_chassis_power_and_buffer(&chassis_power, &chassis_power_buffer);
+    PID_calc(&chassis_power_control->buffer_pid, chassis_power_buffer, 30);
+    get_chassis_max_power(&max_power_limit);
+    input_power = max_power_limit - chassis_power_control->buffer_pid.out;
+    CAN_CMD_CAP(input_power);     // set the input power of capacitor controller
+    ...
+    for (uint8_t i = 0; i < 4; i++) {        // 正向计算：模型 -> 功率
+        initial_give_power[i] =
+              chassis_power_control->motor_speed_pid[i].out * toque_coefficient
+                  * chassis_power_control->motor_chassis[i].chassis_motor_measure->speed_rpm
+            + k2 * speed_rpm * speed_rpm
+            + a  * chassis_power_control->motor_speed_pid[i].out
+                 * chassis_power_control->motor_speed_pid[i].out
+            + constant;
+        if (initial_give_power < 0)          // <-- 见下文的讨论
+            continue;
+        initial_total_power += initial_give_power[i];
+    }
+
+    if (initial_total_power > chassis_max_power) {   // 超限才干预
+        fp32 power_scale = chassis_max_power / initial_total_power;
+        for (uint8_t i = 0; i < 4; i++) {
+            scaled_give_power[i] = initial_give_power[i] * power_scale;
+            if (scaled_give_power[i] < 0)
+                continue;
+            fp32 b = toque_coefficient * speed_rpm;
+            fp32 c = k2 * speed_rpm * speed_rpm - scaled_give_power[i] + constant;
+            fp32 inside = b * b - 4 * a * c;
+            if (inside < 0) {
+                continue;                    // <-- 维持原指令
+            } else if (chassis_power_control->motor_speed_pid[i].out > 0) {
+                fp32 temp = (-b + sqrt(inside)) / (2 * a);
+                if (temp > 16000) temp = 16000;
+                chassis_power_control->motor_speed_pid[i].out = temp;
+            } else {
+                fp32 temp = (-b - sqrt(inside)) / (2 * a);
+                if (temp < -16000) temp = -16000;
+                chassis_power_control->motor_speed_pid[i].out = temp;
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+整体流程与第~\ref{sec:redistribute} 节描述的完全一致，可以逐段对应：
+
+\begin{enumerate}
+  \item \code{get\_chassis\_power\_and\_buffer} 读取裁判系统的功率与缓冲能量；
+  \item \code{PID\_calc(..., 30)} 以 $30\ \mathrm{J}$ 为设定值计算缓冲能量外环；
+  \item \code{input\_power = max\_power\_limit - out} 得到本周期功率预算，
+  并同步给超电控制器；
+  \item 第一个 \code{for} 循环做\emph{正向计算}，把模型算出的功率累加；
+  \item 若未超限则\emph{完全不干预}（这是很好的设计）；
+  \item 否则求功率缩放系数 \code{power\_scale}；
+  \item 第二个 \code{for} 循环做\emph{反解}，用一元二次方程求根公式算出新的控制量，
+  并按原始控制量 \code{motor\_speed\_pid[i].out} 的符号选择 $+$ 或 $-$ 根。
+\end{enumerate}
+
+注意 \code{2*a} 中的 \code{a} 正是 $\Icmd^2$ 的系数 $k_1$，
+\code{b = toque\_coefficient * speed\_rpm} 正是 $\CT\omega$，
+\code{c = k2*speed\string^2 - scaled + constant} 正是 $C$。
+与 \fref{eq:invquad} 完全对应。
+
+\subsection{值得修正的实现细节}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{代码中值得修正的实现细节}
+  \label{tab:codeissues}
+  \begin{tabular}{@{}p{0.05\textwidth}p{0.38\textwidth}p{0.47\textwidth}@{}}
+    \toprule
+    \# & 现象 & 影响与建议 \\
+    \midrule
+    1 & \code{initial\_give\_power < 0} 是数组名（指针）与 $0$ 比较，恒为假 &
+    负功率电机始终被计入总和。行为上属于第~\ref{sec:redistribute} 节的“实现 A”，
+    是安全的，但与注释不符。应改为 \code{initial\_give\_power[i] < 0} \\[3pt]
+    2 & 变量命名与文档公式不一致（\code{a}、\code{k2}、\code{constant}） &
+    极易在调参时改错对象。建议重命名为 \code{k\_omega2}、\code{k\_i2}、\code{c0} \\[3pt]
+    3 & 判别式为负时 \code{continue}，保留原指令 &
+    原指令可能已超功率。建议按 \fref{eq:clip} 把目标功率抬到 $P_0(\omega)$ 后重解，
+    此时必有解且方向正确 \\[3pt]
+    4 & 正根分支只做上限钳位（\code{temp > 16000}），无下限保护 &
+    当目标功率低于空载损耗时正根为负，会导致\emph{力矩反向}。
+    应在取根后校验符号：若与原始指令异号，则置 $0$ \\[3pt]
+    5 & \code{toque\_coefficient} 拼写错误（应为 \code{torque}） &
+    可读性问题，不影响功能 \\[3pt]
+    6 & \code{float} 与 \code{fp32} 混用 &
+    在 STM32F4 上二者等价，但混用会掩盖移植到 double 平台时的潜在差异 \\[3pt]
+    7 & 每周期 4 次 \code{sqrt} 与 4 次除法 &
+    1 kHz 下开销可接受；若紧张可用 \code{arm\_sqrt\_f32}，
+    或把 $1/(2k_1)$ 预先算成常数 \\[3pt]
+    8 & \code{chassis\_max\_power} 这一命名 &
+    其实际语义是“本周期的功率预算”，而非“底盘的最大功率”。
+    建议改名以免与外层的等级功率上限混淆 \\[3pt]
+    9 & 母线电压反馈未被使用（虽已 \code{include} \code{voltage\_task.h}） &
+    模型未做电压归一化，电池放电后段会有系统偏差。见第~\ref{sec:future} 节 \\[3pt]
+    10 & 未对 $\delta$ 做任何在线修正 &
+    依赖外环兜底，符合设计意图；若希望更精确，可引入第~\ref{sec:future} 节的 RLS 在线辨识 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+其中第 3、4 两条是功能性问题，其余主要是可维护性问题。
+需要强调的是：这些问题的量值都不大，原实现在比赛中是可用且有效的；
+这里把它们列出来，是因为它们正好对应本文前面推导出的两个边界情形，
+理解它们比记住结论更有价值。
+
+% ============================================================================
+\section{工程实践：标定、部署与故障排查}
+
+理论推导完成之后，真正决定成败的是标定质量与部署细节。
+本节给出一份可执行的流程清单。
+
+\subsection{硬件准备：电流采样量程的选择}
+
+模型标定依赖一路可信的功率测量。常用的方案~\cite{ina226} 是在电调输入端串入分流电阻，
+用 INA226 之类的双向电流/功率监测芯片测量母线电流与电压。
+选型时最需要先算清楚的是\emph{量程}，因为它直接决定了数据里会不会出现削顶。
+
+INA226 的分流电压输入满量程为 $\pm81.92\ \mathrm{mV}$（对应十进制 $7\mathrm{FFF}$），
+最低有效位约 $2.5\ \mu\mathrm{V}$；总线电压输入范围为 $0\sim36\ \mathrm{V}$，
+不可超过。由此可算得电流量程
+\begin{equation}\label{eq:inacur}
+  I_{\max} = \frac{81.92\ \mathrm{mV}}{R_{\mathrm{shunt}}} :
+  \qquad
+  \begin{aligned}
+    R &= 2\ \mathrm{m}\Omega &&\Rightarrow I_{\max} = \pm40.96\ \mathrm{A},\\
+    R &= 4\ \mathrm{m}\Omega &&\Rightarrow I_{\max} = \pm20.48\ \mathrm{A},\\
+    R &= 5\ \mathrm{m}\Omega &&\Rightarrow I_{\max} = \pm16.38\ \mathrm{A}.
+  \end{aligned}
+\end{equation}
+M3508 的额定力矩电流为 $20\ \mathrm{A}$，因此 $4\ \mathrm{m}\Omega$ 恰好覆盖，
+$2\ \mathrm{m}\Omega$ 则留出一倍余量但牺牲一半分辨率。若为了压低噪声选了过大的电阻，
+就必然在峰值力矩下削顶——开源报告图 1 的注记
+“输入功率出现失真是因为电流超过 INA226 最大采样电流”正是这个现象。
+\textbf{被削顶的样本必须剔除，否则会把最小二乘解整体拉偏}（见第~\ref{sec:lsq} 节）。
+
+\subsection{标定流程}
+
+\begin{enumerate}
+  \item \textbf{固定硬件。} 标定与装车应使用同批、同保养状态的电机；
+  齿轮箱阻尼差异会直接体现在 $k_2$ 上。若条件允许，逐台标定最优。
+  \item \textbf{设计激励信号。} 用 C 型开发板向 C620 发送\emph{不同频率与幅值}的正弦力矩指令，
+  同时对电机施加\emph{随机大小}的负载。
+  这一步的目的是让 $\omega^2$ 与 $\Icmd^2$ 两列去相关——
+  若只在恒定转速下实验，$k_2$ 与 $a$ 将不可辨识（第~\ref{sec:lsq} 节）。
+  \item \textbf{采集数据。} 用 INA226 采样实时电流与母线电压，
+  用 STM32CubeMonitor 把真实电流、力矩控制值、转子转速导出为 CSV。
+  \item \textbf{拟合与交叉验证。} 用 MATLAB 的 \code{fit}/\code{fittype}
+  或自己实现的正规方程求解（附录~\ref{app:lsq}）得到 $k_2,k_1,a$，
+  再用\emph{不同批次}的数据做验证，观察参数是否稳定、验证集 RMSE 是否接近训练集。
+  \item \textbf{物理自检。} 用 \fref{eq:k1phys} 反解等效相电阻，
+  用 $k_2$ 估算空载损耗曲线，看二者是否落在合理范围。不合理就回到第 2 步。
+  \item \textbf{装车验证。} 见第~\ref{sec:verify} 节。
+\end{enumerate}
+
+\begin{note}[三条来自开源实现的经验]
+\begin{enumerate}
+  \item \textbf{拟合时电机不要空载。}空载时力矩电流控制值并不等于实际力矩电流，
+  因为此时电流主要被用来克服空载损耗，模型的前提被破坏。
+  \item \textbf{走不直时先把功率均分试试。}这是一个极好的隔离手段：
+  若均分之后仍然走不直，问题多半在模型或机械；若均分之后正常了，
+  问题就在分配算法。
+  \item \textbf{改完轮电机的 PID 参数后，务必同步复核功率模型的相关参数。}
+  功率模型只对“最终发送值”负责；任何在功率分配之后、CAN 发送之前
+  额外加入的限幅、滤波或非线性环节，都会让模型预测与实际脱节。
+  最稳妥的架构是把功率控制放在整条指令链路的末端。
+\end{enumerate}
+\end{note}
+
+\subsection{验证方法}\label{sec:verify}
+
+\begin{description}
+  \item[恒功率启动测试。] 让底盘从静止满油起步，同时记录四个电机的功率之和。
+  若算法正确，总功率曲线应当迅速爬升到预算附近并\emph{保持平坦}，
+  而不是先冲高再回落。这正是“恒功率运行”这一设计目标的直接体现。
+  \item[缓冲能量稳定性测试。] 在多种工况（直线加速、原地转向、爬坡、急停）下
+  观察缓冲能量是否稳定在设定值附近小幅波动。
+  持续单边漂移说明外环极性或积分项有问题；周期性振荡说明带宽过高。
+  \item[阶跃响应测试。] 人为把功率预算阶跃降低（例如在代码里临时改成 $20\ \mathrm{W}$），
+  观察电机指令是否平滑跟随、有无过冲与振荡。
+  用这条测试可以直接标定外环的实际闭环带宽。
+  \item[对表测试。] 用外部功率计（或超电控制器回传的功率）与模型预测值对比，
+  统计不同工况下的相对误差。误差随转速单调变化通常意味着缺项（例如电压归一化）。
+\end{description}
+
+\subsection{常见故障与排查}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{常见故障与排查路径}
+  \label{tab:trouble}
+  \begin{tabular}{@{}p{0.20\textwidth}p{0.34\textwidth}p{0.36\textwidth}@{}}
+    \toprule
+    现象 & 可能原因 & 排查手段 \\
+    \midrule
+    起步无力、加速缓慢 &
+    仍在用固定力矩阈值；或 $k_1,k_2$ 明显偏大 &
+    打印单电机“允许控制量上限—转速”曲线，与图~\ref{fig:envelope} 对照 \\[4pt]
+    走不直、行进中偏航 &
+    分配算法破坏了各轮的相对关系；或四台电机参数不一致 &
+    临时改为功率均分，看是否恢复正常；再逐台标定参数 \\[4pt]
+    持续超功率（缓冲能量一直被扣） &
+    模型偏乐观（$k$ 偏小）；或下发了超出执行器能力的指令 &
+    检查 $k_1$ 反解出的电阻是否过小；检查是否有 $|\Icmd|>16384$ 的非法值 \\[4pt]
+    功率抖动、“一顿一顿” &
+    外环带宽过高；或对 $10\ \mathrm{Hz}$ 的阶梯信号做了微分 &
+    降低 $K_p$；去掉或前置滤波 $D$ 项 \\[4pt]
+    电容还有电却超功率 &
+    超电侧功率环或硬件能力不足 &
+    按第~\ref{sec:bufferloop} 节的讨论，优先排查超电侧，而非继续调主控 PID \\[4pt]
+    制动时超功率 &
+    回馈制动功率被模型低估（符号处理不当） &
+    检查建模与反解过程中是否出现过取绝对值 \\[4pt]
+    通信中断后行为异常 &
+    未做兜底 &
+    超时未收到裁判数据时，把预算严格设为 $\Pmax$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================================
+\section{局限性与未来工作}\label{sec:future}
+
+\subsection{已知局限}
+
+\begin{enumerate}
+  \item \textbf{$k_2$ 是电机的个体参数，不可通用。}
+  它主要来自齿轮箱阻尼，不同电机不同。当四台电机的 $k_2$ 相差较大时，
+  “按功率等比削减”会在四轮之间引入稳态误差，表现为轻微跑偏。
+  \item \textbf{模型不含母线电压。} 电池从满电放到欠压，同样控制量对应的功率会下降。
+  由于外环会把预算拉回平衡点，这个偏差不会导致超功率，
+  但会造成“电压低时动力衰减比预期更明显”。
+  \item \textbf{模型不含温度。} 铜电阻温度系数约 $+0.39\%/\mathrm{K}$，
+  绕组从 $25\,^{\circ}\mathrm{C}$ 升到 $100\,^{\circ}\mathrm{C}$ 时 $k_1$ 增大三成，
+  同样会被外环掩盖成“静差”，但瞬时精度会下降。
+  \item \textbf{与平衡步兵的冲突。} 功率限制过严时，平衡步兵在高速下
+  无法及时输出足够的反向力矩改变倾角来减速，会出现“滑铲”。
+  这不是本算法的缺陷，而是“严格功率约束”与“姿态控制的瞬时功率需求”之间
+  的固有矛盾。可行的方向是在检测到减速意图时临时提高功率上限，
+  由超电介入提供这部分功率。
+  \item \textbf{分配策略仍是“等比”而非“最优”。}
+  等比削减保证了一致性，但并非在所有工况下都能最大化有效牵引力。
+\end{enumerate}
+
+\subsection{改进方向}
+
+\paragraph{(a) 母线电压归一化。}
+把 \fref{eq:model} 中的损耗项与机械功率项按 $(U_{\mathrm{nom}}/U_{\mathrm{bus}})^{2}$
+与 $U_{\mathrm{nom}}/U_{\mathrm{bus}}$ 做尺度修正，等效于把模型搬到额定电压下计算。
+实现成本很低（一次除法），却能在电池放电后段明显改善精度。
+
+\paragraph{(b) 在线辨识。}
+若硬件允许读取真实功率（例如超电控制器回传的母线功率），
+可以用递推最小二乘（RLS）\cite{ljung1999system,hkustpowermodule} 在线更新参数：
+\begin{align}
+  K_k &= \frac{P_{k-1}\varphi_k}{\lambda + \varphi_k^{\mathsf T}P_{k-1}\varphi_k},\\
+  \hat\theta_k &= \hat\theta_{k-1} + K_k\bigl(y_k - \varphi_k^{\mathsf T}\hat\theta_{k-1}\bigr),\\
+  P_k &= \frac{1}{\lambda}\bigl(P_{k-1} - K_k\varphi_k^{\mathsf T}P_{k-1}\bigr),
+\end{align}
+其中 $\varphi_k = [\,\lvert\omega_k\rvert,\ \Icmd_k^{2}\,]^{\mathsf T}$，
+$\lambda$ 为遗忘因子（典型取 $0.999\sim0.99999$）。
+工程上有三点必须注意：
+\begin{itemize}
+  \item 遗忘因子越接近 $1$，参数越稳定但跟踪越慢；
+  \item 必须对参数做非负钳位与变化率限幅。若参数漂到负值，
+  模型会给出反物理的预测，进而导致控制发散；
+  \item 只有在“真实功率反馈可信”时才启用辨识。
+  裁判系统无法识别负功率，因此在回馈工况下真实功率不可信，
+  此时应冻结辨识。
+\end{itemize}
+
+\paragraph{(c) 按转速误差加权分配。}
+针对“走不直”，一个有效的改进是把功率预算在各轮之间按\emph{转速误差}分配，
+而不是按当前消耗等比分配：
+\begin{equation}\label{eq:errdist}
+  P_{\max,i} = K_{\mathrm{coe}}\frac{\mathrm{err}_i}{\sum_j \mathrm{err}_j}
+             + (1-K_{\mathrm{coe}})\frac{P_{\mathrm{cmd},i}}{\sum_j P_{\mathrm{cmd},j}} ,
+\end{equation}
+（该策略来自文献~\cite{hkustpowermodule}。）其中 $\mathrm{err}_i$ 为该轮的目标转速与实际转速之差，
+$K_{\mathrm{coe}}$ 在误差总和小于下阈值时取 $0$、大于上阈值时取 $1$、中间线性插值。
+直观理解是：\emph{哪个轮子“追不上”，就多给它一点功率}。
+这在直线上等价于维持原状，在转弯与打滑时能显著改善姿态保持。
+另一种思路~\cite{zjuwiki} 是“削转速而不是削电流”——对轮电机同比例削减\emph{目标转速}，
+因为轮电机的电流是转速误差的 PID 输出，
+削减目标转速不会改变运动学解算的方向性。
+
+\paragraph{(d) 把预算分配写成小规模优化。}
+最一般的形式是一个带约束的凸问题：
+在 $\sum_i P_i \le \Plim$、$\lvert\Icmd_i\rvert\le16384$ 的约束下，
+最大化某个与驾驶意图一致的效用函数（例如四轮力矩与目标力矩的加权平方误差和）。
+对四变量问题可以用解析的 KKT 条件求解，计算量在 STM32F4 上是可以接受的。
+这是把工程经验“升级”为可证明最优的自然方向。
+
+% ============================================================================
+\part{超级电容}
+
+\begin{note}
+本部分目前只给出总体框架与若干必要的定量关系，
+用于说明超级电容在整套控制体系中处于什么位置、与 Part I 的功率控制如何分工。
+详细的电路设计、控制环实现、CAN 协议与实测数据将在后续版本中补充。
+\end{note}
+
+\section{超级电容系统的总体框架}\label{sec:supercap}
+
+\subsection{为什么需要超级电容}
+
+底盘电机的功率需求具有强烈的\emph{脉冲性}：起步、爬坡、急停、碰撞恢复这些瞬间
+需要的功率远高于匀速巡航。而规则对底盘的约束是针对\emph{平均}功率的
+（以缓冲能量为账户），电池的放电能力也受倍率限制。
+这两者之间的矛盾就是超级电容存在的理由：
+\textbf{用一个能量缓冲器把“瞬时峰值功率”与“平均功率”解耦}。
+
+定量地看，一次持续 $2\ \mathrm{s}$、超出限制 $150\ \mathrm{W}$ 的爆发需要
+\begin{equation}
+  \Delta E = 150\ \mathrm{W}\times 2\ \mathrm{s} = 300\ \mathrm{J}
+\end{equation}
+的能量。若系统的能量池在 $2\ \mathrm{kJ}$ 量级，则这样的爆发可以做很多次。
+这正是超电车种在比赛中能够“以低等级底盘功率打出高等级动力”的原因。
+
+\begin{note}[与规则的关系]
+除底盘功率上限之外，近年赛季还引入了整车\emph{能量池}约束
+（例如对总输出能量的累计限制）。这一变化的意义在于：
+功率约束只限制“瞬时能取多快”，而能量约束限制“一共能取多少”。
+两者叠加之后，超电的调度策略不再只是“把峰值削平”，
+还需要考虑“把有限的能量用在什么时刻”。
+本部分的后续版本会结合具体规则数值展开，此处暂不深入。
+\end{note}
+
+\subsection{系统构成}
+
+一个典型的车载超电系统由四部分组成：
+
+\begin{enumerate}
+  \item \textbf{电容组。} 由若干单体串并联构成。串联提升耐压，
+  并联降低等效串联电阻（ESR）。单体之间需要均衡电路，
+  否则个别单体过压会迅速失效。
+  \item \textbf{双向 DC--DC 变换器。} 负责在电池母线电压与电容组电压之间双向传递能量。
+  常见拓扑有串联式 Buck/Boost、并联式四开关 Buck-Boost（FSBB）与并联式两开关结构~\cite{adernal}，
+  它们在效率、体积与控制难度上各有取舍。
+  \item \textbf{超电控制器。} 采样母线电压电流与电容电压电流，
+  运行内层控制环，并通过 CAN 与主控通信。
+  \item \textbf{主控侧的接口。} 把“本周期底盘计划从电池取多少功率”这一意向告知超电控制器。
+\end{enumerate}
+
+\subsection{能量与电压的基本关系}
+
+电容储能为
+\begin{equation}\label{eq:capenergy}
+  E = \tfrac{1}{2}CU^{2}.
+\end{equation}
+由于能量与电压的\emph{平方}成正比，可利用的能量窗口是
+\begin{equation}\label{eq:usable}
+  \frac{E_{\mathrm{usable}}}{E_{\max}}
+  = \frac{U_{\max}^{2} - U_{\min}^{2}}{U_{\max}^{2}} .
+\end{equation}
+举例：某开源设计~\cite{adernal} 采用 $11$ 串 $50\ \mathrm{F}/3\ \mathrm{V}$ 单体
+（单体 ESR 约 $22\ \mathrm{m}\Omega$），则
+\begin{equation}
+  C = \frac{50}{11} \approx 4.55\ \mathrm{F},\qquad
+  U_{\max} = 33\ \mathrm{V},\qquad
+  R_{\mathrm{ESR}} = 11\times 22\ \mathrm{m}\Omega \approx 242\ \mathrm{m}\Omega .
+\end{equation}
+充到 $30\ \mathrm{V}$ 时储能
+\begin{equation}
+  E = \tfrac{1}{2}\times 4.55\times 30^{2} \approx 2045\ \mathrm{J}.
+\end{equation}
+若允许放电到 $15\ \mathrm{V}$，则可用能量占比为
+$1-(15/30)^2 = 75\%$，即约 $1534\ \mathrm{J}$——
+\emph{一半的电压窗口里藏着四分之三的能量}，这是电容储能的一个基本特征。
+
+恒功率放电时电压随时间的演化为
+\begin{equation}\label{eq:capdischarge}
+  U(t) = \sqrt{U_0^{2} - \frac{2Pt}{C}} ,
+\end{equation}
+它清楚地说明了两件事：
+\begin{itemize}
+  \item 电压随时间\emph{非线性}下降，越到后段下降越快；
+  因此“还能撑多久”不能线性外推。
+  \item 电容电压越低，同样的放电电流能提供的功率越小，
+  于是可补偿的差额也越小。这正是 Part I 中
+  “电容电量低于 $5\%$ 时取消额外放宽”那一条保护存在的物理原因。
+\end{itemize}
+
+\begin{note}[为什么不能把电容直接并在母线上]
+若不加 DC--DC 而直接把电容组并到母线，母线电压会随电容放电大幅下降。
+这会同时带来三个问题：电机在低压下性能下降；
+电调的力矩电流环增益需要重新标定；
+第~\ref{sec:model} 节的功率模型（其中不含母线电压）会系统性失准。
+因此双向 DC--DC 不是可选项，而是必要组件——
+它把“电容电压”与“母线电压”这两个量解耦开来。
+\end{note}
+
+\subsection{分层控制架构}
+
+超电系统在控制上是\emph{两层}结构，明确这一点对调试至关重要：
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{超电系统的分层控制职责划分}
+  \label{tab:layers}
+  \begin{tabular}{@{}p{0.14\textwidth}p{0.30\textwidth}p{0.26\textwidth}p{0.22\textwidth}@{}}
+    \toprule
+    层次 & 目标 & 主要手段 & 执行位置 \\
+    \midrule
+    能量层（外） & 决定本周期允许底盘用多少功率，
+    使缓冲能量/电容电量维持在期望区间 &
+    缓冲能量闭环、电量—功率映射、充/放电模式切换 &
+    超电控制器 或 主控 \\
+    \addlinespace[2pt]
+    力矩层（内） & 在给定功率预算下把力矩分配到各电机 &
+    Part I 的功率模型与功率再分配 &
+    主控 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+关于职责边界，存在两种常见做法：
+\begin{itemize}
+  \item \textbf{主控负责能量层。} 主控读裁判系统的缓冲能量，
+  运行外环得到功率预算，再把预算通过网络告知超电控制器。
+  Part I 第~\ref{sec:bufferloop} 节描述的就是这种结构。
+  \item \textbf{超电控制器负责能量层。} 主控把裁判系统的数据透传给超电控制器，
+  由它在本地完成能量调度与电容管理。
+  这种分工的好处是能量层与执行层在同一块板子上，回路更短、延迟更低。
+\end{itemize}
+无论采用哪一种，有一条经验值得记住：
+\begin{quote}
+\textbf{当“电容还有电却仍然超功率”时，应当优先检查超电侧的功率环与硬件能力，
+而不是继续调整主控的 PID。}
+\end{quote}
+
+\subsection{与功率控制的接口}
+
+主控与超电控制器之间至少需要传递两类信息：
+
+\begin{itemize}
+  \item \textbf{下行（主控 $\to$ 超电）：本周期计划从电池取用的功率。}
+  它正是 Part I 中的 $\Plim = \Pmax - u$。超电控制器据此决定
+  是给电容充电（当 $\Plim$ 低于底盘的实际需求时）还是放电补足。
+  \item \textbf{上行（超电 $\to$ 主控）：电容剩余电量百分比、当前母线功率、状态字。}
+  电量信息用于 Part I 中的电量保护与模式切换，
+  真实功率信息则可以反过来用于在线辨识电机参数（第~\ref{sec:future} 节）。
+\end{itemize}
+
+开源实现中几种简洁的接口形态见文献~\cite{hitszsupercap,pspsupercap,h7framework}，其中一种的用法是：
+\begin{lstlisting}[style=cstyle, numbers=none]
+input_power = max_power_limit - chassis_power_control->buffer_pid.out;
+CAN_CMD_CAP(input_power);     /* 下行：告知超电本周期电池侧功率目标 */
+cap_measure.cap_percent;      /* 上行：电容剩余电量百分比 */
+\end{lstlisting}
+
+典型的工作模式有两种，可以按战况切换：
+\begin{description}
+  \item[充电模式。] 把功率预算设为\emph{略低于}裁判限制，
+  使底盘产生小幅冗余功率持续给电容充电。
+  即使在交战中也能缓慢回充，是默认状态。
+  \item[补电模式。] 把功率预算设为\emph{远高于}裁判限制，
+  差额由电容长时间补偿。例如把 $45\ \mathrm{W}$ 的限制临时设为 $80\ \mathrm{W}$，
+  则电容需持续提供 $35\ \mathrm{W}$；若电容储量约 $2000\ \mathrm{J}$，
+  理论上可维持约一分钟。这一模式的代价是电容电量快速下降，
+  必须在电量低于阈值时自动退回充电模式。
+\end{description}
+
+\subsection{待补充的内容}
+
+后续版本计划在本部分补充以下内容（欢迎补充资料）：
+\begin{itemize}
+  \item 电容组选型与均衡电路的详细设计与实测数据；
+  \item 双向 DC--DC 的拓扑对比、开关器件选型与热设计；
+  \item 内层控制环（电容电流环、母线功率环）的建模与整定，
+  包括“恒功率”与“恒流”两种模式的取舍；
+  \item 电流采样方案（分流电阻 + 双向电流监测）的量程与精度设计，
+  以及开关噪声对采样的影响；
+  \item CAN 通信协议的完整报文定义与容错策略（超时、校验、状态机）；
+  \item 能量调度的优化策略：在整车能量池约束下，
+  如何决定“何时放电、放电多少”；
+  \item 实测波形、效率曲线与故障案例。
+\end{itemize}
+
+% ============================================================================
+\appendix
+\renewcommand{\thesection}{附录~\Alph{section}}
+
+% ============================================================================
+\section{矩阵求导速查与最小二乘的几何解释}\label{app:lsq}
+
+\subsection{常用矩阵求导公式}
+
+下表列出推导最小二乘解时用到的全部公式。
+其中 $a$ 为常向量，$A$ 为常矩阵，$\theta$ 为自变量向量。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{常用标量对向量求导公式}
+  \label{tab:matrixderiv}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    表达式 & 导数 & 备注 \\
+    \midrule
+    $a^{\mathsf T}\theta$                & $a$                        & 线性型 \\
+    $\theta^{\mathsf T}a$                & $a$                        & 与上式相等（标量） \\
+    $\theta^{\mathsf T}\theta$           & $2\theta$                  & 取 $A=I$ \\
+    $\theta^{\mathsf T}A\theta$          & $(A+A^{\mathsf T})\theta$  & 一般情形 \\
+    $\theta^{\mathsf T}A\theta$          & $2A\theta$                 & $A$ 对称时 \\
+    $\lVert y-X\theta\rVert^{2}$         & $-2X^{\mathsf T}y + 2X^{\mathsf T}X\theta$ & 最小二乘的核心 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+补充两条常用的标量求导法则（第~\ref{sec:firstorder} 节已用到）：
+\begin{equation}
+  \frac{\partial}{\partial x}\bigl[u(x)^2\bigr] = 2u\,\frac{\partial u}{\partial x},
+  \qquad
+  \frac{\partial}{\partial x}\bigl[u(x)v(x)\bigr]
+  = \frac{\partial u}{\partial x}v + u\frac{\partial v}{\partial x}.
+\end{equation}
+
+\subsection{几何解释：最小二乘就是正交投影}
+
+线性方程组 $X\theta = y$ 通常在 $N>3$ 时无解，因为 $y$ 一般不在 $X$ 的列空间里。
+最小二乘做的事情是：在 $X$ 的列空间中找一个与 $y$ \emph{距离最近}的向量。
+由第~\ref{sec:firstorder} 节得到的正交性条件 \fref{eq:orth}，
+这个“最近点”正是 $y$ 在列空间上的\emph{正交投影}：
+\begin{equation}
+  \hat y = X\hat\theta = X(X^{\mathsf T}X)^{-1}X^{\mathsf T}y = Hy ,
+\end{equation}
+其中 $H = X(X^{\mathsf T}X)^{-1}X^{\mathsf T}$ 称为\emph{投影矩阵}（或称帽子矩阵），
+它满足 $H^2=H$（幂等）与 $H^{\mathsf T}=H$（对称）——这正是投影算子的定义性质。
+残差 $\varepsilon = y-\hat y$ 与列空间中的每一个向量都正交，
+因此有著名的勾股关系
+\begin{equation}
+  \lVert y\rVert^{2} = \lVert \hat y\rVert^{2} + \lVert\varepsilon\rVert^{2}.
+\end{equation}
+“最小二乘”这个名字的来源也在这里：它最小化的正是 $y$ 到列空间的\emph{垂直距离}。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[scale=1.0, >=Stealth]
+    % 列空间（用平行四边形示意）
+    \fill[eblue!8] (0,0) -- (5.0,0.9) -- (6.6,2.9) -- (1.6,2.0) -- cycle;
+    \draw[eblue!45] (0,0) -- (5.0,0.9) -- (6.6,2.9) -- (1.6,2.0) -- cycle;
+    \node[eblue!70!black, font=\small] at (5.85,2.75) {$\operatorname{col}(X)$};
+
+    \coordinate (O)  at (1.55,0.85);
+    \coordinate (Yh) at (4.05,2.00);
+    \coordinate (Y)  at (4.05,4.35);
+
+    \draw[->, thick] (O) -- (Y)  node[midway, left=1pt, font=\small] {$y$};
+    \draw[->, thick, eblue] (O) -- (Yh)
+       node[midway, below right=0pt, font=\small, text=eblue!70!black] {$\hat y = X\hat\theta$};
+    \draw[->, thick, red!70!black, dashed] (Yh) -- (Y)
+       node[midway, right=2pt, font=\small, text=red!70!black] {$\varepsilon$};
+
+    % 直角标记
+    \draw[red!70!black] ($(Yh)+(0.28,0.06)$) -- ($(Yh)+(0.28,0.34)$) -- ($(Yh)+(0.0,0.28)$);
+    \fill (O) circle (1.1pt);
+    \node[below left, font=\small] at (O) {$0$};
+  \end{tikzpicture}
+  \caption{最小二乘的几何意义：$\hat y$ 是观测向量 $y$ 在回归量列空间上的正交投影，
+  残差 $\varepsilon$ 与列空间正交。}
+  \label{fig:projection}
+\end{figure}
+
+\subsection{从投影角度重推正规方程}
+
+设 $\hat y = X\hat\theta$。正交条件“$\varepsilon\perp\operatorname{col}(X)$”
+可以写成：对列空间中的任意向量 $Xv$（$v$ 任意），都有
+\begin{equation}
+  (Xv)^{\mathsf T}(y - X\hat\theta) = 0
+  \;\Longrightarrow\;
+  v^{\mathsf T}\bigl(X^{\mathsf T}y - X^{\mathsf T}X\hat\theta\bigr) = 0 .
+\end{equation}
+由于 $v$ 任意，括号内的向量必须为零向量，于是
+\begin{equation}
+  X^{\mathsf T}y - X^{\mathsf T}X\hat\theta = 0
+  \;\Longleftrightarrow\;
+  X^{\mathsf T}X\hat\theta = X^{\mathsf T}y .
+\end{equation}
+这与 \fref{eq:normal} 完全相同，但完全不需要求导。
+两种推导各有好处：求导的版本给出了“为什么是极小值”（海森矩阵半正定），
+投影的版本给出了“为什么残差正交”（几何直观）。
+
+% ============================================================================
+\section{单位与换算系数}
+
+模型推导中涉及多次单位换算是出错的常见来源。下表把它们集中列出。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{关键单位换算}
+  \label{tab:units}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    换算 & 关系 & 数值 \\
+    \midrule
+    转速：rpm $\to$ rad/s      & $\Omega = \dfrac{2\pi}{60}\omega$ & $\div\,9.5493$ \\
+    转速：rad/s $\to$ rpm      & $\omega = \dfrac{60}{2\pi}\Omega$ & $\times\,9.5493$ \\
+    功率：扭矩 $\times$ 转速   & $P = \dfrac{\tau\omega}{9.55}$    & $\tau$ 单位 N$\cdot$m，$\omega$ 单位 rpm \\
+    控制值 $\to$ 力矩电流      & $\Itau = \dfrac{20}{16384}\Icmd$  & $\times\,1.2207\times10^{-3}$ A \\
+    力矩电流 $\to$ 转子力矩    & $\tau = \KT\Itau$                 & $\KT = 0.015622$ N$\cdot$m/A \\
+    控制值 $\to$ 转子力矩      & $\tau = 1.9069\times10^{-5}\Icmd$ & N$\cdot$m \\
+    控制值 $\to$ 机械功率系数  & $\CT = 1.99688994\times10^{-6}$   & W/rpm（每单位控制值） \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{note}
+在横向比较不同队伍公布的模型系数之前，必须先确认其\emph{单位约定}。
+同样是写作 $k_2$ 的系数，若一方的力矩以 A 为单位、转速以 rad/s 为单位，
+另一方以控制值（$\pm16384$）和 rpm 为单位，两者的数值可以相差约 $10^{6}$ 倍。
+换算关系为
+\begin{equation}
+  k_{2}^{(\text{A},\ \mathrm{rad/s})}
+  = k_{2}^{(\text{控制值},\ \mathrm{rpm})}
+    \times \left(\frac{16384}{20}\right)^{2} \times 9.55 ,
+\end{equation}
+因此在任何对比表中都必须注明单位，否则结论没有意义。
+\end{note}
+
+% ============================================================================
+\section{数据集与拟合脚本}
+
+开源实现提供的\code{model\_fit} 目录包含两部分：拟合脚本与实测数据集。
+
+\subsection{数据集}
+
+数据集为 CSV 格式，文件名反映了激励信号的类型与参数，
+包括恒定转速、斜坡、以及若干组不同频率与幅值的正弦激励：
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{数据集构成（示意）}
+  \label{tab:datasets}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    文件 & 激励类型 & 用途 \\
+    \midrule
+    \code{constantspeed.csv} & 恒定转速 & 观察空载损耗随转速的变化 \\
+    \code{ramp.csv}、\code{ramp2.csv} & 斜坡力矩 & 覆盖大范围力矩 \\
+    \code{sin*.csv} & 正弦力矩（多种频率/幅值） & 主要拟合数据 \\
+    \code{test*.csv} & 混合工况 & 交叉验证 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+如前文所述，这样的激励组合是\emph{刻意}设计的：只有同时让转速与力矩充分变化，
+$k_2$ 与 $k_1$、$a$ 才可分离（第~\ref{sec:lsq} 节）。
+
+\subsection{拟合脚本}
+
+\begin{lstlisting}[style=matstyle]
+KT = 0.3/(3591/187);
+KE = (60/(2*pi*24.48))/(3591/187);
+
+bus_voltage = 24.56;
+give_toque_current = 20 * give_current / 16384;
+give_toque = KT .* give_toque_current;
+input_power = bus_voltage * current;
+
+machine_power = (motor_chassis0speed_rpm .* give_toque) / 9.550;
+
+% 损耗功率 = 实测输入功率 - 解析机械功率
+Pother = input_power - machine_power;
+
+% 线性最小二乘拟合：Pother = k1*w^2 + k2*I^2 + c
+g = fittype('k1*motor_chassis0speed_rpm^2+k2*give_current.^2+c', ...
+    'independent',{'motor_chassis0speed_rpm','give_current'}, ...
+    'dependent','Pother','coefficients',{'k1','k2','c'});
+myfit = fit([motor_chassis0speed_rpm, give_current], Pother, g);
+
+% 拟合结果示例
+Pre_Pother = 2.11e-07*motor_chassis0speed_rpm.^2 ...
+           + 9.805e-08*give_current.^2 + 2.138;
+predicte_power = machine_power + Pre_Pother;
+
+figure; plot(input_power); hold on; plot(predicte_power);
+legend('real power','predicte power');
+\end{lstlisting}
+
+\code{fittype} 中的表达式与本文 \fref{eq:regmodel} 完全一致，
+只是变量名不同：\code{motor\_chassis0speed\_rpm} 对应 $\omega$，
+\code{give\_current} 对应 $\Icmd$，\code{Pother} 对应 $y$。
+\code{fit} 内部使用的是正交分解而非显式求逆，
+因此第~\ref{sec:lsq} 节讨论的数值条件问题在 MATLAB 中通常不会暴露——
+但这也意味着\textbf{直接照抄公式到单片机上可能得到不准确的结果}，
+需要按第~\ref{sec:lsq} 节的建议先做无量纲化。
+
+\subsection{自己实现正规方程}
+
+若需要在 MATLAB 之外（例如 Python 或嵌入式离线工具）复现拟合，
+最小实现只需要构造 $X$ 与 $y$，然后求解 \fref{eq:normal}：
+
+\begin{lstlisting}[style=cstyle, numbers=none]
+# X 的第 i 行为 [omega_i^2, Icmd_i^2, 1]，y_i 为损耗功率
+import numpy as np
+X = np.column_stack([omega**2, Icmd**2, np.ones_like(omega)])
+theta, residuals, rank, sv = np.linalg.lstsq(X, y, rcond=None)
+# theta = [k2, k1, a]
+print("cond(X) =", np.linalg.cond(X))
+\end{lstlisting}
+
+顺手打印条件数是一个好习惯：若 $\kappa(X)$ 大于 $10^{6}$，
+说明数据存在严重共线性，此时参数虽然可以算出来，但不宜相信。
+
+% ============================================================================
+\section{中英文术语对照}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{术语对照表}
+  \label{tab:glossary}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    中文 & 英文 / 代码标识 & 说明 \\
+    \midrule
+    缓冲能量           & buffer energy / \code{chassis\_power\_buffer} & 裁判系统提供的功率账户 \\
+    缓冲能量闭环       & buffer power loop            & 外环，PI 控制 \\
+    功率上限           & power limit / \code{max\_power\_limit} & 裁判系统给定 \\
+    功率预算           & power budget / \code{chassis\_max\_power} & 本周期允许的取用功率 \\
+    力矩电流控制值     & give current / \code{give\_current} & 发送给电调的整型控制量 \\
+    力矩电流反馈值     & given current / \code{given\_current} & 电调回传的控制量 \\
+    力矩电流           & torque current / $I_\tau$    & 与转矩成正比的电流分量 \\
+    力矩电流系数       & \code{toque\_coefficient} / $\CT$ & 发送值 $\times$ 转速 $\to$ 功率 \\
+    空载损耗           & no-load loss / $P_0(\omega)$ & 零力矩时的输入功率 \\
+    功率再分配         & power redistribution         & 本文采用的分配策略 \\
+    功率缩放系数       & power scale / \code{power\_scale} & $k=\Plim/\sum P_i$ \\
+    恒功率包络         & constant-power envelope      & 允许控制量关于转速的曲线 \\
+    回馈制动           & regenerative braking         & 力矩与转速反向，功率为负 \\
+    反电动势           & back electromotive force     & 减速时产生回馈功率的物理机制 \\
+    磁场定向控制       & field-oriented control (FOC) & 将电流分解为 $d$、$q$ 轴 \\
+    递推最小二乘       & recursive least squares (RLS) & 在线参数辨识 \\
+    遗忘因子           & forgetting factor $\lambda$  & RLS 对新数据的权重 \\
+    等效串联电阻       & equivalent series resistance (ESR) & 电容组的关键参数 \\
+    填谷削峰           & peak shaving / valley filling & 超电的基本工作方式 \\
+    电池管理系统       & battery management system (BMS) & — \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================================
+\printbibliography[heading=bibintoc, title=\ebibname]
 
 \end{document}
