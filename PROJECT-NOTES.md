@@ -99,12 +99,13 @@
 
 ---
 
-## 4. 参考素材（不在本仓库中）
+## 4. 参考素材
 
-- 原始开源资料：`https://github.com/MaxwellDemonLin/Motor-modeling-and-power-control`
+- 原始开源资料（外部仓库）：`https://github.com/MaxwellDemonLin/Motor-modeling-and-power-control`
   （开源报告 PDF、讲解幻灯片 PDF、`chassis_power_control.c`、`power_model.m`、数据集 CSV）
-- 调研笔记：记录了各队伍功率控制方案、官方规则原文、超电方案与 CAN 协议等，
-  对应本仓库 `reference.bib` 中的条目。
+- **本仓库内**：`docs/research-rm-power-control.md`
+  调研笔记，记录了各队伍功率控制方案与实测系数、缓冲能量官方规则原文、
+  超级电容拓扑与 CAN 协议实例、常见工程坑等，是 `reference.bib` 条目的来源依据。
 
 ---
 
@@ -114,3 +115,29 @@
   正文第 8 节引用的代码片段已注明出处。
 - 其他开源实现（ZJU、HKUST、HKUST-GZ、HITSZ、UBC/PSP、广工等）均按参考文献列表引用。
 - 官方规则、芯片手册等按官方来源引用。
+
+---
+
+## 6. ⚠️ 平台回写覆盖问题（务必先读）
+
+发生过一次：文档推送成功后，LoongTeX 平台以其本地保存的旧版本回写了一次提交
+（提交信息 `Initial commit from LoongTeX`），把 `elegantnote-cn.tex` 从 2515 行
+改回了 256 行的模板样例。`reference.bib` 与 `PROJECT-NOTES.md` 未受影响。
+
+**结论：只要平台侧的副本还是旧内容，从平台保存时就会覆盖 GitHub 上的版本。**
+
+推荐的操作顺序：
+
+1. **先在平台侧同步**（LoongTeX / Overleaf 里执行“从 GitHub 拉取”或等效操作），
+   确认 `elegantnote-cn.tex` 已经是 2500 行左右、且首行附近的
+   `\documentclass` 是 `[cn,blue,11pt,device=normal]`；
+2. 之后再在平台上编辑、保存、提交；
+3. 若再次被覆盖，可用下面任一方式恢复：
+   - 从历史提交取回：`git checkout <commit> -- elegantnote-cn.tex`
+     （完整文档所在提交为 `fddcdb2`，其后的恢复提交亦可）
+   - 或直接看 `git log --oneline -- elegantnote-cn.tex` 找到行数最多的那一版。
+
+**判断当前文件是不是正确版本的快速自检**：
+`\documentclass[cn,blue,11pt,device=normal]{elegantnote}` + 文件里能搜到“最小二乘”。
+若看到的是 `hazy` / `screen` / `14pt`，说明又拿到旧模板了。
+
