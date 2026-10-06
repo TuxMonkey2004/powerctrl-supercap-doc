@@ -122,21 +122,47 @@
   keepspaces=true
 }
 
+%------------------------------------------------------------------ 框图统一样式
+% 全文所有功能框图共用这一套样式，保证风格一致。
+\tikzset{
+  fblock/.style   = {draw=eblue, thick, rounded corners=2pt, fill=eblue!5,
+                     minimum height=9mm, minimum width=20mm, align=center,
+                     font=\small, inner sep=3pt},
+  fsys/.style     = {fblock, draw=codegreen, fill=codegreen!7, minimum width=26mm},
+  fwarn/.style    = {fblock, draw=red!65!black, fill=red!5},
+  fsoft/.style    = {fblock, fill=eblue!10, minimum width=24mm},
+  fsum/.style     = {draw=eblue, thick, circle, inner sep=0pt,
+                     minimum size=5.5mm, fill=white},
+  fio/.style      = {draw=gray!65, rounded corners=7pt, fill=gray!6,
+                     align=center, font=\small, inner sep=4pt},
+  fgroup/.style   = {draw=gray!55, dashed, rounded corners=3pt, inner sep=7pt},
+  farr/.style     = {draw, thick, -{Stealth[length=1.8mm]}},
+  fdarr/.style    = {draw, thick, dashed, -{Stealth[length=1.8mm]}},
+  fbio/.style     = {draw, thick, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}},
+  flab/.style     = {font=\scriptsize, text=black!70, inner sep=1pt},
+  ftitle/.style   = {font=\small\bfseries, text=eblue}
+}
+
 % 行内代码：等宽、可在空格与下划线处断行。
 % 注意不要用 \mbox 包住——那会变成一个不可断行的盒子，
 % 长标识符（如 motor_speed_pid[i].out）会直接冲出页边。
 \newcommand{\code}[1]{{\ttfamily\small\def\_{\textunderscore\allowbreak}#1}}
 
 %------------------------------------------------------------------ 记号宏
-\newcommand{\Pin}{P_{\mathrm{in}}}
-\newcommand{\Pmech}{P_{\mathrm{m}}}
-\newcommand{\Icmd}{I_{\mathrm{cmd}}}
-\newcommand{\Itau}{I_{\tau}}
-\newcommand{\KT}{K_{T}}
-\newcommand{\CT}{C_{T}}
-\newcommand{\Ebuf}{E_{\mathrm{buf}}}
-\newcommand{\Plim}{P_{\mathrm{lim}}}
-\newcommand{\Pmax}{P_{\max}}
+% 注意每个宏末尾都带一个空的 {}：这些宏本身已经含下标（如 P_{\mathrm{in}}），
+% 若在宏名后面直接跟一个下标，会形成“同一个基底下标两次”，
+% 触发 Double subscript 错误，第二个下标被 TeX 静默丢弃（页面上看不出来）。
+% 末尾的 {} 提供一个零宽基底，因此“宏名 + 下标”与
+% “用大括号包住宏名再加下标”两种写法都能正常工作。
+\newcommand{\Pin}{P_{\mathrm{in}}{}}
+\newcommand{\Pmech}{P_{\mathrm{m}}{}}
+\newcommand{\Icmd}{I_{\mathrm{cmd}}{}}
+\newcommand{\Itau}{I_{\tau}{}}
+\newcommand{\KT}{K_{T}{}}
+\newcommand{\CT}{C_{T}{}}
+\newcommand{\Ebuf}{E_{\mathrm{buf}}{}}
+\newcommand{\Plim}{P_{\mathrm{lim}}{}}
+\newcommand{\Pmax}{P_{\max}{}}
 \newcommand{\dd}{\mathrm{d}}
 \newcommand{\fref}[1]{式~\eqref{#1}}
 
@@ -200,31 +226,67 @@ $s^2 + K_p s + K_i = 0$ 与阻尼比、自然频率的对应关系。最后逐�
 % ============================================================================
 \section{背景、问题与符号约定}
 
-\subsection{缓冲能量：一个会失效的“能量账户”}
+\subsection{缓冲能量是怎么工作的}
 
-RoboMaster 裁判系统对底盘功率施加的约束并不是一个硬上限，而是一个带“账户”的软约束。
-系统向底盘提供一份\emph{缓冲能量}（buffer energy）$\Ebuf$，其动态为
+裁判系统发给底盘的并不是一个“绝对不能超过”的功率上限，而是把“还能多用多少”
+和“已经用超了多少”合在同一个量里管理。这个量就是\emph{缓冲能量}
+（buffer energy）$\Ebuf$，它的变化规律只有一条：
 \begin{equation}\label{eq:buffer}
-  \frac{\dd \Ebuf}{\dd t} =
-  \begin{cases}
-    \Pmax - \Pin, & \Pin < \Pmax \quad(\text{盈余入账}),\\[2pt]
-    \Pmax - \Pin, & \Pin > \Pmax \quad(\text{超支扣减}),
-  \end{cases}
+  \frac{\dd \Ebuf}{\dd t} = \Pmax - \Pin ,
 \end{equation}
 其中 $\Pmax$ 为当前等级对应的底盘功率上限，$\Pin$ 为底盘从电池实际取用的功率。
-\fref{eq:buffer} 的两支其实可以合并写成同一个式子：$\dd \Ebuf/\dd t = \Pmax - \Pin$。
-换言之，缓冲能量就是\emph{功率误差对时间的积分}，它有一个由裁判系统设定的上限
-$E_{\max}$（常见取值为 $60\ \mathrm{J}$，随赛季与兵种等级可能不同）：
-当 $\Ebuf$ 触及上限后不再累积；当 $\Ebuf$ 被扣减到零并继续超功率时，裁判系统开始施加惩罚\cite{rm2024rules}。
+\fref{eq:buffer} 的含义非常直白：
 
-由此得到一个非常重要的推论：\textbf{缓冲能量是“底盘功率是否超标”的唯一观测量}。
-只要底盘长期稳定地工作在 $\Pmax$ 附近，$\Ebuf$ 就会被钉在某个不动点上游走。
-过去几年的功率控制方案，本质上都是围绕 $\Ebuf$ 设计一个外环：
+\begin{itemize}
+  \item $\Pin < \Pmax$：底盘用得比上限少，差额先存下来，$\Ebuf$ 变大；
+  \item $\Pin > \Pmax$：底盘用得比上限多，超出的部分从这里扣，$\Ebuf$ 变小。
+\end{itemize}
+
+也就是说，$\Ebuf$ 就是\emph{功率差对时间的累积}，单位是焦耳。
+它有一个上限 $E_{\max}$（常见取值为 $60\ \mathrm{J}$，随赛季与兵种等级可能不同）：
+到达上限后就不再增加；一旦被扣到 $0$ 之后还在超功率，裁判系统就开始扣血\cite{rm2024rules}。
+整个过程如图~\ref{fig:bufferbehaviour} 所示。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1.0cm, y=0.048cm, >=Stealth]
+    % 扣血区域
+    \fill[red!10] (8.2,0) rectangle (11.0,64);
+    % 坐标轴
+    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,0) -- (11.5,0)
+      node[right, font=\small] {$t$};
+    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,0) -- (0,68)
+      node[above, font=\small] {$\Ebuf$ (J)};
+    % 60 J 上限
+    \draw[red!60!black, dashed] (0,60) -- (11.0,60);
+    \node[flab, text=red!60!black, anchor=south west] at (0.0,61) {$E_{\max}=60\ \mathrm{J}$};
+    % 缓冲能量曲线
+    \draw[eblue, very thick]
+      (0,18) -- (1.6,44) -- (3.4,14) -- (5.2,60) -- (6.4,60) -- (8.2,0) -- (11.0,0);
+    % 标注（白底，避免文字与曲线互相干扰）
+    \node[flab, fill=white, inner sep=1.5pt] at (0.55,40) {上升};
+    \node[flab, fill=white, inner sep=1.5pt] at (2.45,27) {下降};
+    \node[flab, anchor=south] at (5.80,62)
+      {到达上限后不再增加};
+    \node[flab, text=red!65!black, align=center, anchor=north] at (9.20,55)
+      {缓冲能量耗尽\\开始扣血};
+    \node[flab, anchor=west] at (0.10,10) {$0$};
+  \end{tikzpicture}
+  \caption{缓冲能量的典型变化过程。它本身不是一个可以“取用”的储量，
+  而是功率差随时间的累积：底盘功率低于上限 $\Pmax$ 时上升，超过 $\Pmax$ 时下降；
+  到达 $60\ \mathrm{J}$ 后饱和不再增加，被扣到 $0$ 之后进入扣血阶段。}
+  \label{fig:bufferbehaviour}
+\end{figure}
+
+由此可以得到一个关键结论：\textbf{缓冲能量是判断底盘有没有超功率的唯一观测量}。
+只要底盘长期工作在 $\Pmax$ 附近，$\Ebuf$ 就会在某个值附近来回摆动。
+过去几年的功率控制方案，本质上都是围绕 $\Ebuf$ 做一个外环：
 
 \begin{quote}
-用 PID 把 $\Ebuf$ 稳定在一个设定值（例如 $30\ \mathrm{J}$）上，PID 的输出被解释为
-“本控制周期允许底盘多花或少花多少功率”，于是底盘既不会长期超功率，
-又能在需要时动用账户余额实现短暂爆发。
+用 PID 把 $\Ebuf$ 稳定在某个设定值（例如 $30\ \mathrm{J}$）：
+$\Ebuf$ 偏低，说明前段时间用得太多，就把本周期的功率限额收紧一点；
+$\Ebuf$ 偏高，说明还有余量，就放宽一点。
+这样底盘既不会长期超功率，又能在需要的时候短时间超过 $\Pmax$ 冲一下。
 \end{quote}
 
 \subsection{超电为什么会让缓冲能量失效}
@@ -294,6 +356,183 @@ $E_{\max}$（常见取值为 $60\ \mathrm{J}$，随赛季与兵种等级可能�
 把这个问题回答清楚，就能实现一个理想的功率控制目标——\emph{恒功率运行}：
 从起步到大加速度的整个过程中，电机始终工作在 $\Pmax$ 上，从而获得功率受限条件下
 理论上的最大加速度。这一目标也解释了为什么必须建模：它要求的是“功率到力矩”的\emph{反函数}。
+
+\subsection{为什么必须“预测”功率}\label{sec:whypredict}
+
+既然缓冲能量能反映超功率，为什么不能“先用着，超了再收”？
+这个思路在底盘上会遇到三个绕不过去的困难。
+
+\paragraph{困难一：等测到，就已经晚了。}
+裁判系统对底盘功率的结算周期是 $100\ \mathrm{ms}$（即 $10\ \mathrm{Hz}$）\cite{rm2024rules}，
+而底盘的控制周期是 $1\ \mathrm{ms}$ 量级。也就是说，
+从“电机真的超功率了”到“程序知道超功率了”，中间隔着一百个控制周期。
+在这段时间里底盘只能继续超功率，等数据回来再收手，多消耗的能量已经发生了。
+这是一条“先犯错、再纠正”的路，而功率约束恰恰不给人犯错的机会：
+缓冲能量被扣到 $0$ 之后，每一次超功率都直接扣血。
+
+\paragraph{困难二：反馈量分不到具体电机。}
+裁判系统给出的只有\emph{四个电机的总功率}。当总功率超标时，
+程序并不知道是哪一个电机超了——可能只有右前轮在打滑空转，
+也可能四个轮子一起用力过猛。而功率限制最终必须落到每一个电机的力矩指令上，
+这中间缺了一个“总功率 $\to$ 各电机力矩”的分配环节，而反馈信息里没有它。
+
+\paragraph{困难三：能下发的量不是功率。}
+这是最根本的一点。程序能直接控制的量是\emph{力矩电流指令} $\Icmd$，
+而功率与指令之间不是固定的倍数关系：
+\begin{equation}\label{eq:why-nonlinear}
+  \Pin = k_2\omega^2 + \CT\,\Icmd\,\omega + k_1\Icmd^2 + a .
+\end{equation}
+同一个指令 $\Icmd$，在 $1000\ \mathrm{rpm}$ 下可能只消耗几瓦，
+在 $6000\ \mathrm{rpm}$ 下却要消耗几十瓦；反过来，同样要求消耗 $40\ \mathrm{W}$，
+低速时要发很大的指令，高速时只需要很小的指令。
+所以“功率超了就把指令调小一点”这种做法，\emph{调多少完全取决于当前转速}，
+并不存在一个通用的比例。
+
+\medskip
+三个困难指向同一个结论：\textbf{与其在下发之后去测量和纠正，
+不如在下发之前就把结果算出来}。这就是“预测”的含义：
+
+\begin{quote}
+用电机功率模型，从\emph{准备下发的指令}与\emph{当前转速}，
+直接算出\emph{这样下发会消耗多少功率}；反过来，
+也可以从\emph{希望消耗多少功率}算出\emph{应该下发多大的指令}。
+\end{quote}
+
+两种思路的差别如图~\ref{fig:why-predict} 所示。反馈式控制必须“先发生、再发现”，
+而预测式控制在下发之前就已经知道结果。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth]
+    % ================= (a) 反馈式 =================
+    \node[ftitle] at (-1.35,0) {(a)};
+    \node[fblock] (a1) at (0,0)    {力矩指令};
+    \node[fblock] (a2) at (3.4,0)  {电机};
+    \node[fblock] (a3) at (6.8,0)  {实际功率};
+    \node[fblock] (a4) at (10.2,0) {与上限比较};
+    \draw[farr] (a1) -- (a2);
+    \draw[farr] (a2) -- (a3);
+    \draw[farr] (a3) -- (a4);
+    \draw[fdarr] (a4.south) -- ++(0,-0.9) -| (a1.south);
+    \node[flab, text=red!65!black, anchor=north] at (5.1,-1.75)
+      {要等下一个结算周期（$100\ \mathrm{ms}$）才生效——此刻已经超功率了};
+
+    % ================= (b) 预测式 =================
+    \node[ftitle] at (-1.35,-4.1) {(b)};
+    \node[fblock] (b1) at (0,-4.1)    {目标功率\\$P^{\ast}$};
+    \node[fsoft]  (b2) at (3.4,-4.1)  {模型反解\\$f^{-1}$};
+    \node[fblock] (b3) at (6.8,-4.1)  {力矩指令\\$\Icmd$};
+    \node[fblock] (b4) at (10.2,-4.1) {电机};
+    \draw[farr] (b1) -- (b2);
+    \draw[farr] (b2) -- (b3);
+    \draw[farr] (b3) -- (b4);
+
+    \node[fsoft] (b5) at (3.4,-6.5) {功率预测\\$\hat\Pin = f(\Icmd,\omega)$};
+    \node[flab, anchor=east] at (1.75,-6.5) {$\Icmd$、$\omega$};
+    \draw[farr] (1.85,-6.5) -- (b5.west);
+    \draw[fdarr] (b5.north) -- (b2.south);
+    \node[flab, text=codegreen, anchor=north west] at (2.0,-7.35)
+      {同一套模型正反两用：下发前先算一遍，因此不需要“事后修正”};
+  \end{tikzpicture}
+  \caption{两种控制思路的对比。(a) 反馈式：先下发、再测量、再修正，
+  修正永远滞后一个结算周期；(b) 预测式：用同一个模型在下发之前算出后果，
+  并把“想要多少功率”直接翻译成“该发多大指令”。}
+  \label{fig:why-predict}
+\end{figure}
+
+预测带来三个直接的好处：
+\begin{enumerate}
+  \item 功率是在下发\emph{之前}分配好的，不存在“先超标再收回”的窗口；
+  \item 预算可以精确地分给四个电机，而不是靠一个笼统的系数去凑；
+  \item \emph{恒功率运行}成为可能——从起步到加速的整个过程，电机始终贴着功率上限走。
+  这正是功率受限条件下加速度最大的工作方式（参见图~\ref{fig:envelope}）。
+\end{enumerate}
+
+当然，预测不是免费的：它的准确性完全取决于模型。
+这就是第~\ref{sec:model} 节与第~\ref{sec:lsq} 节要花大篇幅建立模型、
+做参数辨识的原因。而模型误差又不可能完全消除（温度、母线电压、电机个体差异都会带来偏差），
+所以除了预测，还必须保留第~\ref{sec:bufferloop} 节的缓冲能量外环作为兜底——
+一句话概括两者的分工：\textbf{预测负责“准”，外环负责“稳”}。
+
+\subsection{系统总体结构}\label{sec:system}
+
+把上面的思路落到实车上，就得到一个分层的系统结构，如图~\ref{fig:system} 所示。
+从上到下可以分成四层。
+
+\begin{description}
+  \item[感知层：] 提供全部输入——操作手的遥控指令、
+  裁判系统给出的功率上限与缓冲能量、以及四个电机回传的转速与力矩电流。
+  \item[决策层（主控软件）：] 全部算法都在这一层，而且分成两个节奏。
+  外环按裁判系统的 $10\ \mathrm{Hz}$ 结算节奏运行，负责把缓冲能量稳定住并给出功率预算；
+  内环按 $1\ \mathrm{kHz}$ 运行，负责预测功率、分配预算、反解指令。
+  \item[执行层：] 通过 CAN 把力矩指令发给 C620 电调，由电调驱动 M3508 电机。
+  \item[能量层：] 电池母线与超级电容之间通过双向 DC--DC 交换能量，
+  在底盘需要爆发时补足差额，在底盘有余量时把能量收回去。
+\end{description}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, transform shape, scale=0.94]
+    % ---------------- 感知层 ----------------
+    \node[fio] (rc)  at (0,0)    {操作手\\遥控指令};
+    \node[fio] (ref) at (5.0,0)  {裁判系统\\$\Pmax$、$\Ebuf$};
+    \node[fio] (fb)  at (10.0,0) {电机反馈\\$\omega$、$\Icmd$};
+
+    % ---------------- 外环 ----------------
+    \node[fblock] (bloop) at (5.0,-2.6) {缓冲能量\\外环 PID};
+    \node[fblock] (bud)   at (10.0,-2.6){功率预算\\$\Plim$};
+    \draw[farr] (ref) -- (bloop);
+    \draw[farr] (bloop) -- (bud);
+
+    % ---------------- 内环 ----------------
+    \node[fsoft]  (pred)  at (0,-5.2)    {功率预测\\$\hat P_i=f({\Icmd}_i,\omega_i)$};
+    \node[fblock] (alloc) at (5.0,-5.2)  {功率再分配\\$k=\Plim/\sum_i \hat P_i$};
+    \node[fblock] (inv)   at (10.0,-5.2) {反解\\${\Icmd}_i'=f^{-1}(P_i^{\ast},\omega_i)$};
+    \draw[farr] (rc) -- (pred);
+    \draw[farr] (pred) -- (alloc);
+    \draw[farr] (alloc) -- (inv);
+    \draw[farr] (bud) -- (alloc);
+
+    % ---------------- 执行层 ----------------
+    \node[fblock] (can) at (0,-7.8)    {CAN 发送};
+    \node[fblock] (esc) at (5.0,-7.8)  {C620 电调};
+    \node[fblock] (mot) at (10.0,-7.8) {M3508 电机 $\times4$};
+    \draw[farr] (inv.south) -- ++(0,-1.0) -| (can.north);
+    \draw[farr] (can) -- (esc);
+    \draw[farr] (esc) -- (mot);
+
+    % ---------------- 能量层 ----------------
+    \node[fio]  (bat) at (0,-10.4)   {电池母线};
+    \node[fsys] (cap) at (5.0,-10.4) {超级电容\\$+$ 双向 DC--DC};
+    \node[flab, anchor=west] at (6.9,-10.4) {补足差额 / 收回余量};
+    \draw[fbio] (bat) -- (cap);
+
+    % ---------------- 反馈回路 ----------------
+    \draw[fdarr] (mot.east) -- ++(1.5,0) |- (fb.east);
+    \node[flab, anchor=west, text=codegreen] at (11.6,-3.9) {反馈};
+
+    % ---------------- 软件范围 ----------------
+    \node[fgroup, fit=(bloop)(bud)(pred)(alloc)(inv),
+          label={[flab, anchor=south west]above left:主控软件（决策层）}] {};
+  \end{tikzpicture}
+  \caption{底盘功率控制系统的总体结构。虚线框内是运行在主控上的软件：
+  外环按裁判系统的结算节奏（$10\ \mathrm{Hz}$）给出功率预算，
+  内环按控制周期（$1\ \mathrm{kHz}$）完成功率预测、预算分配与指令反解；
+  超级电容在能量层与电池母线并联，负责补足或收回差额。}
+  \label{fig:system}
+\end{figure}
+
+这个结构里有两条信息流值得单独指出。
+
+\begin{itemize}
+  \item \textbf{纵向：预算的传递。} 缓冲能量外环不直接参与电机运算，
+  它只输出一个数——本周期的功率预算 $\Plim$。内环把它当作“总共能用多少功率”，
+  再决定怎么分给四个电机。外环与内环解耦，是这套结构最容易维护的地方：
+  调外环参数不会影响内环的分配逻辑，反之亦然。
+  \item \textbf{横向：模型的复用。} 内环里“功率预测”与“反解”用的是\emph{同一个模型}，
+  只是一个正向用、一个求反。因此模型参数只需要标定一次，
+  任何一处改进（例如加入母线电压修正）都会同时改善预测与反解。
+\end{itemize}
 
 \subsection{符号与正方向约定}\label{sec:convention}
 
@@ -541,6 +780,42 @@ C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要
       = 1.99688994\times10^{-6}\ \ [\mathrm{W/rpm}].
 \end{equation}
 
+模型的用法如图~\ref{fig:predict} 所示：把\emph{准备下发的指令}与\emph{当前转速}
+送进模型，四项分别算出再求和，就得到电机在这一刻的输入功率估计值 $\hat\Pin$。
+整个过程只有几次乘加与一次平方，没有任何迭代，在 $1\ \mathrm{kHz}$ 的控制周期里开销可以忽略。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth]
+    \node[fio] (in) at (0,-3.0) {$\Icmd$ 力矩电流指令\\$\omega$ 转子转速};
+
+    \draw[thick, eblue] (2.6,-0.4) -- (2.6,-5.9);
+    \draw[farr] (in.east) -- (2.6,-3.0);
+
+    \node[fblock] (t1) at (5.3,-0.4) {$\CT\,\Icmd\,\omega$\quad\scriptsize 机械功率};
+    \node[fblock] (t2) at (5.3,-2.2) {$k_2\,\omega^2$\quad\scriptsize 铁损 $+$ 阻尼};
+    \node[fblock] (t3) at (5.3,-4.1) {$k_1\,\Icmd^2$\quad\scriptsize 铜损};
+    \node[fblock] (t4) at (5.3,-5.9) {$a$\quad\scriptsize 控制器静态功耗};
+
+    \draw[farr] (2.6,-0.4) -- (t1.west);
+    \draw[farr] (2.6,-2.2) -- (t2.west);
+    \draw[farr] (2.6,-4.1) -- (t3.west);
+    \draw[farr] (2.6,-5.9) -- (t4.west);
+
+    \node[fsum] (sum) at (9.1,-3.1) {$\Sigma$};
+    \node[fblock] (out) at (11.8,-3.1) {$\hat\Pin$\\预估功率};
+
+    \foreach \n in {t1,t2,t3,t4} { \draw[farr] (\n.east) -- (sum); }
+    \draw[farr] (sum) -- (out);
+
+    \node[flab, anchor=north west] at (-0.4,-6.8)
+      {系数 $k_1,k_2,a,\CT$ 由第~\ref{sec:lsq} 节标定得到；四项之和即为预估值。};
+  \end{tikzpicture}
+  \caption{功率预测的实现框图。输入是“准备下发的指令”与“当前转速”，
+  输出是“这样下发会消耗多少功率”。全部由四则运算构成，可以直接放进每个控制周期里算。}
+  \label{fig:predict}
+\end{figure}
+
 \begin{table}[htbp]
   \centering
   \small
@@ -615,7 +890,42 @@ C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要
 
 本节把开源资料中一笔带过的“使用 Matlab 的 \code{fit} 与 \code{fittype} 函数进行拟合”
 展开成完整的数学过程。即使你今后只调用现成函数，理解这一节也能让你知道
-“拟合什么时候会骗人”。
+“拟合什么时候会骗人”。整条流程可以用一张图概括，如图~\ref{fig:lsqflow} 所示；
+后面的各小节就是把它逐步展开。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, node distance=4mm]
+    % 第一列：数据
+    \node[fio] (d1) at (0,0)    {发送正弦力矩指令\\施加随机负载};
+    \node[fio] (d2) at (0,-2.1) {采样母线电压与电流\\记录 $\omega$、$\Icmd$};
+    \node[fio] (d3) at (0,-4.3) {减去已知的机械功率\\得到损耗功率 $y_i$};
+
+    % 第二列：构造矩阵
+    \node[fsoft] (x1) at (4.6,-2.1) {构造设计矩阵 $X$\\(每行 $\omega_i^2,\ {\Icmd}_i^2,\ 1$)};
+
+    % 第三列：求解
+    \node[fblock] (x2) at (9.2,-2.1) {求 $X^{\mathsf T}X$ 与 $X^{\mathsf T}y$\\解 $3\times3$ 正规方程};
+
+    % 第四列：检验
+    \node[fblock] (x3) at (9.2,-4.9) {交叉验证\\看验证集误差};
+    \node[fblock] (x4) at (4.6,-6.8)  {物理自检\\$k_1$ 反解出的电阻是否合理};
+    \node[fsys]  (x5) at (0,-6.8)    {装车使用\\（逐台标定）};
+
+    \draw[farr] (d1) -- (d2);
+    \draw[farr] (d2) -- (d3);
+    \draw[farr] (d3.east) -- ++(0.6,0) |- (x1.west);
+    \draw[farr] (x1) -- (x2);
+    \draw[farr] (x2) -- (x3);
+    \draw[farr] (x3.west) -- ++(-1.2,0) |- (x4.east);
+    \draw[farr] (x4) -- (x5);
+    \draw[fdarr] (x4.north) -- ++(0,1.35) -| (x1.south);
+    \node[flab, anchor=west, text=red!65!black] at (5.0,-5.55) {不合格则重新采集};
+  \end{tikzpicture}
+  \caption{参数辨识的整体流程。注意最后一道“物理自检”：
+  由于 $k_1$ 可以反解出等效相电阻，拟合结果是否可信有一个与数据无关的独立判据。}
+  \label{fig:lsqflow}
+\end{figure}
 
 \subsection{把辨识问题写成线性回归}
 
@@ -647,6 +957,72 @@ C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要
 \end{equation}
 则 \fref{eq:regmodel} 整体就是 $y = X\theta + \varepsilon$。
 矩阵 $X$ 的每一列称为一个\emph{回归量}（regressor）。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{辨识问题中各个矩阵的形状与含义}
+  \label{tab:matrixshape}
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    符号 & 形状 & 含义 & 本问题的取值 \\
+    \midrule
+    $X$            & $N\times 3$ & 设计矩阵（每行一个样本） & $N$ 为样本数，列数为 $3$ \\
+    $\theta$       & $3\times 1$ & 待估参数 $(k_2,\;k_1,\;a)^{\mathsf T}$ & $3$ \\
+    $y$            & $N\times 1$ & 每组的损耗功率 & $N$ \\
+    $\varepsilon$  & $N\times 1$ & 残差 & $N$ \\
+    $X^{\mathsf T}X$ & $3\times 3$ & 回归量的内积矩阵 & 与 $N$ 无关 \\
+    $X^{\mathsf T}y$ & $3\times 1$ & 回归量与观测量的内积 & 与 $N$ 无关 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, x=1cm, y=1cm]
+    % X^T
+    \draw[fill=eblue!12, draw=eblue, thick] (0,0.99) rectangle (2.6,1.61);
+    \node[font=\small] at (1.3,1.3) {$X^{\mathsf T}$};
+    \node[flab, anchor=north] at (1.3,0.91) {$3\times N$};
+
+    \node[font=\large] at (3.1,1.3) {$\times$};
+
+    % X
+    \draw[fill=codegreen!12, draw=codegreen, thick] (3.6,0) rectangle (4.22,2.6);
+    \node[font=\small, rotate=90] at (3.91,1.3) {$X$};
+    \node[flab, anchor=north] at (3.91,-0.08) {$N\times3$};
+
+    \node[font=\large] at (4.7,1.3) {$=$};
+
+    % X^T X
+    \draw[fill=eblue!12, draw=eblue, thick] (5.2,0.6) rectangle (6.6,2.0);
+    \node[font=\small] at (5.9,1.3) {$X^{\mathsf T}X$};
+    \node[flab, anchor=north] at (5.9,0.52) {$3\times3$};
+
+    \node[font=\large] at (7.1,1.3) {$\times$};
+
+    % theta
+    \draw[fill=red!10, draw=red!65!black, thick] (7.6,0.6) rectangle (8.22,2.0);
+    \node[font=\small, rotate=90] at (7.91,1.3) {$\theta$};
+    \node[flab, anchor=north] at (7.91,0.52) {$3\times1$};
+
+    \node[font=\large] at (8.7,1.3) {$=$};
+
+    % X^T y
+    \draw[fill=red!10, draw=red!65!black, thick] (9.2,0.6) rectangle (9.82,2.0);
+    \node[font=\small, rotate=90] at (9.51,1.3) {$X^{\mathsf T}y$};
+    \node[flab, anchor=north] at (9.51,0.52) {$3\times1$};
+
+    % 注释
+    \node[flab, anchor=north west, align=left] at (0,-0.55)
+      {$N$ 可达上万，但两个内积矩阵只与列的个数（$3$）有关，};
+    \node[flab, anchor=north west, align=left] at (0,-1.05)
+      {因此最终要解的始终只是一个 $3\times3$ 的线性方程组。};
+  \end{tikzpicture}
+  \caption{正规方程的矩阵形状。注意“大矩阵”$X$ 在被利用完之后就消失了：
+  真正需要求解的只是 $X^{\mathsf T}X\;\theta=X^{\mathsf T}y$ 这个 $3\times3$ 的小方程组。}
+  \label{fig:matrixshape}
+\end{figure}
 
 \begin{remark}[为什么要先减掉机械功率]
 这一步常被忽略，但很关键。若直接对总功率 $\Pin$ 拟合，
@@ -760,6 +1136,31 @@ C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要
   \boxed{\;\hat\theta = (X^{\mathsf T}X)^{-1}X^{\mathsf T}y\;}
 \end{equation}
 这与 \fref{eq:ne1}--\fref{eq:ne3} 完全等价，只是写法更紧凑、更容易推广到更多参数的情形。
+
+把 \fref{eq:normal} 的两个矩阵完整写出来，就是下面这个样子。
+看到它就能明白为什么我说“最后只需要解一个小方程组”：
+矩阵里的每一个元素都是一个求和量，$N$ 再大，矩阵也只有 $3\times3$。
+\begin{equation}\label{eq:normalexpanded}
+  \underbrace{
+  \begin{bmatrix}
+    \sum_i \omega_i^{4} & \sum_i \omega_i^{2}{\Icmd}_i^{2} & \sum_i \omega_i^{2}\\[6pt]
+    \sum_i \omega_i^{2}{\Icmd}_i^{2} & \sum_i {\Icmd}_i^{4} & \sum_i {\Icmd}_i^{2}\\[6pt]
+    \sum_i \omega_i^{2} & \sum_i {\Icmd}_i^{2} & N
+  \end{bmatrix}}_{X^{\mathsf T}X\ (3\times3)}
+  \underbrace{
+  \begin{bmatrix} k_2\\[4pt] k_1\\[4pt] a\end{bmatrix}}_{\hat\theta\ (3\times1)}
+  =
+  \underbrace{
+  \begin{bmatrix} \sum_i \omega_i^{2}y_i\\[6pt] \sum_i {\Icmd}_i^{2}y_i\\[6pt] \sum_i y_i\end{bmatrix}
+  }_{X^{\mathsf T}y\ (3\times1)}
+\end{equation}
+
+注意 $X^{\mathsf T}X$ 是\emph{对称}的，三个对角元分别是
+$\sum\omega^4$、$\sum\Icmd^4$、$N$，
+也就是说它只由数据的四个求和量（$\sum\omega^4$、$\sum\Icmd^4$、
+$\sum\omega^2\Icmd^2$、$\sum\omega^2$、$\sum\Icmd^2$）决定。
+实际编程时不需要真的构造 $X$，只需遍历一次数据把这几个量累加起来，
+再解一个三元一次方程组即可——这正是它适合放进单片机的根本原因。
 
 顺带说明为什么这个驻点一定是极小值：对 \fref{eq:gradS} 再求一次导，得到海森矩阵
 \begin{equation}
@@ -1204,6 +1605,49 @@ $C$ 的符号则取决于目标功率与该转速下\emph{空载损耗}的比较
 对本文这个方程，$B$ 大约在 $10^{-3}\sim10^{-2}$ 量级、
 $\sqrt\Delta$ 与之同量级，属于\emph{恰好}容易抵消的区间，因此并非可有可无的优化。
 
+把这一节的完整过程整理成流程图，就是图~\ref{fig:inverse}。
+它是整个算法里唯一需要开方的地方，也是唯一边界情形会真正出现的地方。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, node distance=3.2mm]
+    \node[fio] (in) at (0,0) {目标功率 $P^{\ast}$、转速 $\omega$、原始指令 $\Icmd$};
+
+    \node[fblock] (c0) at (0,-1.7)
+      {算空载损耗 $P_0 = k_2\omega^2 + a$\\[1pt]
+       \scriptsize 钳位 $P^{\ast}\gets\max\bigl(P^{\ast},\,P_0\bigr)$，避免出现反向力矩};
+
+    \node[fblock] (c1) at (0,-3.7)
+      {$B = \CT\omega$，\quad $C = P_0 - P^{\ast}$\\[1pt]
+       $\Delta = B^2 - 4k_1C$};
+
+    \node[draw=eblue, thick, diamond, aspect=2.4, inner sep=1pt,
+          fill=eblue!6, align=center, font=\small] (d) at (0,-5.5) {$\Delta\ge0$ ?};
+
+    \node[fblock] (yes) at (0,-7.4)
+      {按原始指令 $\Icmd$ 的符号选根\\[1pt]
+       $\Icmd' = \dfrac{-B \pm \sqrt{\Delta}}{2k_1}$};
+
+    \node[fwarn] (no) at (6.2,-5.5) {目标不可达\\[1pt]\scriptsize 置 $\Icmd'=0$};
+
+    \node[fblock] (clamp) at (0,-9.3) {限幅到 $[-16384,\;16384]$};
+    \node[fio] (out) at (0,-10.8) {输出 $\Icmd'$};
+
+    \draw[farr] (in) -- (c0);
+    \draw[farr] (c0) -- (c1);
+    \draw[farr] (c1) -- (d);
+    \draw[farr] (d) -- node[flab, anchor=west]{是} (yes);
+    \draw[farr] (d) -- node[flab, anchor=south]{否} (no);
+    \draw[farr] (yes) -- (clamp);
+    \draw[farr] (no.south) |- (clamp.east);
+    \draw[farr] (clamp) -- (out);
+  \end{tikzpicture}
+  \caption{给定功率反解指令的实现流程。左侧那条“钳位”是最容易被忽略、
+  却最容易被实车遇到的一步：目标功率低于空载损耗时，
+  不钳位会让解出的指令变成负号，也就是力矩反向。}
+  \label{fig:inverse}
+\end{figure}
+
 % ============================================================================
 \section{多电机功率再分配}\label{sec:redistribute}
 
@@ -1362,6 +1806,51 @@ float initial_give_power[4];
 好在由前面的推导可知实现 A 是安全的，所以这处笔误没有造成超功率，
 只是让实际行为与注释不一致，给调试带来困惑。
 
+整个分配环节的实现流程如图~\ref{fig:redistribute} 所示。
+它由一次“正向遍历”、一次判断、一次求 $k$、再一次“反向遍历”构成，
+两次遍历都是对四个电机各算一遍，计算量在一次控制周期内微不足道。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, node distance=3.2mm]
+    \node[fio] (in) at (0,0) {四个电机各自的 ${\Icmd}_i$ 与 $\omega_i$};
+
+    \node[fblock] (fwd) at (0,-1.7)
+      {正向预测：$P_i = k_2\omega_i^2 + \CT{\Icmd}_i\omega_i + k_1{\Icmd}_i^2 + a$\\[1pt]
+       \scriptsize 逐台计算，\textbf{保留符号}};
+    \node[fblock] (tot) at (0,-3.5) {求和 $P_{\mathrm{tot}} = \sum_i P_i$};
+
+    \node[draw=eblue, thick, diamond, aspect=2.4, inner sep=1pt,
+          fill=eblue!6, align=center, font=\small] (d) at (0,-5.3)
+      {$P_{\mathrm{tot}} > \Plim$ ?};
+
+    \node[fio] (skip) at (6.3,-5.3) {不干预\\[1pt]\scriptsize 四路指令原样下发};
+
+    \node[fblock] (k) at (0,-7.2) {求功率缩放系数 $k = \Plim \,/\, P_{\mathrm{tot}}$};
+
+    \node[fblock] (neg) at (0,-9.0)
+      {若 $P_i < 0$（正在回馈制动）：保持 ${\Icmd}_i' = {\Icmd}_i$};
+    \node[fblock] (pos) at (0,-10.6)
+      {否则：$P_i^{\ast} = \max\bigl(kP_i,\; k_2\omega_i^2+a\bigr)$，
+       代入图~\ref{fig:inverse} 反解 ${\Icmd}_i'$};
+
+    \node[fio] (out) at (0,-12.2) {输出四路新指令};
+
+    \draw[farr] (in) -- (fwd);
+    \draw[farr] (fwd) -- (tot);
+    \draw[farr] (tot) -- (d);
+    \draw[farr] (d) -- node[flab, anchor=south west]{否} (skip);
+    \draw[farr] (d) -- node[flab, anchor=west]{是} (k);
+    \draw[farr] (k) -- (neg);
+    \draw[farr] (neg) -- (pos);
+    \draw[farr] (pos) -- (out);
+  \end{tikzpicture}
+  \caption{功率再分配环节的实现流程。关键点有两个：
+  正向计算时\emph{保留功率符号}（负值代表回馈制动），
+  以及反解之前把目标功率抬到空载损耗之上（否则会出现反向力矩）。}
+  \label{fig:redistribute}
+\end{figure}
+
 \subsection{三种方案的对比}
 
 \begin{table}[htbp]
@@ -1460,7 +1949,7 @@ RoboMaster 规则手册对缓冲能量的描述可以概括为一个离散积分
 \begin{equation}
   \dot Z = (P_l - P_r)\times 10 \quad [\mathrm{J/s}],
 \end{equation}
-即\emph{盈余时以与超支完全相同的速率回充}。这一点值得特别指出：
+即\emph{低于上限时回升的速率与超过上限时下降的速率完全相同}。这一点值得特别指出：
 规则手册并没有单独规定一个“恢复速率”，网上流传的所谓 $24\ \mathrm{J/s}$、
 $36\ \mathrm{J/s}$ 等具体数值并无可查证的官方依据，不应作为设计输入。
 
@@ -1664,7 +2153,7 @@ if (cap_measure.cap_percent > 5) {
 
 \begin{enumerate}
   \item \textbf{常规档额外放宽 $5\ \mathrm{W}$。}
-  让底盘长期“略微超支”，从而持续小额消耗电容能量。
+  让底盘长期“略微超出电池侧的目标功率”，从而持续小额消耗电容能量。
   这样电容不会长期处于满电状态，一旦出现回馈制动就有空间吸收能量。
   原代码注释把这一做法的目的表述为“提高能量利用率”。
   \item \textbf{爆发档额外放宽 $200\ \mathrm{W}$。}
@@ -2085,7 +2574,7 @@ $K_{\mathrm{coe}}$ 在误差总和小于下阈值时取 $0$、大于上阈值时
 
 底盘电机的功率需求具有强烈的\emph{脉冲性}：起步、爬坡、急停、碰撞恢复这些瞬间
 需要的功率远高于匀速巡航。而规则对底盘的约束是针对\emph{平均}功率的
-（以缓冲能量为账户），电池的放电能力也受倍率限制。
+（通过缓冲能量来体现），电池的放电能力也受倍率限制。
 这两者之间的矛盾就是超级电容存在的理由：
 \textbf{用一个能量缓冲器把“瞬时峰值功率”与“平均功率”解耦}。
 
@@ -2505,7 +2994,7 @@ print("cond(X) =", np.linalg.cond(X))
     \toprule
     中文 & 英文 / 代码标识 & 说明 \\
     \midrule
-    缓冲能量           & buffer energy / \code{chassis\_power\_buffer} & 裁判系统提供的功率账户 \\
+    缓冲能量           & buffer energy / \code{chassis\_power\_buffer} & 裁判系统给出的功率余量 \\
     缓冲能量闭环       & buffer power loop            & 外环，PI 控制 \\
     功率上限           & power limit / \code{max\_power\_limit} & 裁判系统给定 \\
     功率预算           & power budget / \code{chassis\_max\_power} & 本周期允许的取用功率 \\
