@@ -12,9 +12,24 @@
 | 主文档 | `elegantnote-cn.tex` |
 | 参考文献 | `reference.bib`（Biber） |
 | 模板 | ElegantNote（`elegantnote.cls`） |
-| 纸张 / 背景 | `device=normal`（A4，1 in 页边距）／显式 `\pagecolor{paperwhite}` 恢复纯白 |
+| 纸张 / 背景 | `device=normal`（A4，1 in 页边距）＋ `mode=geye`（护眼模式，绿豆沙底色 RGB 199,237,204） |
+| 主题色 | `blue`（标题、链接、图表标题、公式框线均为蓝色） |
 | 编译方式 | **XeLaTeX + Biber**（Overleaf 中主文档设为 `elegantnote-cn.tex`） |
 | 结构 | Part I 功率控制（第 1–10 节）＋ Part II 超级电容（第 11 节）＋ 附录 A–D |
+
+### 换配色（两种模式互相独立，可叠加）
+
+| 想要的效果 | 改法 |
+|---|---|
+| 绿豆沙护眼底 | 类选项中加 `mode=geye`（当前已启用）。**注意不要再写 `\pagecolor`**，否则会覆盖底色 |
+| 米白 / 暖褐底 | 把 `mode` 改成 `hazy`（251,250,248）或 `sepia`（250,237,225） |
+| 纯白底 | 去掉 `mode=geye`，并在导言区加回 `\pagecolor{paperwhite}` |
+| 绿色主题色 | 类选项里把 `blue` 改成 `green`（仅改标题/链接等的颜色，不动底色） |
+
+**改动底色时必须同步检查图里的“遮底”填充。**
+全文所有需要遮住底纹的节点（框图求和点、pgfplots 图例、曲线上的白底标签）
+统一使用 `fill=geyecolor`，它会跟随 `mode` 自动变色；
+**不要写死 `fill=white`**，否则换底色后会出现明显的白色补丁。
 
 ### 主体内容一览
 
@@ -148,7 +163,7 @@
     全文框图共用导言区 `\tikzset` 中定义的一套样式（`fblock`/`fsys`/`fsoft`/`fwarn`/
     `fio`/`fsum`/`fgroup`/`farr`/`fdarr`/`flab`/`ftitle`）。
     新增框图请复用这些样式，以保证风格一致。
-    注意两点：`\flab` 标签若压在曲线上，加 `fill=white` 做白底遮挡；
+    注意两点：`\flab` 标签若压在曲线上，加 `fill=geyecolor` 做遮底；
     避免把数学公式写进 `\section`/`\subsection` 标题（会触发 hyperref 书签无限展开）。
 
 
@@ -175,24 +190,76 @@
 
 ## 6. ⚠️ 平台回写覆盖问题（务必先读）
 
-发生过一次：文档推送成功后，LoongTeX 平台以其本地保存的旧版本回写了一次提交
-（提交信息 `Initial commit from LoongTeX`），把 `elegantnote-cn.tex` 从 2515 行
-改回了 256 行的模板样例。`reference.bib` 与 `PROJECT-NOTES.md` 未受影响。
+**已经发生两次。** 症状都是：我推送成功后，LoongTeX 用其本地保存的旧副本回写一个
+提交信息为 `Initial commit from LoongTeX` 的提交，把 GitHub 上的版本改回去。
 
-**结论：只要平台侧的副本还是旧内容，从平台保存时就会覆盖 GitHub 上的版本。**
+| 次序 | 被覆盖的内容 | 覆盖提交 |
+|---|---|---|
+| 第 1 次 | `elegantnote-cn.tex` 从 2515 行退回 256 行的模板样例 | `43c1386` |
+| 第 2 次 | 护眼模式那一次改动（`mode=geye` 与配套的 `fill` 调整）被整体撤销 | `6991191` |
 
-推荐的操作顺序：
+**结论：只要平台侧的副本落后于 GitHub，从平台保存时就会覆盖掉已有的改动。**
 
-1. **先在平台侧同步**（LoongTeX / Overleaf 里执行“从 GitHub 拉取”或等效操作），
-   确认 `elegantnote-cn.tex` 已经是 2500 行左右、且首行附近的
-   `\documentclass` 是 `[cn,blue,11pt,device=normal]`；
-2. 之后再在平台上编辑、保存、提交；
-3. 若再次被覆盖，可用下面任一方式恢复：
-   - 从历史提交取回：`git checkout <commit> -- elegantnote-cn.tex`
-     （完整文档所在提交为 `fddcdb2`，其后的恢复提交亦可）
-   - 或直接看 `git log --oneline -- elegantnote-cn.tex` 找到行数最多的那一版。
+### 恢复方式（推荐用 revert）
 
-**判断当前文件是不是正确版本的快速自检**：
-`\documentclass[cn,blue,11pt,device=normal]{elegantnote}` + 文件里能搜到“最小二乘”。
-若看到的是 `hazy` / `screen` / `14pt`，说明又拿到旧模板了。
+不要强推。最干净的做法是把那次覆盖提交本身 revert 掉，
+这样只是在历史顶端加一个“撤销”，推送仍是快进：
+
+```powershell
+git fetch origin
+git merge --ff-only origin/main      # 先接受被覆盖的状态
+git log --oneline -3                 # 找到 "Initial commit from LoongTeX" 的哈希
+git revert --no-edit <那个哈希>       # 生成一个撤销提交
+git diff --stat <你的好提交> HEAD     # 确认为空，即内容已完全恢复
+git push origin main
+```
+
+第 2 次就是这样恢复的：`git revert 6991191`，随后 `git diff 5acf21d HEAD` 为空。
+
+其他备选：`git checkout <commit> -- elegantnote-cn.tex`
+（完整文档所在提交：`4d0d475`、`5acf21d`）。
+
+### 避免再发生
+
+**在 LoongTeX 里编辑之前，先执行一次“从 GitHub 同步/拉取”。**
+只要平台侧拿到的是最新版，它回写的内容就是最新的，不会再覆盖掉改动。
+
+**快速自检**（打开主文件看一眼）：
+
+```
+\documentclass[cn,blue,11pt,device=normal,mode=geye]{elegantnote}
+```
+
+再搜一下能不能找到“最小二乘”。若看到 `hazy` / `screen` / `14pt`，
+或者 `mode=geye` 不见了，说明平台侧又是旧副本。
+
+---
+
+## 7. 远端仓库地址（已变更）
+
+主仓库已迁移到：
+
+```
+origin  https://github.com/TuxMonkey2004/powerctrl-supercap-doc.git
+```
+
+旧仓库仍作为备用远端保留（**不再推送**）：
+
+```
+old-origin  https://github.com/TuxMonkey2004/Docs-of-PowerControl-and-SuperCap.git
+```
+
+迁移时的处理方式：新仓库里已经是同一份内容（逐文件哈希一致），
+因此没有重推内容，只用 `git merge -s ours --allow-unrelated-histories`
+把两段互不相关的历史接在一起，使本地 `main` 成为新仓库历史的后续，
+以后的推送都是快进，不会再出现需要强推的情况。
+
+本地 `main` 的上游已设为 `origin/main`。日常操作就是：
+
+```powershell
+git add -A
+git commit -F <消息文件>      # 消息里含 "/" 时用文件，避免被 git 当成路径
+git push origin main
+```
+
 
