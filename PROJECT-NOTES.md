@@ -12,24 +12,9 @@
 | 主文档 | `elegantnote-cn.tex` |
 | 参考文献 | `reference.bib`（Biber） |
 | 模板 | ElegantNote（`elegantnote.cls`） |
-| 纸张 / 背景 | `device=normal`（A4，1 in 页边距）＋ `mode=geye`（护眼模式，绿豆沙底色 RGB 199,237,204） |
-| 主题色 | `blue`（标题、链接、图表标题、公式框线均为蓝色） |
+| 纸张 / 背景 | `device=normal`（A4，1 in 页边距）／显式 `\pagecolor{paperwhite}` 恢复纯白 |
 | 编译方式 | **XeLaTeX + Biber**（Overleaf 中主文档设为 `elegantnote-cn.tex`） |
 | 结构 | Part I 功率控制（第 1–10 节）＋ Part II 超级电容（第 11 节）＋ 附录 A–D |
-
-### 换配色（两种模式互相独立，可叠加）
-
-| 想要的效果 | 改法 |
-|---|---|
-| 绿豆沙护眼底 | 类选项中加 `mode=geye`（当前已启用）。**注意不要再写 `\pagecolor`**，否则会覆盖底色 |
-| 米白 / 暖褐底 | 把 `mode` 改成 `hazy`（251,250,248）或 `sepia`（250,237,225） |
-| 纯白底 | 去掉 `mode=geye`，并在导言区加回 `\pagecolor{paperwhite}` |
-| 绿色主题色 | 类选项里把 `blue` 改成 `green`（仅改标题/链接等的颜色，不动底色） |
-
-**改动底色时必须同步检查图里的“遮底”填充。**
-全文所有需要遮住底纹的节点（框图求和点、pgfplots 图例、曲线上的白底标签）
-统一使用 `fill=geyecolor`，它会跟随 `mode` 自动变色；
-**不要写死 `fill=white`**，否则换底色后会出现明显的白色补丁。
 
 ### 主体内容一览
 
@@ -163,7 +148,7 @@
     全文框图共用导言区 `\tikzset` 中定义的一套样式（`fblock`/`fsys`/`fsoft`/`fwarn`/
     `fio`/`fsum`/`fgroup`/`farr`/`fdarr`/`flab`/`ftitle`）。
     新增框图请复用这些样式，以保证风格一致。
-    注意两点：`\flab` 标签若压在曲线上，加 `fill=geyecolor` 做遮底；
+    注意两点：`\flab` 标签若压在曲线上，加 `fill=white` 做白底遮挡；
     避免把数学公式写进 `\section`/`\subsection` 标题（会触发 hyperref 书签无限展开）。
 
 
@@ -200,7 +185,7 @@
 
 1. **先在平台侧同步**（LoongTeX / Overleaf 里执行“从 GitHub 拉取”或等效操作），
    确认 `elegantnote-cn.tex` 已经是 2500 行左右、且首行附近的
-   `\documentclass` 是 `[cn,blue,11pt,device=normal,mode=geye]`；
+   `\documentclass` 是 `[cn,blue,11pt,device=normal]`；
 2. 之后再在平台上编辑、保存、提交；
 3. 若再次被覆盖，可用下面任一方式恢复：
    - 从历史提交取回：`git checkout <commit> -- elegantnote-cn.tex`
@@ -208,36 +193,6 @@
    - 或直接看 `git log --oneline -- elegantnote-cn.tex` 找到行数最多的那一版。
 
 **判断当前文件是不是正确版本的快速自检**：
-`\documentclass[cn,blue,11pt,device=normal,mode=geye]{elegantnote}` + 文件里能搜到“最小二乘”。
+`\documentclass[cn,blue,11pt,device=normal]{elegantnote}` + 文件里能搜到“最小二乘”。
 若看到的是 `hazy` / `screen` / `14pt`，说明又拿到旧模板了。
-
----
-
-## 7. 远端仓库地址（已变更）
-
-主仓库已迁移到：
-
-```
-origin  https://github.com/TuxMonkey2004/powerctrl-supercap-doc.git
-```
-
-旧仓库仍作为备用远端保留（**不再推送**）：
-
-```
-old-origin  https://github.com/TuxMonkey2004/Docs-of-PowerControl-and-SuperCap.git
-```
-
-迁移时的处理方式：新仓库里已经是同一份内容（逐文件哈希一致），
-因此没有重推内容，只用 `git merge -s ours --allow-unrelated-histories`
-把两段互不相关的历史接在一起，使本地 `main` 成为新仓库历史的后续，
-以后的推送都是快进，不会再出现需要强推的情况。
-
-本地 `main` 的上游已设为 `origin/main`。日常操作就是：
-
-```powershell
-git add -A
-git commit -F <消息文件>      # 消息里含 "/" 时用文件，避免被 git 当成路径
-git push origin main
-```
-
 

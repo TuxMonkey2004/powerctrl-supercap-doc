@@ -5,18 +5,13 @@
 %  模板：ElegantNote (https://github.com/ElegantLaTeX/ElegantNote)
 %  编译：XeLaTeX + Biber
 % ============================================================================
-\documentclass[cn,blue,11pt,device=normal,mode=geye]{elegantnote}
+\documentclass[cn,blue,11pt,device=normal]{elegantnote}
 
 %------------------------------------------------------------------ 页面
 % device=normal  ->  A4 纸张，1 英寸页边距
-% mode=geye      ->  护眼模式，纸张底色为绿豆沙浅绿 RGB(199,237,204)。
-%                    底色由模板在类文件里通过 \pagecolor{geyecolor} 设置，
-%                    因此这里不要再用 \pagecolor 覆盖它。
-%                    图里需要“遮住底纹”的地方统一用 fill=geyecolor，
-%                    这样以后换成 hazy / sepia 或去掉 mode 时会自动跟随。
-% 想改回纯白底：把上面的 mode=geye 去掉，并在此处加回
-%                    \definecolor{paperwhite}{RGB}{255,255,255}
-%                    \pagecolor{paperwhite}
+% 模板的 geye / hazy / sepia 模式会给纸张上底色，这里显式恢复为纯白背景。
+\definecolor{paperwhite}{RGB}{255,255,255}
+\pagecolor{paperwhite}
 
 %------------------------------------------------------------------ 宏包
 \usepackage{array}
@@ -137,7 +132,7 @@
   fwarn/.style    = {fblock, draw=red!65!black, fill=red!5},
   fsoft/.style    = {fblock, fill=eblue!10, minimum width=24mm},
   fsum/.style     = {draw=eblue, thick, circle, inner sep=0pt,
-                     minimum size=5.5mm, fill=geyecolor},
+                     minimum size=5.5mm, fill=white},
   fio/.style      = {draw=gray!65, rounded corners=7pt, fill=gray!6,
                      align=center, font=\small, inner sep=4pt},
   fgroup/.style   = {draw=gray!55, dashed, rounded corners=3pt, inner sep=7pt},
@@ -269,8 +264,8 @@ $s^2 + K_p s + K_i = 0$ 与阻尼比、自然频率的对应关系。最后逐�
     \draw[eblue, very thick]
       (0,18) -- (1.6,44) -- (3.4,14) -- (5.2,60) -- (6.4,60) -- (8.2,0) -- (11.0,0);
     % 标注（白底，避免文字与曲线互相干扰）
-    \node[flab, fill=geyecolor, inner sep=1.5pt] at (0.55,40) {上升};
-    \node[flab, fill=geyecolor, inner sep=1.5pt] at (2.45,27) {下降};
+    \node[flab, fill=white, inner sep=1.5pt] at (0.55,40) {上升};
+    \node[flab, fill=white, inner sep=1.5pt] at (2.45,27) {下降};
     \node[flab, anchor=south] at (5.80,62)
       {到达上限后不再增加};
     \node[flab, text=red!65!black, align=center, anchor=north] at (9.20,55)
@@ -1393,7 +1388,7 @@ $C$ 的符号则取决于目标功率与该转速下\emph{空载损耗}的比较
       xmin=-4000, xmax=12000, ymin=-60, ymax=190,
       grid=both, grid style={gray!18},
       legend style={at={(0.98,0.03)}, anchor=south east, draw=gray!40,
-                    fill=geyecolor, fill opacity=0.9, text opacity=1, font=\small},
+                    fill=white, fill opacity=0.9, text opacity=1, font=\small},
       tick label style={font=\small},
       label style={font=\small},
       axis line style={gray!60}
@@ -1544,7 +1539,7 @@ $C$ 的符号则取决于目标功率与该转速下\emph{空载损耗}的比较
       ytick={0,4000,8000,12000,16000},
       grid=both, grid style={gray!18},
       legend style={at={(0.97,0.97)}, anchor=north east, draw=gray!40,
-                    fill=geyecolor, fill opacity=0.9, text opacity=1, font=\small},
+                    fill=white, fill opacity=0.9, text opacity=1, font=\small},
       tick label style={font=\small},
       label style={font=\small},
       axis line style={gray!60}
@@ -2192,7 +2187,7 @@ if (cap_measure.cap_percent > 5) {
       block/.style={draw=eblue, thick, fill=eblue!4, rounded corners=1.5pt,
                     minimum height=8mm, minimum width=14mm, align=center, inner sep=2pt},
       bigblock/.style={block, minimum width=26mm},
-      sum/.style={draw=eblue, thick, circle, inner sep=0pt, minimum size=5mm, fill=geyecolor},
+      sum/.style={draw=eblue, thick, circle, inner sep=0pt, minimum size=5mm, fill=white},
       line/.style={draw, thick, -{Stealth[length=1.8mm]}},
       pline/.style={draw, thick}
     ]
