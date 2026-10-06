@@ -248,6 +248,40 @@
 \setlength{\emergencystretch}{1em}
 \tolerance=1200
 \hbadness=1000
+
+%------------------------------------------------------------------ 断页与孤行控制
+% 这两个惩罚值调到最大，禁止“段末孤行”与“段首孤行”——
+% 即一段的最后一行或第一行被单独甩到相邻页上。技术文档里这种孤行特别刺眼。
+\widowpenalty=10000
+\clubpenalty=10000
+% 公式前后的孤行同样要挡掉：公式不该与它引出的那句话被拆到两页。
+\displaywidowpenalty=10000
+\predisplaypenalty=10000
+\postdisplaypenalty=0
+% 带连字符的断行不跨页（中文很少触发，英文术语会有）。
+\brokenpenalty=4000
+
+%------------------------------------------------------------------ 目录排版
+% 原模板在每个 \section 级目录条目前留的垂直间距偏大，20 个 section 累计
+% 下来会让目录多溢出两行、单独占掉一页（那一页几乎是空白）。
+% 这里收紧 section 级条目的前置间距，并整体略缩一号，让目录排满。
+\makeatletter
+\renewcommand*\l@section[2]{%
+  \ifnum \c@tocdepth >\z@
+    \addpenalty \@secpenalty
+    \addvspace{0.45em \@plus\p@}%
+    \setlength\@tempdima{1.5em}%
+    \begingroup
+      \parindent \z@ \rightskip \@pnumwidth
+      \parfillskip -\@pnumwidth
+      \leavevmode \bfseries \color{ecolor}%
+      \advance\leftskip\@tempdima
+      \hskip -\leftskip
+      #1\nobreak\hfil \nobreak\hb@xt@\@pnumwidth{\hss #2}\par
+    \endgroup
+  \fi}
+\makeatother
+
 \vbadness=1000
 % 允许在 CJK 字符之间伸缩，这是中文断行均匀的关键
 \XeTeXlinebreakskip = 0pt plus 0.08em minus 0.02em
@@ -435,7 +469,9 @@ $s^2 + K_p s + K_i = 0$ 与阻尼比、自然频率的对应关系。最后逐�
 
 \newpage
 \phantomsection
+{\small
 \tableofcontents
+}
 \newpage
 
 % ============================================================================

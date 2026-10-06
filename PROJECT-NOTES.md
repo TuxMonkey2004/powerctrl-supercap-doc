@@ -384,3 +384,16 @@ git push origin main
 
 > **⑥ 标注压在连线/波形上时，给标注加 `fill=papercolor, inner sep=1.5pt`**，
 > 让底色把线遮断；比反复微调坐标可靠得多。
+## 排版精修 checklist（每轮终稿都过一遍）
+
+用 `D:\glkzjiaocai\polishscan3.py` 扫描 PDF，看四项：
+1. **标题孤行** —— 标题是否是本页最后一个内容块
+2. **半空页** —— 正文底部是否低于 690pt（浮动体断口）
+3. **空白页** —— 文本块少于 3 个的页
+4. **末页** —— 是否排满
+
+以及目录：**目录最后一页若只剩一两行，就是没排好**。
+根因通常是 section 级条目前置间距过大，改 `\l@section` 的 `\addvspace` 即可。
+
+断页控制已在导言区设好：`\widowpenalty` / `\clubpenalty` /
+`\displaywidowpenalty` / `\predisplaypenalty` 全部 10000。
