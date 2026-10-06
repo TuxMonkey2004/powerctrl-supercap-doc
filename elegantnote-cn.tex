@@ -252,36 +252,85 @@ $s^2 + K_p s + K_i = 0$ 与阻尼比、自然频率的对应关系。最后逐�
 也就是说，$\Ebuf$ 就是\emph{功率差对时间的累积}，单位是焦耳。
 它有一个上限 $E_{\max}$（常见取值为 $60\ \mathrm{J}$，随赛季与兵种等级可能不同）：
 到达上限后就不再增加；一旦被扣到 $0$ 之后还在超功率，裁判系统就开始扣血\cite{rm2024rules}。
-整个过程如图~\ref{fig:bufferbehaviour} 所示。
+整个过程如图~\ref{fig:bufferbehaviour} 所示。图中用一个具体例子说明因果链：
+底盘在某一时刻用掉了 $65\ \mathrm{W}$，而该等级的上限是 $45\ \mathrm{W}$，
+多出来的 $20\ \mathrm{W}$ 就从缓冲能量里扣；反过来，当底盘只用 $30\ \mathrm{W}$ 时，
+省下的 $15\ \mathrm{W}$ 又会把它补回去。
 
 \begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[x=1.0cm, y=0.048cm, >=Stealth]
-    % 扣血区域
-    \fill[red!10] (8.2,0) rectangle (11.0,64);
-    % 坐标轴
-    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,0) -- (11.5,0)
-      node[right, font=\small] {$t$};
-    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,0) -- (0,68)
-      node[above, font=\small] {$\Ebuf$ (J)};
-    % 60 J 上限
-    \draw[red!60!black, dashed] (0,60) -- (11.0,60);
-    \node[flab, text=red!60!black, anchor=south west] at (0.0,61) {$E_{\max}=60\ \mathrm{J}$};
-    % 缓冲能量曲线
-    \draw[eblue, very thick]
-      (0,18) -- (1.6,44) -- (3.4,14) -- (5.2,60) -- (6.4,60) -- (8.2,0) -- (11.0,0);
-    % 标注（白底，避免文字与曲线互相干扰）
-    \node[flab, fill=papercolor, inner sep=1.5pt] at (0.55,40) {上升};
-    \node[flab, fill=papercolor, inner sep=1.5pt] at (2.45,27) {下降};
-    \node[flab, anchor=south] at (5.80,62)
-      {到达上限后不再增加};
-    \node[flab, text=red!65!black, align=center, anchor=north] at (9.20,55)
-      {缓冲能量耗尽\\开始扣血};
-    \node[flab, anchor=west] at (0.10,10) {$0$};
+  \begin{tikzpicture}[x=0.62cm, >=Stealth]
+
+    % ================== 面板 (a)：底盘实际功率 ==================
+    \begin{scope}[y=0.052cm]
+      % 两条曲线与上限之间的面积：绿=低于上限，红=超过上限
+      \fill[codegreen!16]
+        (0,45) -- (0,20) -- (1,25) -- (2,30) -- (3,35) -- (3.333,45) -- cycle;
+      \fill[red!12]
+        (3.333,45) -- (4,65) -- (5,70) -- (6,68) -- (7,66) -- (8,64) -- (9,62)
+        -- (10,60) -- (11,58) -- (12,56) -- (13,54) -- (14,52) -- (15,50)
+        -- (16,48) -- (16,45) -- cycle;
+      % 坐标轴
+      \draw[gray!60] (0,0) -- (17.2,0) node[right, font=\small] {$t$};
+      \draw[gray!60] (0,0) -- (0,92) node[above, font=\small] {$P$ (W)};
+      % 功率上限
+      \draw[red!65!black, dashed] (0,45) -- (16.6,45);
+      \node[flab, text=red!65!black, anchor=south west] at (0.15,46)
+        {$\Pmax = 45\ \mathrm{W}$};
+      % 实际功率曲线
+      \draw[eblue, very thick]
+        (0,20) -- (1,25) -- (2,30) -- (3,35) -- (4,65) -- (5,70) -- (6,68) -- (7,66)
+        -- (8,64) -- (9,62) -- (10,60) -- (11,58) -- (12,56) -- (13,54) -- (14,52)
+        -- (15,50) -- (16,48);
+      \node[flab, text=eblue, anchor=south west] at (5.0,47) {实际功率 $\Pin$};
+      % 关键点
+      \draw[gray!60, densely dotted] (4,65) -- (4,0);
+      \fill[eblue] (4,65) circle (1.6pt);
+      \node[flab, text=red!65!black, anchor=south west] at (4.2,76)
+        {此处用了 $65\ \mathrm{W}$，比上限多 $20\ \mathrm{W}$};
+      \node[flab, text=codegreen!60!black, anchor=south west] at (0.2,10)
+        {低于上限：缓冲能量在回升};
+      \node[flab, text=red!65!black, align=right, anchor=north east] at (16.3,32)
+        {持续超过上限：\\缓冲能量被不断扣减};
+    \end{scope}
+
+    % ================== 面板 (b)：缓冲能量 ==================
+    \begin{scope}[yshift=-5.6cm, y=0.052cm]
+      % 扣血区域
+      \fill[red!10] (6.386,0) rectangle (16.6,72);
+      % 坐标轴
+      \draw[gray!60] (0,0) -- (17.2,0) node[right, font=\small] {$t$};
+      \draw[gray!60] (0,0) -- (0,72) node[above, font=\small] {$\Ebuf$ (J)};
+      % 上限 60 J
+      \draw[red!60!black, dashed] (0,60) -- (16.6,60);
+      \node[flab, text=red!60!black, anchor=south west] at (0.15,61)
+        {$E_{\max}=60\ \mathrm{J}$};
+      % 缓冲能量曲线（由上面那条功率曲线积分得到）
+      \draw[eblue, very thick]
+        (0,20) -- (1,42.5) -- (2,60) -- (3,60) -- (4,55) -- (5,32.5) -- (6,8.5)
+        -- (6.386,0) -- (16.6,0);
+      % 对应时刻的虚线
+      \draw[gray!60, densely dotted] (2,60) -- (2,0);
+      \draw[gray!60, densely dotted] (6.386,0) -- (6.386,72);
+      % 标注
+      \node[flab, fill=papercolor, inner sep=1.5pt, text=codegreen!60!black] at (0.95,26)
+        {回升};
+      \node[flab, fill=papercolor, inner sep=1.5pt, text=eblue] at (3.9,44)
+        {被扣减};
+      \node[flab, text=eblue, anchor=south west] at (4.4,62)
+        {到 $60\ \mathrm{J}$ 后不再增加};
+      \node[flab, text=red!65!black, align=center, anchor=north] at (11.4,52)
+        {缓冲能量耗尽\\此后每周期直接扣血};
+      \node[flab, anchor=west] at (0.1,5) {$0$};
+    \end{scope}
+
   \end{tikzpicture}
-  \caption{缓冲能量的典型变化过程。它本身不是一个可以“取用”的储量，
-  而是功率差随时间的累积：底盘功率低于上限 $\Pmax$ 时上升，超过 $\Pmax$ 时下降；
-  到达 $60\ \mathrm{J}$ 后饱和不再增加，被扣到 $0$ 之后进入扣血阶段。}
+  \caption{缓冲能量是怎么被“用掉”的。\textbf{上}：底盘的实际功率 $\Pin$ 与功率上限 $\Pmax$；
+  低于上限的部分（绿色）会把缓冲能量补回来，超过上限的部分（红色）会把它扣掉。
+  图中在第 $4$ 个时刻底盘用了 $65\ \mathrm{W}$，比 $45\ \mathrm{W}$ 的上限多 $20\ \mathrm{W}$，
+  这 $20\ \mathrm{W}$ 的差额就正在消耗缓冲能量。
+  \textbf{下}：由上面同一条功率曲线积分得到的缓冲能量：先回升到 $60\ \mathrm{J}$ 饱和，
+  随后被持续扣减，扣到 $0$ 之后进入扣血阶段。}
   \label{fig:bufferbehaviour}
 \end{figure}
 
@@ -1029,6 +1078,9 @@ C620 的力矩电流控制值满量程 $\pm 16384$ 对应输出力矩电流 $\pm
 \begin{equation}\label{eq:itau}
   \Itau = \frac{20}{16384}\,\Icmd \qquad [\mathrm{A}].
 \end{equation}
+式中 $\Icmd$ 为主控\emph{发下去}的力矩电流控制值（无量纲整型数，范围 $[-16384,\,16384]$）；
+$\Itau$ 为电调据此输出的\emph{力矩电流}（A）；
+$20$ 是满量程对应的额定电流（A），$16384$ 是对应的控制值满量程。
 这是一个纯粹的线性标度变换，使用时要注意 $20/16384 = 1.2207\times 10^{-3}$ 这一系数
 在整条链路中会反复出现。
 
@@ -1043,6 +1095,8 @@ M3508 搭配的 P19 行星减速箱，减速比记作 $k_g$（这里特意不写
 \begin{equation}\label{eq:gearratio}
   k_g = \frac{3591}{187} \approx 19.203 .
 \end{equation}
+式中 $k_g$ 为\emph{减速比}（无量纲）：电机转子转 $k_g$ 圈，输出轴才转一圈；
+$3591$ 与 $187$ 分别是减速箱的齿数参数（由厂家给出）。
 
 设输出轴力矩为 $\tau_{\mathrm{out}}$、转子力矩为 $\tau$，忽略齿轮传动损失（效率 $\eta \approx 1$），
 由功率守恒或杠杆关系有 $\tau_{\mathrm{out}} = k_g\,\tau$，即
@@ -1051,10 +1105,19 @@ M3508 搭配的 P19 行星减速箱，减速比记作 $k_g$（这里特意不写
       = 0.3 \times \frac{187}{3591}
       \approx 0.01562\ \mathrm{N\cdot m/A}.
 \end{equation}
+式中 $K_T^{\mathrm{out}}$ 为手册给出的\emph{输出轴侧}转矩常数（N$\cdot$m/A），即“每安培力矩电流能产生多大的输出轴力矩”；
+$k_g$ 为上面算出的减速比；
+$\KT$ 为折算到\emph{转子侧}的力矩常数（N$\cdot$m/A）。
+之所以要除以 $k_g$，是因为减速箱会放大力矩、缩小转速，
+同样的电流在输出轴侧对应更大的力矩，折算回转子侧就要除掉这个倍数。
+
 于是转子侧力矩与力矩电流的关系为
 \begin{equation}\label{eq:tau-itau}
   \tau = \KT\,\Itau = \KT \cdot \frac{20}{16384}\,\Icmd .
 \end{equation}
+式中 $\tau$ 为\emph{转子}输出力矩（N$\cdot$m）；
+$\KT$ 为转子侧力矩常数（N$\cdot$m/A）；
+$\Itau$ 为力矩电流（A），$\Icmd$ 为发送值（无量纲），二者由 \fref{eq:itau} 联系。
 
 \begin{remark}
 这里把齿轮效率取为 $1$ 并不是因为它真的等于 $1$（实际上行星减速箱效率约在 $0.9$ 上下），
@@ -1077,6 +1140,8 @@ M3508 搭配的 P19 行星减速箱，减速比记作 $k_g$（这里特意不写
 \begin{equation}
   \tau = \KT \cdot \frac{20}{16384}\,\Icmd = 1.9069\times 10^{-5}\,\Icmd \quad [\mathrm{N\cdot m}].
 \end{equation}
+式中 $\tau$ 为转子力矩（N$\cdot$m），$\Icmd$ 为发送值（无量纲），
+$1.9069\times10^{-5}$ 是 $\KT$ 与 $20/16384$ 相乘后的合并系数（单位 N$\cdot$m）。
 即发送值每变化 $1$，转子力矩变化约 $1.91\times 10^{-5}\ \mathrm{N\cdot m}$；
 满量程 $16384$ 对应约 $0.3124\ \mathrm{N\cdot m}$ 的转子力矩（乘回减速比即 $6.0\ \mathrm{N\cdot m}$ 输出力矩）。
 
@@ -1120,14 +1185,22 @@ M3508 搭配的 P19 行星减速箱，减速比记作 $k_g$（这里特意不写
 \subsection{机械功率与常数 9.55}
 
 C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要求角速度单位为 rad/s：
-\begin{equation}
+\begin{equation}\label{eq:omega}
   \Omega = \frac{2\pi}{60}\,\omega = \frac{\omega}{9.5493}.
 \end{equation}
-于是
+式中 $\omega$ 为电机\emph{转子转速}，单位 rpm，来自 C620 的回传；
+$\Omega$ 为与之对应的\emph{机械角速度}，单位 rad/s；
+$2\pi/60$ 是 rpm 换算到 rad/s 的系数（一圈 $2\pi$ 弧度，一分钟 $60$ 秒）。
+$9.5493$ 就是它的倒数 $60/(2\pi)$。
+
+于是机械功率可以写成
 \begin{equation}\label{eq:pm}
   \Pmech = \tau\Omega = \frac{\tau\,\omega}{9.55} \qquad [\mathrm{W}],
 \end{equation}
-其中 $9.55 = 60/(2\pi)$ 是 rpm 到 rad/s 的换算系数。
+式中 $\Pmech$ 为电机轴端输出的\emph{机械功率}，单位 W；
+$\tau$ 为电机\emph{转子输出力矩}，单位 N$\cdot$m（按第~\ref{sec:convention} 节的正方向约定，顺时针为正）；
+$\Omega$ 为机械角速度（rad/s），$\omega$ 为转子转速（rpm），二者由上式换算；
+$9.55$ 即 $60/(2\pi)$，是 rpm 到 rad/s 的换算系数。
 需要注意，\fref{eq:pm} 是\emph{精确}的物理关系而\emph{不是}经验公式，
 其系数 $1/9.55$ 既不需要也不可能通过数据拟合确定。这一点在第~\ref{sec:identifiability} 节会再次用到。
 
@@ -1142,16 +1215,27 @@ C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要
 \begin{equation}
   T_e = \tfrac{3}{2}\,p\,\psi_f\,i_q \;\equiv\; \KT\,i_q ,
 \end{equation}
-其中 $p$ 为极对数，$\psi_f$ 为永磁磁链（峰值约定）。三相绕组的总铜损为
+式中 $T_e$ 为\emph{电磁转矩}（N$\cdot$m）；
+$p$ 为电机\emph{极对数}（无量纲）；
+$\psi_f$ 为永磁体磁链的\emph{峰值}（Wb）；
+$i_q$ 为磁场定向控制下与转矩成正比的 $q$ 轴电流（A）；
+$\KT$ 为把它们合并之后的\emph{转子侧力矩常数}（N$\cdot$m/A），$\equiv$ 表示“记作”。
+三相绕组的总铜损为
 \begin{equation}
   P_{\mathrm{cu}} = 3\left(\frac{i_q}{\sqrt{2}}\right)^2 R_s
   = \frac{3}{2}\,i_q^2 R_s
   = \frac{3}{2}\,\frac{R_s}{\KT^2}\,\tau^2 ,
 \end{equation}
-其中 $R_s$ 为单相绕组电阻。把 $\tau = \KT\Itau$ 与 \fref{eq:itau} 代入，就得到以\emph{发送值}为自变量的形式：
+式中 $P_{\mathrm{cu}}$ 为\emph{铜损}（W）；$i_q$ 同上（A）；
+$R_s$ 为\emph{单相绕组电阻}（$\Omega$）；$\tau$ 为转子力矩（N$\cdot$m）。
+第一个等号里的 $i_q/\sqrt{2}$ 是把峰值电流换成有效值，系数 $3$ 表示三相，
+所以合并后系数是 $3/2$。把 $\tau = \KT\Itau$ 与 \fref{eq:itau} 代入，
+就得到以\emph{发送值}为自变量的形式：
 \begin{equation}\label{eq:k1phys}
   P_{\mathrm{cu}} = \underbrace{\frac{3}{2}\,R_s\left(\frac{20}{16384}\right)^{2}}_{k_1}\;\Icmd^2 .
 \end{equation}
+式中 $\Icmd$ 为发送给电调的力矩电流控制值（无量纲，$[-16384,16384]$）；
+$k_1$ 是这一整串物理常数的合并结果，单位 W。
 \fref{eq:k1phys} 说明 $k_1$ 不只是“一个拟合出来的数”，它可以反过来解读。
 把部署参数 $k_1 = 1.453\times10^{-7}$ 代回，可反解出等效相电阻
 \begin{equation}\label{eq:reff}
@@ -1167,15 +1251,22 @@ C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要
 \paragraph{(b) 转速平方项来自铁损与机械阻尼。}
 空载（$\tau = 0$）时电机依旧要消耗功率，且该功率随转速迅速上升，来源包括：
 \begin{itemize}
-  \item 磁滞损耗，与频率和磁密有关，近似 $\propto f B^{n}$（$n$ 约 $1.6\sim2.2$）；
-  \item 涡流损耗，$\propto f^2 B^2$；
-  \item 轴承与齿轮箱的粘滞摩擦，摩擦力矩近似 $b\,\omega$，对应损耗功率 $\propto \omega^2$；
-  \item 风阻与搅油损耗 $\propto \omega^3$，仅在高转速下才显著。
+  \item \textbf{磁滞损耗}，与交变频率 $f$（Hz）和磁通密度 $B$（T）有关，
+  近似 $\propto f B^{n}$，其中 $n$ 是经验指数（约 $1.6\sim2.2$），$\propto$ 读作“正比于”；
+  \item \textbf{涡流损耗}，$\propto f^2 B^2$，随频率上升得比磁滞损耗更快；
+  \item \textbf{轴承与齿轮箱的粘滞摩擦}：摩擦力矩近似为 $b\,\omega$，
+  其中 $b$ 是粘滞摩擦系数（N$\cdot$m$\cdot$s/rad），$\omega$ 是转速（rpm）；
+  摩擦力矩乘以转速就是损耗功率，因此这部分功率 $\propto \omega^2$；
+  \item \textbf{风阻与搅油损耗}，$\propto \omega^3$，仅在高转速下才显著。
 \end{itemize}
 在 M3508 的工作转速区间内，把上述各项合并近似成一条 $\omega^2$ 抛物线是合理且方便的：
 \begin{equation}\label{eq:k2phys}
   P_{\mathrm{fe}} + P_{\mathrm{damp}} \approx k_2\,\omega^2 .
 \end{equation}
+式中 $P_{\mathrm{fe}}$ 为\emph{铁损}（磁滞与涡流损耗，W）；
+$P_{\mathrm{damp}}$ 为\emph{机械阻尼损耗}（轴承摩擦、齿轮搅油、风阻，W）；
+$\omega$ 为转子转速（rpm）；
+$k_2$ 是把这两类损耗合并之后的系数（W/rpm$^2$），也就是模型中 $\omega^2$ 项的系数。
 这也解释了开源报告中提到的一个现象——不同电机的 $k_2$ 参数不同。
 原因是不同电机齿轮箱的阻尼系数不同，而阻尼力矩恰好贡献 $\omega^2$ 项。
 换句话说，$k_2$ 是\emph{个体参数}，而不是整个动力套件的通用常数。
@@ -1191,12 +1282,25 @@ C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要
 \begin{equation}\label{eq:model}
   \boxed{\;\Pin \;=\; k_2\,\omega^2 \;+\; \CT\,\Icmd\,\omega \;+\; k_1\,\Icmd^2 \;+\; a\;}
 \end{equation}
-其中 $\CT\Icmd\omega$ 就是 \fref{eq:pm} 的机械功率项，其系数由物理常数唯一确定：
+式中各项与符号分别是：
+$\Pin$ 为\emph{单台}电机的输入功率（W）；
+$\omega$ 为转子转速（rpm），$\Icmd$ 为准备下发的力矩电流控制值（无量纲）——
+这两个是\emph{自变量}，也就是代码里当前能拿到的两个数；
+$k_2\omega^2$ 是铁损与阻尼项，$k_2$ 单位 W/rpm$^2$；
+$k_1\Icmd^2$ 是铜损项，$k_1$ 单位 W；
+$\CT\Icmd\omega$ 是机械功率项，$\CT$ 单位 W/rpm；
+$a$ 是控制器静态功耗（W）。
+其中 $k_2,k_1,a$ 三个系数需要靠实测数据标定（第~\ref{sec:lsq} 节），
+而 $\CT\Icmd\omega$ 就是 \fref{eq:pm} 的机械功率项，其系数由物理常数唯一确定：
 \begin{equation}\label{eq:ct}
   \CT = \frac{\KT}{9.55}\times\frac{20}{16384}
       = \frac{0.015622}{9.55}\times1.2207\times10^{-3}
       = 1.99688994\times10^{-6}\ \ [\mathrm{W/rpm}].
 \end{equation}
+式中 $\KT$ 为转子侧力矩常数（N$\cdot$m/A，见 \fref{eq:kt}）；
+$9.55$ 是 rpm 到 rad/s 的换算系数（见 \fref{eq:pm}）；
+$20/16384$ 是发送值到力矩电流的换算系数（见 \fref{eq:itau}）；
+三者相乘即得把“发送值 $\times$ 转速”直接换算成功率（W）的系数 $\CT$。
 
 模型的用法如图~\ref{fig:predict} 所示：把\emph{准备下发的指令}与\emph{当前转速}
 送进模型，四项分别算出再求和，就得到电机在这一刻的输入功率估计值 $\hat\Pin$。
@@ -2413,11 +2517,18 @@ $36\ \mathrm{J/s}$ 等具体数值并无可查证的官方依据，不应作为�
 \begin{equation}
   \Pin = \Plim + \delta .
 \end{equation}
+式中 $\Pin$ 为电机\emph{实际}消耗的输入功率（W）；
+$\Plim$ 为外环给出的\emph{本周期功率预算}（W），也就是我们希望它消耗的值；
+$\delta$ 为两者之差，即\emph{实际与期望的偏差}（W），正号表示实际用得多。
 于是缓冲能量的动态变为
 \begin{equation}\label{eq:plant}
   \dot\Ebuf = \Pmax - \Pin = \Pmax - (\Pmax - u) - \delta = u - \delta,
 \end{equation}
-其中 $u$ 是外环控制器的输出。\fref{eq:plant} 说明\textbf{被控对象是一个纯积分器}：
+式中 $\dot\Ebuf$ 为缓冲能量对时间的\emph{变化率}（J/s）；
+$\Pmax$ 为裁判系统给出的功率上限（W）；
+$u$ 是外环控制器的输出（W），
+第二个等号用到了第~\ref{sec:bufferloop} 节的预算定义 $\Plim=\Pmax-u$。
+\fref{eq:plant} 说明\textbf{被控对象是一个纯积分器}：
 控制量 $u$（单位 W）积分后得到 $\Ebuf$（单位 J），直流增益为 $1$，
 而模型误差 $\delta$ 相当于作用在积分器\emph{输入端}的常值扰动。
 
