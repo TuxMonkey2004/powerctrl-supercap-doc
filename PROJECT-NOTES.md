@@ -196,3 +196,33 @@
 `\documentclass[cn,blue,11pt,device=normal]{elegantnote}` + 文件里能搜到“最小二乘”。
 若看到的是 `hazy` / `screen` / `14pt`，说明又拿到旧模板了。
 
+---
+
+## 7. 远端仓库地址（已变更）
+
+主仓库已迁移到：
+
+```
+origin  https://github.com/TuxMonkey2004/powerctrl-supercap-doc.git
+```
+
+旧仓库仍作为备用远端保留（**不再推送**）：
+
+```
+old-origin  https://github.com/TuxMonkey2004/Docs-of-PowerControl-and-SuperCap.git
+```
+
+迁移时的处理方式：新仓库里已经是同一份内容（逐文件哈希一致），
+因此没有重推内容，只用 `git merge -s ours --allow-unrelated-histories`
+把两段互不相关的历史接在一起，使本地 `main` 成为新仓库历史的后续，
+以后的推送都是快进，不会再出现需要强推的情况。
+
+本地 `main` 的上游已设为 `origin/main`。日常操作就是：
+
+```powershell
+git add -A
+git commit -F <消息文件>      # 消息里含 "/" 时用文件，避免被 git 当成路径
+git push origin main
+```
+
+
