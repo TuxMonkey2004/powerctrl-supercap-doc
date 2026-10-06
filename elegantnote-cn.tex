@@ -46,6 +46,97 @@
   wlab/.style={font=\scriptsize, anchor=east},
   % 背景色带（用于标注导通区间）
   wband/.style={fill=eblue!12, draw=none},
+  % 能量流箭头：红=储能相，绿=释能相
+  rflow/.style={red!72!black, very thick, -{Stealth[length=1.7mm]}},
+  gflow/.style={codegreen!62!black, very thick, -{Stealth[length=1.7mm]}},
+  % 失活支路（该相没有电流）
+  idle/.style={black!28, thick, densely dashed},
+}
+
+%------------------------------------------------------------------ 变换器主电路（供 Buck / Boost 各画两相时复用）
+% 尺寸已压缩到约 6.5cm 宽，便于两个子图并排。
+\newcommand{\buckstage}{%
+  \draw[mwire] (-0.5,0) -- (5.7,0);
+  \draw[mwire] (-0.5,-2.3) -- (5.7,-2.3);
+  % 输入电源
+  \draw[mwire] (-0.5,0) -- (-0.5,-0.8);
+  \draw[mwire] (-0.85,-0.8) -- (-0.15,-0.8);
+  \draw[mwire] (-0.7,-1.1) -- (-0.3,-1.1);
+  \draw[mwire] (-0.5,-1.1) -- (-0.5,-2.3);
+  \node[mlab, left] at (-0.95,-0.85) {$U_{\mathrm{in}}$};
+  % 输入电容
+  \draw[mwire] (0.5,0) -- (0.5,-0.8);
+  \draw[mwire] (0.2,-0.8) -- (0.8,-0.8);
+  \draw[mwire] (0.2,-1.1) -- (0.8,-1.1);
+  \draw[mwire] (0.5,-1.1) -- (0.5,-2.3);
+  \node[mlab, right] at (0.85,-0.95) {\scriptsize $C_{\mathrm{in}}$};
+  % 开关管
+  \node[msw] (s1) at (1.6,0) {$S_1$};
+  \draw[mwire] (0.9,0) -- (s1.west);
+  \draw[mwire] (s1.east) -- (2.5,0);
+  \fill[eblue] (2.5,0) circle (1.2pt);
+  % 续流二极管（阴极朝上）
+  \draw[mwire] (2.5,0) -- (2.5,-0.65);
+  \draw[fill=black!78] (2.22,-1.15) -- (2.78,-1.15) -- (2.5,-0.65) -- cycle;
+  \draw[mwire] (2.22,-0.65) -- (2.78,-0.65);
+  \draw[mwire] (2.5,-1.15) -- (2.5,-2.3);
+  \node[mlab, right] at (2.85,-0.9) {\scriptsize $D_1$};
+  % 电感
+  \draw[mwire] (2.5,0) -- (3.0,0);
+  \draw[decorate, decoration={coil, segment length=1.45mm, amplitude=1.15mm},
+        black!78, thick] (3.0,0) -- (4.15,0);
+  \node[mlab, above] at (3.58,0.16) {\scriptsize $L$};
+  \draw[mwire] (4.15,0) -- (4.75,0);
+  % 输出电容
+  \draw[mwire] (4.75,0) -- (4.75,-0.8);
+  \draw[mwire] (4.45,-0.8) -- (5.05,-0.8);
+  \draw[mwire] (4.45,-1.1) -- (5.05,-1.1);
+  \draw[mwire] (4.75,-1.1) -- (4.75,-2.3);
+  \node[mlab, right] at (5.10,-0.95) {\scriptsize $C_{\mathrm{out}}$};
+  % 负载
+  \node[mcmp, minimum width=3mm, minimum height=6.5mm] (rl) at (5.5,-1.15) {};
+  \draw[mwire] (5.5,0) -- (rl.north);
+  \draw[mwire] (rl.south) -- (5.5,-2.3);
+  \node[mlab, anchor=north] at (5.5,-1.62) {\scriptsize $R_{\mathrm{L}}$};
+}
+
+\newcommand{\booststage}{%
+  \draw[mwire] (-0.5,0) -- (5.7,0);
+  \draw[mwire] (-0.5,-2.3) -- (5.7,-2.3);
+  % 输入电源
+  \draw[mwire] (-0.5,0) -- (-0.5,-0.8);
+  \draw[mwire] (-0.85,-0.8) -- (-0.15,-0.8);
+  \draw[mwire] (-0.7,-1.1) -- (-0.3,-1.1);
+  \draw[mwire] (-0.5,-1.1) -- (-0.5,-2.3);
+  \node[mlab, left] at (-0.95,-0.85) {$U_{\mathrm{in}}$};
+  % 电感（在输入侧）
+  \draw[mwire] (0.5,0) -- (0.95,0);
+  \draw[decorate, decoration={coil, segment length=1.45mm, amplitude=1.15mm},
+        black!78, thick] (0.95,0) -- (2.10,0);
+  \node[mlab, above] at (1.53,0.16) {\scriptsize $L$};
+  \draw[mwire] (2.10,0) -- (2.6,0);
+  \fill[eblue] (2.6,0) circle (1.2pt);
+  % 开关管（把电感对地短路）
+  \node[msw] (s1) at (2.6,-1.55) {$S_1$};
+  \draw[mwire] (2.6,0) -- (s1.north);
+  \draw[mwire] (s1.south) -- (2.6,-2.3);
+  % 二极管（阳极在左）
+  \draw[mwire] (2.6,0) -- (3.3,0);
+  \draw[fill=black!78] (3.3,-0.3) -- (3.3,0.3) -- (3.85,0) -- cycle;
+  \draw[mwire] (3.85,-0.3) -- (3.85,0.3);
+  \draw[mwire] (3.85,0) -- (4.75,0);
+  \node[mlab, above] at (3.57,0.34) {\scriptsize $D_1$};
+  % 输出电容
+  \draw[mwire] (4.75,0) -- (4.75,-0.8);
+  \draw[mwire] (4.45,-0.8) -- (5.05,-0.8);
+  \draw[mwire] (4.45,-1.1) -- (5.05,-1.1);
+  \draw[mwire] (4.75,-1.1) -- (4.75,-2.3);
+  \node[mlab, right] at (5.10,-0.95) {\scriptsize $C_{\mathrm{out}}$};
+  % 负载
+  \node[mcmp, minimum width=3mm, minimum height=6.5mm] (rl) at (5.5,-1.15) {};
+  \draw[mwire] (5.5,0) -- (rl.north);
+  \draw[mwire] (rl.south) -- (5.5,-2.3);
+  \node[mlab, anchor=north] at (5.5,-1.62) {\scriptsize $R_{\mathrm{L}}$};
 }
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -3183,74 +3274,92 @@ Buck 把高电压变成低电压，电路如图~\ref{fig:buck} 所示。
 
 \begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[>=Stealth, font=\small, scale=0.98]
-    % ---- 上下母线 ----
-    \draw[mwire] (-0.6,0) -- (9.2,0);
-    \draw[mwire] (-0.6,-3.0) -- (9.2,-3.0);
-
-    % ---- 输入电源 ----
-    \draw[mwire] (-0.6,0) -- (-0.6,-1.05);
-    \draw[mwire] (-1.05,-1.05) -- (-0.15,-1.05);
-    \draw[mwire] (-0.85,-1.40) -- (-0.35,-1.40);
-    \draw[mwire] (-0.6,-1.40) -- (-0.6,-3.0);
-    \node[mlab, left] at (-1.15,-1.15) {$U_{\mathrm{in}}$};
-
-    % ---- 输入电容 ----
-    \draw[mwire] (0.9,0) -- (0.9,-1.05);
-    \draw[mwire] (0.5,-1.05) -- (1.3,-1.05);
-    \draw[mwire] (0.5,-1.40) -- (1.3,-1.40);
-    \draw[mwire] (0.9,-1.40) -- (0.9,-3.0);
-    \node[mlab, right] at (1.38,-1.22) {$C_{\mathrm{in}}$};
-
-    % ---- 开关管 S1 ----
-    \node[msw] (s1) at (2.6,0) {$S_1$};
-    \draw[mwire] (1.5,0) -- (s1.west);
-    \draw[mwire] (s1.east) -- (3.9,0);
-    \coordinate (A) at (3.9,0);
-    \fill[eblue] (A) circle (1.3pt);
-
-    % ---- 续流二极管（阴极在上，三角形朝上）----
-    \draw[mwire] (A) -- (3.9,-0.95);
-    \draw[fill=black!78] (3.55,-1.55) -- (4.25,-1.55) -- (3.9,-0.95) -- cycle;
-    \draw[mwire] (3.55,-0.95) -- (4.25,-0.95);
-    \draw[mwire] (3.9,-1.55) -- (3.9,-3.0);
-    \node[mlab, right] at (4.32,-1.25) {$D_1$};
-
-    % ---- 电感 ----
-    \draw[mwire] (A) -- (4.7,0);
-    \draw[decorate, decoration={coil, segment length=1.7mm, amplitude=1.35mm},
-          black!78, thick] (4.7,0) -- (6.5,0);
-    \node[mlab, above] at (5.6,0.22) {$L$};
-    \draw[mwire] (6.5,0) -- (7.3,0);
-
-    % ---- 输出电容 ----
-    \draw[mwire] (7.3,0) -- (7.3,-1.05);
-    \draw[mwire] (6.95,-1.05) -- (7.65,-1.05);
-    \draw[mwire] (6.95,-1.40) -- (7.65,-1.40);
-    \draw[mwire] (7.3,-1.40) -- (7.3,-3.0);
-    \node[mlab, right] at (7.78,-1.22) {$C_{\mathrm{out}}$};
-
-    % ---- 负载 ----
-    \node[mcmp, minimum width=3.2mm, minimum height=9mm] (rl) at (8.7,-1.5) {};
-    \draw[mwire] (8.7,0) -- (rl.north);
-    \draw[mwire] (rl.south) -- (8.7,-3.0);
-    \node[mlab, right] at (9.0,-1.5) {$R_{\mathrm{L}}$};
-
-    % ---- 电压标注 ----
-    \draw[<->, gray!70] (9.0,0.05) -- (9.0,-3.05);
-    \node[mlab, right, text=black!70] at (9.05,-3.25) {$U_{\mathrm{out}}$};
-
-    % ---- 两种电流路径 ----
-    \draw[red!70!black, very thick, -{Stealth[length=1.7mm]}]
-      (1.55,0.42) -- (2.05,0.42)
-      node[midway, above, mlab, text=red!70!black] {\;导通};
-    \draw[codegreen!75!black, very thick, -{Stealth[length=1.7mm]}]
-      (3.9,-2.6) -- (3.9,-2.05)
-      node[midway, right, mlab, text=codegreen!75!black] {\;续流};
+  % ==================== 上排：两个工作相的电路 ====================
+  \begin{tikzpicture}[>=Stealth, font=\small]
+    \buckstage
+    \draw[rflow] (-0.15,0.45) -- (1.0,0.45);
+    \draw[rflow] (2.10,0.45) -- (4.50,0.45);
+    \draw[rflow] (5.92,-0.50) -- (5.92,-1.85);
+    \draw[rflow] (5.20,-2.68) -- (0.10,-2.68);
+    \node[font=\small, text=black!32] at (2.50,-1.95) {$\times$};
+    \node[mlab, text=red!72!black, anchor=west, align=left] at (-0.90,-3.28)
+      {输入 $\to S_1\to L\to$ 输出；\\ 电感电流\emph{上升}，能量存入 $L$};
+    \node[font=\small\bfseries, text=eblue] at (2.30,-4.55) {(a) $S_1$ 导通（储能相）};
   \end{tikzpicture}
-  \caption{Buck（降压）变换器。红色箭头是 $S_1$ 导通时的电流方向，
-  绿色箭头是 $S_1$ 关断时电感经 $D_1$ 续流的路径。
-  注意 $D_1$ 的\emph{阴极朝上}接在开关节点，阳极接地。}
+  \hfill
+  \begin{tikzpicture}[>=Stealth, font=\small]
+    \buckstage
+    \node[font=\small, text=black!32] at (0.55,0.42) {$\times$};
+    \draw[gflow] (2.10,0.45) -- (4.50,0.45);
+    \draw[gflow] (5.92,-0.50) -- (5.92,-1.85);
+    \draw[gflow] (5.20,-2.68) -- (0.10,-2.68);
+    \draw[gflow] (2.04,-2.02) -- (2.04,-0.58);
+    \node[mlab, text=codegreen!62!black, anchor=east] at (1.94,-1.30) {续流};
+    \node[mlab, text=codegreen!62!black, anchor=west, align=left] at (-0.90,-3.28)
+      {$L$ 经 $D_1$ 续流；\\ 电感电流\emph{下降}，能量释放给输出};
+    \node[font=\small\bfseries, text=eblue] at (2.30,-4.55) {(b) $S_1$ 关断（释能相）};
+  \end{tikzpicture}
+
+  \vspace{6pt}
+  % ==================== 下排：时间-电压 / 时间-电流 波形 ====================
+  \begin{tikzpicture}[>=Stealth, font=\small, x=1.32cm, y=0.85cm]
+    \def\per{2.0}
+    \def\Dt{0.62}
+    \pgfmathsetmacro{\ton}{\Dt*\per}
+    % 导通区间底色（与上面的电路配色一致）
+    \foreach \k in {0,1,2,3} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \fill[wband] (\xA,-0.22) rectangle (\xB,1.28);
+      \fill[wband] (\xA,-2.62) rectangle (\xB,-1.38);
+    }
+    % ---- 行 1：开关节点电压 u_sw ----
+    \draw[gray!60] (-0.25,0) -- (8.35,0);
+    \foreach \k in {0,1,2,3} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \pgfmathsetmacro{\xC}{\k*\per+\per}
+      \draw[eblue, very thick] (\xA,0) -- (\xA,1.1) -- (\xB,1.1) -- (\xB,0) -- (\xC,0);
+    }
+    \node[wlab] at (-0.4,0.55) {$u_{\mathrm{sw}}$};
+    \node[mlab, anchor=west, text=black!60] at (1.75,-0.32) {$0$};
+    \node[mlab, anchor=west, text=black!60] at (1.75,1.16) {$U_{\mathrm{in}}$};
+    % ---- 行 2：电感电流 i_L（上升=红，下降=绿，与电路配色对应）----
+    \draw[gray!60] (-0.25,-2.0) -- (8.35,-2.0);
+    \draw[gray!55, densely dashed] (-0.20,-2.0) -- (8.25,-2.0);
+    \foreach \k in {0,1,2,3} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \pgfmathsetmacro{\xC}{\k*\per+\per}
+      \draw[red!72!black, very thick] (\xA,-2.45) -- (\xB,-1.55);
+      \draw[codegreen!62!black, very thick] (\xB,-1.55) -- (\xC,-2.45);
+    }
+    \node[wlab] at (-0.4,-2.0) {$i_L$};
+    \node[mlab, anchor=west, text=black!60] at (4.15,-1.90) {$\overline{I_L}$};
+    % ---- 时间轴 ----
+    \draw[gray!70] (0,-3.05) -- (8.2,-3.05);
+    \foreach \k in {0,1,2,3,4} { \draw[gray!70] (\k*\per,-3.05) -- (\k*\per,-3.22); }
+    \node[mlab, below] at (0,-3.26) {$0$};
+    \node[mlab, below] at (2*\per,-3.26) {$2T$};
+    \node[mlab, below] at (4*\per,-3.26) {$4T$};
+    \draw[<->, gray!70] (0,-2.92) -- (\ton,-2.92);
+    \node[mlab, above] at (0.62,-2.90) {$D\,T$};
+    % ---- 图例 ----
+    \draw[red!72!black, very thick] (4.9,-3.45) -- (5.25,-3.45);
+    \node[mlab, anchor=west] at (5.30,-3.45) {上升 $=$ 储能相};
+    \draw[codegreen!62!black, very thick] (4.9,-3.85) -- (5.25,-3.85);
+    \node[mlab, anchor=west] at (5.30,-3.85) {下降 $=$ 释能相};
+    \fill[wband] (0.0,-3.85) rectangle (0.30,-3.68);
+    \node[mlab, anchor=west] at (0.36,-3.77) {浅蓝底色 $=S_1$ 导通};
+  \end{tikzpicture}
+  \caption{Buck（降压）变换器：两个工作相的\emph{电流回路}（上）与对应的
+  \emph{时间-电压、时间-电流}波形（下）。
+  上排\textbf{红色箭头}是 $S_1$ 导通时的回路（输入 $\to S_1\to L\to$ 输出），
+  \textbf{绿色箭头}是 $S_1$ 关断时的续流回路（电感 $\to$ 输出 $\to$ 地 $\to D_1\to$ 回电感）；
+  灰色的 $\times$ 表示该相中这条支路没有电流。
+  下排把两种颜色沿用到波形上：$i_L$ 在\emph{上升段}即储能相、
+  在\emph{下降段}即释能相，读者可以一眼把电路和波形对上。
+  $u_{\mathrm{sw}}$ 在 $U_{\mathrm{in}}$ 与 $0$ 之间跳变，是开关噪声的来源。}
   \label{fig:buck}
 \end{figure}
 
@@ -3310,76 +3419,97 @@ $L$ 为电感量（H）；$f_{\mathrm{sw}}=1/T$ 为开关频率（Hz）。
 
 \begin{figure}[htbp]
   \centering
+  % 所有坐标都由周期与占空比算出，避免手写数值不一致
   \begin{tikzpicture}[>=Stealth, font=\small, x=1.05cm, y=0.62cm]
-    \def\Dt{0.62}      % 占空比（示意）
-    \def\per{2.0}      % 一个开关周期的长度
-    % ---------- 辅助：给每个周期画导通区间底色 ----------
+    \def\per{2.0}          % 一个开关周期在坐标里的长度
+    \def\Dt{0.62}          % 占空比 D（示意）
+    \pgfmathsetmacro{\ton}{\Dt*\per}
+    \pgfmathsetmacro{\toff}{\per-\ton}
+
+    % ---------- 导通区间底色（逐周期铺，与波形严格对齐）----------
     \foreach \k in {0,1,2} {
-      \fill[wband] (\k*\per, -0.2) rectangle (\k*\per+\Dt*\per, 1.5);
-      \fill[wband] (\k*\per, -2.6) rectangle (\k*\per+\Dt*\per, -1.0);
-      \fill[wband] (\k*\per, -5.4) rectangle (\k*\per+\Dt*\per, -3.8);
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \fill[wband] (\xA,-0.25) rectangle (\xB,1.45);
+      \fill[wband] (\xA,-2.55) rectangle (\xB,-1.05);
+      \fill[wband] (\xA,-5.55) rectangle (\xB,-3.95);
     }
+
     % ---------- 行 1：门极驱动 ----------
-    \draw[gray!60] (-0.3,0) -- (6.5,0);
-    \draw[eblue, very thick] (0,0) -- (0,1.2) -- (\Dt*\per,1.2) -- (\Dt*\per,0)
-      -- (\per,0) -- (\per,1.2) -- (1.62,1.2) -- (1.62,0) -- (2,0)
-      -- (2,1.2) -- (3.24,1.2) -- (3.24,0) -- (4,0) -- (4,1.2) -- (4.86,1.2)
-      -- (4.86,0) -- (6,0);
-    \node[wlab] at (-0.4,0.6) {$V_{gs1}$};
-    \draw[dashed, gray!60] (0,0) -- (0,-7.4);
+    \draw[gray!60] (-0.3,0) -- (6.7,0);
+    \foreach \k in {0,1,2} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \pgfmathsetmacro{\xC}{\k*\per+\per}
+      \draw[eblue, very thick] (\xA,0) -- (\xA,1.2) -- (\xB,1.2) -- (\xB,0) -- (\xC,0);
+    }
+    \node[wlab] at (-0.45,0.6) {$V_{gs1}$};
 
     % ---------- 行 2：开关节点电压 ----------
-    \draw[gray!60] (-0.3,-1.8) -- (6.5,-1.8);
-    \draw[eblue, very thick] (0,-1.8) -- (0,-0.9) -- (\Dt*\per,-0.9) -- (\Dt*\per,-1.8)
-      -- (\per,-1.8) -- (\per,-0.9) -- (1.62,-0.9) -- (1.62,-1.8)
-      -- (2,-1.8) -- (2,-0.9) -- (3.24,-0.9) -- (3.24,-1.8)
-      -- (4,-1.8) -- (4,-0.9) -- (4.86,-0.9) -- (4.86,-1.8) -- (6,-1.8);
-    \node[wlab] at (-0.4,-1.35) {$u_{\mathrm{sw}}$};
-    \node[mlab, anchor=west, text=black!60] at (0.15,-0.75) {$U_{\mathrm{in}}$};
-    \node[mlab, anchor=west, text=black!60] at (0.15,-2.05) {$0$};
+    \draw[gray!60] (-0.3,-1.8) -- (6.7,-1.8);
+    \foreach \k in {0,1,2} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \pgfmathsetmacro{\xC}{\k*\per+\per}
+      \draw[eblue, very thick] (\xA,-1.8) -- (\xA,-0.9) -- (\xB,-0.9) -- (\xB,-1.8) -- (\xC,-1.8);
+    }
+    \node[wlab] at (-0.45,-1.35) {$u_{\mathrm{sw}}$};
+    \node[mlab, anchor=west, text=black!60] at (0.18,-0.72) {$U_{\mathrm{in}}$};
+    \node[mlab, anchor=east, text=black!60] at (-0.02,-1.80) {$0$};
 
     % ---------- 行 3：电感电流 ----------
-    \draw[gray!60] (-0.3,-4.0) -- (6.5,-4.0);
-    \node[wlab] at (-0.4,-4.0) {$i_L$};
-    \node[mlab, anchor=west, text=black!60] at (0.15,-3.55) {$\overline{I_L}$};
-    \draw[gray!55, densely dashed] (-0.2,-3.75) -- (6.3,-3.75);
-    \draw[red!70!black, very thick] (0,-3.75) -- (\Dt*\per,-3.05)
-      -- (\per,-3.75) -- (1.62,-3.05) -- (2,-3.75)
-      -- (2.62,-3.05) -- (3.24,-3.75) -- (4,-3.05)
-      -- (4.62,-3.75) -- (4.86,-3.75) -- (5.48,-3.05) -- (6,-3.05);
+    \draw[gray!60] (-0.3,-3.4) -- (6.7,-3.4);
+    \draw[gray!55, densely dashed] (-0.25,-3.4) -- (6.55,-3.4);
+    \foreach \k in {0,1,2} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \pgfmathsetmacro{\xC}{\k*\per+\per}
+      \draw[red!70!black, very thick] (\xA,-3.78) -- (\xB,-3.02) -- (\xC,-3.78);
+    }
+    \node[wlab] at (-0.45,-3.4) {$i_L$};
+    \node[mlab, anchor=west, text=black!60] at (4.35,-3.30) {$\overline{I_L}$};
     % 纹波标注
-    \draw[<->, gray!70] (0.35,-3.75) -- (0.35,-3.05);
-    \node[mlab, anchor=west] at (0.42,-3.40) {$\Delta I_L$};
+    \draw[<->, gray!70] (0.30,-3.78) -- (0.30,-3.02);
+    \node[mlab, anchor=west] at (0.38,-3.40) {$\Delta I_L$};
 
     % ---------- 行 4：电容电流 ----------
-    \draw[gray!60] (-0.3,-6.4) -- (6.5,-6.4);
-    \node[wlab] at (-0.4,-6.4) {$i_C$};
-    \draw[codegreen!75!black, very thick] (0,-6.4) -- (0,-5.75) -- (\Dt*\per,-5.75)
-      -- (\Dt*\per,-6.4) -- (\per,-6.4) -- (1.62,-6.4) -- (1.62,-5.75)
-      -- (2,-5.75) -- (2,-6.4) -- (2.62,-6.4) -- (3.24,-6.4)
-      -- (4,-6.4) -- (4,-5.75) -- (4.86,-5.75) -- (4.86,-6.4) -- (6,-6.4);
-    \node[mlab, anchor=west, text=black!60] at (0.15,-6.65) {充} ;
-    \node[mlab, anchor=west, text=black!60] at (1.05,-6.65) {放};
-
-    % ---------- 时间刻度 ----------
-    \draw[gray!70] (0,-7.15) -- (6.5,-7.15);
-    \foreach \k in {0,1,2,3} {
-      \draw[gray!70] (\k*\per,-7.15) -- (\k*\per,-7.35);
+    \draw[gray!60] (-0.3,-6.05) -- (6.7,-6.05);
+    \foreach \k in {0,1,2} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \pgfmathsetmacro{\xC}{\k*\per+\per}
+      \draw[codegreen!75!black, very thick] (\xA,-6.40) -- (\xB,-5.70) -- (\xC,-6.40);
     }
-    \node[mlab, below] at (0,-7.4) {$0$};
-    \node[mlab, below] at (\per,-7.4) {$T$};
-    \node[mlab, below] at (2*\per,-7.4) {$2T$};
-    \draw[<->, gray!70] (0,-7.02) -- (\Dt*\per,-7.02);
-    \node[mlab, above] at (0.62,-7.00) {$D\,T$};
-    \draw[<->, gray!70] (\Dt*\per,-7.02) -- (\per,-7.02);
-    \node[mlab, above] at (1.31,-7.00) {$(1-D)T$};
-    % 底色图例
-    \fill[wband] (4.6,-7.62) rectangle (4.85,-7.45);
-    \node[mlab, anchor=west] at (4.9,-7.55) {$S_1$ 导通区间};
+    \node[wlab] at (-0.45,-6.05) {$i_C$};
+    \node[mlab, text=black!60] at (0.62,-5.55) {充电};
+    \node[mlab, text=black!60] at (1.62,-6.58) {放电};
+
+    % ---------- 时间轴 ----------
+    \draw[gray!70] (0,-7.35) -- (6.6,-7.35);
+    \foreach \k in {0,1,2,3} {
+      \draw[gray!70] (\k*\per,-7.35) -- (\k*\per,-7.55);
+    }
+    \node[mlab, below] at (0,-7.60) {$0$};
+    \node[mlab, below] at (\per,-7.60) {$T$};
+    \node[mlab, below] at (2*\per,-7.60) {$2T$};
+    \draw[<->, gray!70] (0,-7.12) -- (\ton,-7.12);
+    \node[mlab, above] at (0.62,-7.10) {$D\,T$};
+    \draw[<->, gray!70] (\ton,-7.12) -- (\per,-7.12);
+    \node[mlab, above] at (1.62,-7.10) {$(1-D)T$};
+
+    % ---------- 图例 ----------
+    \fill[wband] (0.0,-8.35) rectangle (0.28,-8.18);
+    \node[mlab, anchor=west] at (0.34,-8.27) {浅蓝底色 $=S_1$ 导通区间};
   \end{tikzpicture}
-  \caption{Buck 变换器的关键波形（示意，占空比 $D\approx0.62$）。
+  \caption{Buck 变换器的关键波形（示意，占空比 $D=0.62$）。
   自上而下依次是：$S_1$ 的门极驱动、开关节点电压 $u_{\mathrm{sw}}$、
-  电感电流 $i_L$（红色，在导通区间上升、在关断区间下降）、电容电流 $i_C$。
+  电感电流 $i_L$、电容电流 $i_C$。
+  电感电流在导通区间\emph{线性上升}、在关断区间\emph{线性下降}，
+  呈三角波；其平均值 $\overline{I_L}$ 就是负载电流，
+  峰峰起伏 $\Delta I_L$ 即式~\eqref{eq:buckripple} 给出的纹波。
+  电容电流同样呈三角波，但以零为中线：
+  上半周由电容\emph{充电}（承担电感电流高于负载的那部分），
+  下半周\emph{放电}补给负载，两部分面积相等，因此输出电压保持稳定。
   浅蓝底色标出 $S_1$ 的导通区间。}
   \label{fig:buckwave}
 \end{figure}
@@ -3404,66 +3534,100 @@ Boost 把低电压变成高电压。它把电感放在\emph{输入侧}，
 
 \begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[>=Stealth, font=\small, scale=0.98]
-    \draw[mwire] (-0.6,0) -- (9.2,0);
-    \draw[mwire] (-0.6,-3.0) -- (9.2,-3.0);
-
-    % 输入电源
-    \draw[mwire] (-0.6,0) -- (-0.6,-1.05);
-    \draw[mwire] (-1.05,-1.05) -- (-0.15,-1.05);
-    \draw[mwire] (-0.85,-1.40) -- (-0.35,-1.40);
-    \draw[mwire] (-0.6,-1.40) -- (-0.6,-3.0);
-    \node[mlab, left] at (-1.15,-1.15) {$U_{\mathrm{in}}$};
-
-    % 电感（在输入侧）
-    \draw[mwire] (0.5,0) -- (1.0,0);
-    \draw[decorate, decoration={coil, segment length=1.7mm, amplitude=1.35mm},
-          black!78, thick] (1.0,0) -- (2.8,0);
-    \node[mlab, above] at (1.9,0.22) {$L$};
-    \draw[mwire] (2.8,0) -- (3.6,0);
-    \coordinate (A) at (3.6,0);
-    \fill[eblue] (A) circle (1.3pt);
-
-    % 开关管（对地短路电感）
-    \node[msw] (s1) at (3.6,-2.0) {$S_1$};
-    \draw[mwire] (A) -- (s1.north);
-    \draw[mwire] (s1.south) -- (3.6,-3.0);
-
-    % 二极管（阳极在左，阴极朝右）
-    \draw[mwire] (A) -- (4.5,0);
-    \draw[fill=black!78] (4.5,-0.38) -- (4.5,0.38) -- (5.15,0) -- cycle;
-    \draw[mwire] (5.15,-0.38) -- (5.15,0.38);
-    \draw[mwire] (5.15,0) -- (6.4,0);
-    \node[mlab, above] at (4.85,0.42) {$D_1$};
-
-    % 输出电容
-    \draw[mwire] (6.4,0) -- (6.4,-1.05);
-    \draw[mwire] (6.05,-1.05) -- (6.75,-1.05);
-    \draw[mwire] (6.05,-1.40) -- (6.75,-1.40);
-    \draw[mwire] (6.4,-1.40) -- (6.4,-3.0);
-    \node[mlab, right] at (6.88,-1.22) {$C_{\mathrm{out}}$};
-
-    % 负载
-    \node[mcmp, minimum width=3.2mm, minimum height=9mm] (rl) at (8.0,-1.5) {};
-    \draw[mwire] (8.0,0) -- (rl.north);
-    \draw[mwire] (rl.south) -- (8.0,-3.0);
-    \draw[mwire] (6.55,0) -- (8.0,0);
-    \node[mlab, right] at (8.3,-1.5) {$R_{\mathrm{L}}$};
-
-    \draw[<->, gray!70] (8.5,0.05) -- (8.5,-3.05);
-    \node[mlab, right, text=black!70] at (8.55,-3.25) {$U_{\mathrm{out}}$};
-
-    % 电流路径
-    \draw[red!70!black, very thick, -{Stealth[length=1.7mm]}]
-      (3.05,-1.3) -- (3.05,-1.8)
-      node[midway, left, mlab, text=red!70!black] {储能};
-    \draw[codegreen!75!black, very thick, -{Stealth[length=1.7mm]}]
-      (4.35,0.72) -- (4.95,0.72)
-      node[midway, above, mlab, text=codegreen!75!black] {释能};
+  % ==================== 上排：两个工作相的电路 ====================
+  \begin{tikzpicture}[>=Stealth, font=\small]
+    \booststage
+    \draw[rflow] (-0.15,0.45) -- (2.45,0.45);
+    \draw[rflow] (2.73,-0.12) -- (2.73,-1.22);
+    \draw[rflow] (2.20,-2.68) -- (0.10,-2.68);
+    \node[font=\small, text=black!32] at (3.55,0.42) {$\times$};
+    \node[mlab, text=red!72!black, anchor=west, align=left] at (-0.90,-3.28)
+      {输入 $\to L\to S_1\to$ 地；\\ 电感被短路\emph{储能}，电流上升};
+    \node[font=\small\bfseries, text=eblue] at (2.30,-4.55) {(a) $S_1$ 导通（储能相）};
   \end{tikzpicture}
-  \caption{Boost（升压）变换器。电感在输入侧：$S_1$ 导通时电感被短路储能，
-  $S_1$ 关断时电感与输入电源\emph{串联}经 $D_1$ 向输出释能，
-  因此输出电压可以高于输入电压。}
+  \hfill
+  \begin{tikzpicture}[>=Stealth, font=\small]
+    \booststage
+    \node[font=\small, text=black!32] at (2.60,-0.70) {$\times$};
+    \draw[gflow] (-0.15,0.45) -- (4.50,0.45);
+    \draw[gflow] (5.92,-0.50) -- (5.92,-1.85);
+    \draw[gflow] (5.20,-2.68) -- (0.10,-2.68);
+    \node[mlab, text=codegreen!62!black, anchor=west, align=left] at (-0.90,-3.28)
+      {$L$ 与输入\emph{串联}经 $D_1$ 输出；\\ 电压叠加，故 $U_{\mathrm{out}}>U_{\mathrm{in}}$};
+    \node[font=\small\bfseries, text=eblue] at (2.30,-4.55) {(b) $S_1$ 关断（释能相）};
+  \end{tikzpicture}
+
+  \vspace{6pt}
+  % ==================== 下排：时间-电压 / 时间-电流 波形 ====================
+  \begin{tikzpicture}[>=Stealth, font=\small, x=1.32cm, y=0.85cm]
+    \def\per{2.0}
+    \def\Dt{0.62}
+    \pgfmathsetmacro{\ton}{\Dt*\per}
+    \foreach \k in {0,1,2,3} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \fill[wband] (\xA,-0.22) rectangle (\xB,1.28);
+      \fill[wband] (\xA,-2.62) rectangle (\xB,-1.38);
+      \fill[wband] (\xA,-4.92) rectangle (\xB,-4.10);
+    }
+    % ---- 行 1：开关节点电压 u_sw（与 Buck 相反：导通时为 0）----
+    \draw[gray!60] (-0.25,0) -- (8.35,0);
+    \foreach \k in {0,1,2,3} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \pgfmathsetmacro{\xC}{\k*\per+\per}
+      \draw[eblue, very thick] (\xA,0) -- (\xB,0) -- (\xB,1.1) -- (\xC,1.1) -- (\xC,0);
+    }
+    \node[wlab] at (-0.4,0.55) {$u_{\mathrm{sw}}$};
+    \node[mlab, anchor=west, text=black!60] at (0.30,-0.32) {$0$};
+    \node[mlab, anchor=west, text=black!60] at (1.45,0.55) {$U_{\mathrm{out}}$};
+    % ---- 行 2：电感电流 i_L（上升=红，下降=绿）----
+    \draw[gray!60] (-0.25,-2.0) -- (8.35,-2.0);
+    \foreach \k in {0,1,2,3} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \pgfmathsetmacro{\xC}{\k*\per+\per}
+      \draw[red!72!black, very thick] (\xA,-2.35) -- (\xB,-1.69);
+      \draw[codegreen!62!black, very thick] (\xB,-1.69) -- (\xC,-2.35);
+    }
+    \node[wlab] at (-0.4,-2.05) {$i_L$};
+    % ---- 行 3：二极管电流 i_D（只在关断相导通）----
+    \draw[gray!60] (-0.25,-4.5) -- (8.35,-4.5);
+    \foreach \k in {0,1,2,3} {
+      \pgfmathsetmacro{\xA}{\k*\per}
+      \pgfmathsetmacro{\xB}{\k*\per+\ton}
+      \pgfmathsetmacro{\xC}{\k*\per+\per}
+      \draw[codegreen!62!black, very thick]
+        (\xA,-4.5) -- (\xB,-4.5) -- (\xB,-1.69) -- (\xC,-2.35) -- (\xC,-4.5);
+    }
+    \node[wlab] at (-0.4,-4.5) {$i_D$};
+    \node[mlab, anchor=west, text=black!60] at (5.30,-4.70) {只在关断相导通};
+    % ---- 时间轴 ----
+    \draw[gray!70] (0,-5.30) -- (8.2,-5.30);
+    \foreach \k in {0,1,2,3,4} { \draw[gray!70] (\k*\per,-5.30) -- (\k*\per,-5.47); }
+    \node[mlab, below] at (0,-5.51) {$0$};
+    \node[mlab, below] at (2*\per,-5.51) {$2T$};
+    \node[mlab, below] at (4*\per,-5.51) {$4T$};
+    \draw[<->, gray!70] (0,-5.17) -- (\ton,-5.17);
+    \node[mlab, above] at (0.62,-5.15) {$D\,T$};
+    % ---- 图例 ----
+    \draw[red!72!black, very thick] (4.9,-5.72) -- (5.25,-5.72);
+    \node[mlab, anchor=west] at (5.30,-5.72) {上升 $=$ 储能相};
+    \draw[codegreen!62!black, very thick] (4.9,-6.12) -- (5.25,-6.12);
+    \node[mlab, anchor=west] at (5.30,-6.12) {下降 $=$ 释能相};
+    \fill[wband] (0.0,-6.12) rectangle (0.30,-5.95);
+    \node[mlab, anchor=west] at (0.36,-6.04) {浅蓝底色 $=S_1$ 导通};
+  \end{tikzpicture}
+  \caption{Boost（升压）变换器：两个工作相的\emph{电流回路}（上）与对应的
+  \emph{时间-电压、时间-电流}波形（下）。
+  上排\textbf{红色箭头}是 $S_1$ 导通时的回路（输入 $\to L\to S_1\to$ 地，
+  电感被直接短路储能），\textbf{绿色箭头}是 $S_1$ 关断时的回路
+  （输入电源与电感\emph{串联}，经 $D_1$ 向输出供电）——
+  正因为两者电压叠加，输出电压才可能高于输入电压。
+  下排中 $i_L$ 的上升段（红）对应储能相、下降段（绿）对应释能相；
+  最下面一行的 $i_D$ 揭示了一个 Buck 没有的特点：
+  \textbf{二极管电流只在关断相存在}，输出端因此是\emph{脉冲式}供电，
+  必须靠 $C_{\mathrm{out}}$ 把电流“填平”——这也是升压电路输出纹波通常更大的原因。}
   \label{fig:boost}
 \end{figure}
 
@@ -3604,23 +3768,23 @@ FSBB 的妙处在于：\textbf{它用同一个电感覆盖了 Buck、Boost 与�
   \small
   \caption{几种双向 DC--DC 结构的对比}
   \label{tab:bbcompare}
-  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.14\textwidth}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.21\textwidth}>{\raggedright\arraybackslash}p{0.23\textwidth}@{}}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.19\textwidth}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.19\textwidth}>{\raggedright\arraybackslash}p{0.22\textwidth}@{}}
     \toprule
     结构 & 电压关系 & 开关数 & 优点 & 缺点 \\
     \midrule
-    Buck & $U_{\mathrm{out}}=DU_{\mathrm{in}}$ &
+    Buck & $U_{\mathrm{out}}=D\,U_{\mathrm{in}}$ &
     1 管 $+$ 1 二极管 &
-    最简单、效率最高 & 只能降压，本场景不适用 \\[3pt]
-    Boost & $U_{\mathrm{out}}=\dfrac{U_{\mathrm{in}}}{1-D}$ &
+    最简单、效率最高 & 只能降压，本场景不适用 \\[4pt]
+    Boost & $U_{\mathrm{out}}=U_{\mathrm{in}}/(1-D)$ &
     1 管 $+$ 1 二极管 &
-    升压效率高 & 只能升压；有右半平面零点 \\[3pt]
-    反相 Buck-Boost & $U_{\mathrm{out}}=-\dfrac{D}{1-D}U_{\mathrm{in}}$ &
+    升压效率高 & 只能升压；有右半平面零点 \\[4pt]
+    反相 Buck-Boost & $U_{\mathrm{out}}=-D\,U_{\mathrm{in}}/(1-D)$ &
     1 管 $+$ 1 二极管 &
-    一个电路覆盖升降压 & 输出反相、不共地；效率低；有右半平面零点 \\[3pt]
+    一个电路覆盖升降压 & 输出反相、不共地；效率低；有右半平面零点 \\[4pt]
     \textbf{四开关 Buck-Boost} & 由模式决定，见 \ref{sec:fsbbmode} 节 &
     4 管 &
     共地、双向、可直通、两边都无右半平面零点 &
-    器件多、驱动与逻辑复杂、需处理死区与体二极管 \\[3pt]
+    器件多、驱动与逻辑复杂、需处理死区与体二极管 \\[4pt]
     串联式 Buck/Boost & 两套独立变换器 &
     $\ge 4$ 管 &
     控制最直观，可用成品模块 & 体积大；电容低压时效率差 \\
@@ -3698,20 +3862,20 @@ $\alpha<1$ 则相反。这个量在后面推导控制律时会反复出现。
     \draw[gray!70] (2.1,-0.5) -- (2.1,-0.62);
     \draw[gray!70] (8.5,-0.5) -- (8.5,-0.62);
     \draw[gray!70, very thick] (5.3,-0.36) -- (5.3,-0.64);
-    \node[mlab, below] at (5.3,-0.72) {$1$};
-    \node[mlab, below] at (1.0,-0.72) {$\alpha>1$};
-    \node[mlab, below] at (9.6,-0.72) {$\alpha<1$};
+    \node[mlab, below] at (5.3,-0.70) {$1$};
+    \node[mlab, below] at (1.0,-0.70) {$\alpha>1$};
+    \node[mlab, below] at (9.6,-0.70) {$\alpha<1$};
 
     % 每个模式下的开关管状态
-    \node[font=\scriptsize, text=eblue, align=center] at (2.1,-1.35)
+    \node[font=\scriptsize, text=eblue, align=center] at (2.1,-1.85)
       {$S_3$ 常通、$S_4$ 常断\\$S_1/S_2$ 互补 PWM};
-    \node[font=\scriptsize, text=red!70!black, align=center] at (5.3,-1.45)
+    \node[font=\scriptsize, text=red!70!black, align=center] at (5.3,-1.85)
       {四管\\都开关};
-    \node[font=\scriptsize, text=codegreen!60!black, align=center] at (8.5,-1.35)
+    \node[font=\scriptsize, text=codegreen!60!black, align=center] at (8.5,-1.85)
       {$S_1$ 常通、$S_2$ 常断\\$S_3/S_4$ 互补 PWM};
 
     % 说明
-    \node[mlab, anchor=west, text=black!60] at (0,-2.25)
+    \node[mlab, anchor=west, text=black!60] at (0,-2.85)
       {电容电压低于母线时降压使用；高于母线时升压使用；两者接近时进入过渡模式。};
   \end{tikzpicture}
   \caption{FSBB 的工作区间划分（示意）。
