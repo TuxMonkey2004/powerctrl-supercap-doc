@@ -397,3 +397,14 @@ git push origin main
 
 断页控制已在导言区设好：`\widowpenalty` / `\clubpenalty` /
 `\displaywidowpenalty` / `\predisplaypenalty` 全部 10000。
+## 图文对应检查（每次改动后都跑）
+
+`D:\glkzjiaocai\floatdist.py`：从 PDF 里同时抽取「每个 caption 所在页」与
+「正文中每次 图 N / 表 N 引用所在页」，逐项比页码差。
+**任何一项超过 1 页就要处理**——要么把图移到引用点附近，要么补引用。
+
+同时查「孤儿图」：有 label 但全文没有 \ref 的图，属于必须补正文引入的情况。
+（图 21 接线框图就曾是这样，补了一段引入正文。）
+
+注意：**向前引用（正文先提、图在很后面）比向后引用糟糕得多**，
+优先消除。图 10 曾出现"第 2 章提到、图在 16 页之后"。

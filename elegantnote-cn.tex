@@ -789,6 +789,44 @@ $k_1,k_2,a,\CT$ 是电机的模型参数——它们的物理含义、单位与�
   \item 预算可以精确地分给四个电机，而不是靠一个笼统的系数去凑；
   \item \emph{恒功率运行}成为可能——从起步到加速的整个过程，电机始终贴着功率上限走。
   这正是功率受限条件下加速度最大的工作方式（参见图~\ref{fig:envelope}）。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=0.88\textwidth, height=6.6cm,
+      xlabel={转子转速 $\omega$ (rpm)},
+      ylabel={允许的发送值上限},
+      xmin=0, xmax=9000, ymin=0, ymax=19500,
+      scaled y ticks=false,
+      ytick={0,4000,8000,12000,16000},
+      grid=both, grid style={gray!18},
+      legend style={at={(0.97,0.97)}, anchor=north east, draw=gray!40,
+                    fill=papercolor, fill opacity=0.9, text opacity=1, font=\small},
+      tick label style={font=\small},
+      label style={font=\small},
+      axis line style={gray!60}
+    ]
+      \addplot[thick, codegreen, dashed] coordinates {
+        (0,18240) (500,14619) (1000,11817) (1500,9693) (2000,8086) (2500,6856)
+        (3000,5898) (4000,4517) (5000,3577) (6000,2892) (7000,2369) (8000,1950) (9000,1604)};
+      \addlegendentry{模型解（未受执行器限制）}
+      \addplot[thick, eblue] coordinates {
+        (0,16384) (500,14619) (1000,11817) (1500,9693) (2000,8086) (2500,6856)
+        (3000,5898) (4000,4517) (5000,3577) (6000,2892) (7000,2369) (8000,1950) (9000,1604)};
+      \addlegendentry{恒功率包络（实际可发送上限）}
+      \addplot[gray, thick, dotted] coordinates {(0,10000) (9000,10000)};
+      \addlegendentry{某一固定力矩阈值（示意）}
+      \addplot[red!70!black, thick, dashdotted] coordinates {(0,16384) (9000,16384)};
+      \addlegendentry{C620 控制量上限}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{单台电机在功率预算 $45\ \mathrm{W}$ 下的恒功率包络。
+  固定力矩阈值在低速段偏松、在高速段偏紧，而恒功率包络随转速单调下降；
+  两者只在某一个转速附近偶然相交。}
+  \label{fig:envelope}
+\end{figure}
+
 \end{enumerate}
 
 当然，预测不是免费的：它的准确性完全取决于模型。
@@ -1928,43 +1966,6 @@ $C$ 的符号则取决于目标功率与该转速下\emph{空载损耗}的比较
 这个结论很实用：很多实现里那个“判别式小于零就跳过”的分支，
 在正常行驶工况下几乎永远不会被触发；真正的风险不在判别式，而在下面要讲的\emph{根的符号}。
 
-\begin{figure}[htbp]
-  \centering
-  \begin{tikzpicture}
-    \begin{axis}[
-      width=0.88\textwidth, height=6.4cm,
-      xlabel={力矩电流控制值 $\Icmd$},
-      ylabel={电机输入功率 $\Pin$ (W)},
-      xmin=-4000, xmax=12000, ymin=-60, ymax=190,
-      grid=both, grid style={gray!18},
-      legend style={at={(0.98,0.03)}, anchor=south east, draw=gray!40,
-                    fill=papercolor, fill opacity=0.9, text opacity=1, font=\small},
-      tick label style={font=\small},
-      label style={font=\small},
-      axis line style={gray!60}
-    ]
-      \addplot[domain=-4000:12000, samples=120, thick, eblue]
-        {1.23e-7*x^2 + 0.0119813*x + 9.3118};
-      \addlegendentry{$\omega = 6000$ rpm}
-      \addplot[domain=-4000:12000, samples=120, thick, codegreen, dashed]
-        {1.23e-7*x^2 + 0.0059907*x + 5.3887};
-      \addlegendentry{$\omega = 3000$ rpm}
-      \addplot[gray, thick, dotted] coordinates {(-4000,40) (12000,40)};
-      \addlegendentry{功率预算 $P^{\ast} = 40$ W}
-      \addplot[only marks, mark=*, mark size=1.8pt, black]
-        coordinates {(2497,40) (5898,40)};
-      \node[anchor=north east, font=\scriptsize, text=black,
-            fill=papercolor, inner sep=1.5pt] at (axis cs:2380,36)
-        {$x_+\!\approx\!2497$};
-      \node[anchor=south west, font=\scriptsize, text=black,
-            fill=papercolor, inner sep=1.5pt] at (axis cs:6050,48)
-        {$x_+\!\approx\!5898$};
-    \end{axis}
-  \end{tikzpicture}
-  \caption{同一功率预算在不同转速下对应的控制量。转速越低，允许的控制量越大，
-  这正是“固定力矩阈值”方案失效的根本原因：功率与控制量的换算关系随转速剧烈变化。}
-  \label{fig:powercurve}
-\end{figure}
 
 \subsection{两个根都有物理意义}
 
@@ -2079,42 +2080,6 @@ $C$ 的符号则取决于目标功率与该转速下\emph{空载损耗}的比较
 
 算例 B 和 C 暴露了 \fref{eq:rootselect} 的两个失效场景，下一节详细讨论。
 
-\begin{figure}[htbp]
-  \centering
-  \begin{tikzpicture}
-    \begin{axis}[
-      width=0.88\textwidth, height=6.6cm,
-      xlabel={转子转速 $\omega$ (rpm)},
-      ylabel={允许的发送值上限},
-      xmin=0, xmax=9000, ymin=0, ymax=19500,
-      scaled y ticks=false,
-      ytick={0,4000,8000,12000,16000},
-      grid=both, grid style={gray!18},
-      legend style={at={(0.97,0.97)}, anchor=north east, draw=gray!40,
-                    fill=papercolor, fill opacity=0.9, text opacity=1, font=\small},
-      tick label style={font=\small},
-      label style={font=\small},
-      axis line style={gray!60}
-    ]
-      \addplot[thick, codegreen, dashed] coordinates {
-        (0,18240) (500,14619) (1000,11817) (1500,9693) (2000,8086) (2500,6856)
-        (3000,5898) (4000,4517) (5000,3577) (6000,2892) (7000,2369) (8000,1950) (9000,1604)};
-      \addlegendentry{模型解（未受执行器限制）}
-      \addplot[thick, eblue] coordinates {
-        (0,16384) (500,14619) (1000,11817) (1500,9693) (2000,8086) (2500,6856)
-        (3000,5898) (4000,4517) (5000,3577) (6000,2892) (7000,2369) (8000,1950) (9000,1604)};
-      \addlegendentry{恒功率包络（实际可发送上限）}
-      \addplot[gray, thick, dotted] coordinates {(0,10000) (9000,10000)};
-      \addlegendentry{某一固定力矩阈值（示意）}
-      \addplot[red!70!black, thick, dashdotted] coordinates {(0,16384) (9000,16384)};
-      \addlegendentry{C620 控制量上限}
-    \end{axis}
-  \end{tikzpicture}
-  \caption{单台电机在功率预算 $45\ \mathrm{W}$ 下的恒功率包络。
-  固定力矩阈值在低速段偏松、在高速段偏紧，而恒功率包络随转速单调下降；
-  两者只在某一个转速附近偶然相交。}
-  \label{fig:envelope}
-\end{figure}
 
 \subsection{两类边界情形及其修复}
 
@@ -2231,6 +2196,45 @@ $\sqrt\Delta$ 与之同量级，属于\emph{恰好}容易抵消的区间，因�
   \item \textbf{预算无法转移。} 若某个电机本来就用不到它那一份预算
   （例如对角轮载荷很小），剩余预算不能被其他电机使用，白白浪费。
 \end{itemize}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=0.88\textwidth, height=6.4cm,
+      xlabel={力矩电流控制值 $\Icmd$},
+      ylabel={电机输入功率 $\Pin$ (W)},
+      xmin=-4000, xmax=12000, ymin=-60, ymax=190,
+      grid=both, grid style={gray!18},
+      legend style={at={(0.98,0.03)}, anchor=south east, draw=gray!40,
+                    fill=papercolor, fill opacity=0.9, text opacity=1, font=\small},
+      tick label style={font=\small},
+      label style={font=\small},
+      axis line style={gray!60}
+    ]
+      \addplot[domain=-4000:12000, samples=120, thick, eblue]
+        {1.23e-7*x^2 + 0.0119813*x + 9.3118};
+      \addlegendentry{$\omega = 6000$ rpm}
+      \addplot[domain=-4000:12000, samples=120, thick, codegreen, dashed]
+        {1.23e-7*x^2 + 0.0059907*x + 5.3887};
+      \addlegendentry{$\omega = 3000$ rpm}
+      \addplot[gray, thick, dotted] coordinates {(-4000,40) (12000,40)};
+      \addlegendentry{功率预算 $P^{\ast} = 40$ W}
+      \addplot[only marks, mark=*, mark size=1.8pt, black]
+        coordinates {(2497,40) (5898,40)};
+      \node[anchor=north east, font=\scriptsize, text=black,
+            fill=papercolor, inner sep=1.5pt] at (axis cs:2380,36)
+        {$x_+\!\approx\!2497$};
+      \node[anchor=south west, font=\scriptsize, text=black,
+            fill=papercolor, inner sep=1.5pt] at (axis cs:6050,48)
+        {$x_+\!\approx\!5898$};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{同一功率预算在不同转速下对应的控制量。转速越低，允许的控制量越大，
+  这正是“固定力矩阈值”方案失效的根本原因：功率与控制量的换算关系随转速剧烈变化。}
+  \label{fig:powercurve}
+\end{figure}
+
 
 \subsection{方案二：取绝对值后统一缩放}
 
@@ -4652,6 +4656,15 @@ $11$ 串、单体 ESR 约 $22\ \mathrm{m}\Omega$ 的组，其总 ESR 约 $240\ \
 
 \subsection{硬件总体框图}
 
+接线部分先看一张图。超电模组并不是“控制板直接接电容组”那么简单：
+控制板与电容组之间要经过\emph{【裁判系统】的电容管理模块}，
+而控制板自己的供电又来自\emph{电源管理模块的 Chassis 端口}。
+图~\ref{fig:scwiring} 按使用手册的端口编号（$[1]\sim[19]$）把这些连线画全，
+并标出两条选装支路（NTC 测温与远端补偿）。
+这张图也是整机联调时的接线依据：\emph{接错一根，后面的调试全部白做}，
+所以建议先把端口对照一遍再上电。
+
+
 \begin{figure}[htbp]
   \centering
   % 接线框图：控制板与电容组之间要经过【裁判系统】电容管理模块，这是最容易画错的一处
@@ -4791,8 +4804,9 @@ $11$ 串、单体 ESR 约 $22\ \mathrm{m}\Omega$ 的组，其总 ESR 约 $240\ \
     \node[flab, anchor=west] at (3.05,-6.95) {\scriptsize 控制板给底盘分电};
     \draw[farr] (pdb.east) -- (esc.west);
     \draw[farr] (esc.east) -- (mot.west);
-    \draw[fdarr] (mot.north) -- (12.0,-8.9) -- (12.0,3.0) -- (11.3,3.0);
-    \node[flab, rotate=90, anchor=south, text=codegreen!60!black] at (12.22,-2.6)
+    \draw[fdarr] (mot.east) -- (12.35,-8.9) -- (12.35,3.0) -- (11.3,3.0);
+    \node[flab, rotate=90, anchor=south, text=codegreen!60!black,
+      fill=papercolor, inner sep=1.5pt] at (12.55,-2.6)
       {电机反馈};
   \end{tikzpicture}
   \caption{超电系统的硬件总体框图。
