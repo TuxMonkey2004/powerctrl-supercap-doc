@@ -4219,80 +4219,144 @@ $\alpha<1$ 则相反。这个量在后面推导控制律时会反复出现。
   \label{fig:fsbbmodes}
 \end{figure}
 
+四种模式各自\emph{哪一对管子在工作}、对应的\emph{电感电压与电感电流波形}，
+一并画在图~\ref{fig:modewave} 中：每一行\emph{左边是电路示意、右边是波形}。
+两者对着看最省力——电路回答“\emph{怎么接}”，波形回答“\emph{为什么是这个损耗}”。
+
+
+
 
 
 \begin{figure}[htbp]
   \centering
-  % 四种工作模式排成 2x2；每种模式只改「哪个半桥在动」，颜色沿用全篇约定
-  \begin{tikzpicture}[>=Stealth, font=\small, scale=0.86, transform shape]
+  % 每种模式一行：左＝电路示意（管子配色沿用全篇约定），右＝波形
+  % 波形三件套：储能区间浅蓝底色、i_L 红升绿降、v_L 电平标注
+  \begin{tikzpicture}[>=Stealth, font=\small, scale=0.78, transform shape]
 
-    % ================== (a) Buck ==================
-    \begin{scope}[shift={(0,0)}]
-      \fsbbmini{swpwm}{swpwm}{swon}{swoff}
-      \node[font=\small\bfseries, anchor=north] at (3.55,-1.32)
-        {(a) Buck（降压）：$U_2<U_1$};
-      \node[mlab, anchor=north, align=center, font=\scriptsize, text width=6.6cm] at (3.55,-1.72)
-        {$S_3$ 常通、$S_4$ 常断\\[1pt]
-         \emph{右半桥被短路成导线}，退化为同步 Buck};
+  % ==================== 行 1：Buck ====================
+  \begin{scope}[shift={(0,0)}]
+    \begin{scope}[shift={(0,1.40)}] \fsbbmini{swpwm}{swpwm}{swon}{swoff} \end{scope}
+    \begin{scope}[shift={(8.9,0.70)}]
+      \foreach \k in {0,1,2} {
+        \pgfmathsetmacro{\xa}{\k*2.0}
+        \pgfmathsetmacro{\xb}{\k*2.0+1.24}
+        \pgfmathsetmacro{\xc}{\k*2.0+2.0}
+        \fill[wband] (\xa,-0.10) rectangle (\xb,3.42);
+        \draw[eblue, thick] (\xa,2.50) -- (\xa,3.10) -- (\xb,3.10) -- (\xb,1.90) -- (\xc,1.90);
+        \draw[red!72!black, thick] (\xa,0.05) -- (\xb,0.75);
+        \draw[codegreen!62!black, thick] (\xb,0.75) -- (\xc,0.05);
+      }
+      \draw[gray!55] (0,0.40) -- (6.2,0.40);
+      \draw[gray!55] (0,2.50) -- (6.2,2.50);
+      \node[mlab, anchor=east, font=\scriptsize] at (-0.15,2.50) {$v_L$};
+      \node[mlab, anchor=east, font=\scriptsize] at (-0.15,0.40) {$i_L$};
+      \node[mlab, font=\tiny, text=eblue] at (0.62,3.26) {$U_1-U_2$};
+      \node[mlab, font=\tiny, text=eblue] at (1.62,1.74) {$-U_2$};
     \end{scope}
+    \node[font=\small\bfseries, anchor=north west, text width=15.2cm] at (0,0.10)
+      {\textbf{(a) Buck（降压，$U_2<U_1$）}：$S_1$ 导通时 $v_L=U_1-U_2>0$，$i_L$ \textcolor{red!72!black}{上升}（储能）；
+       $S_1$ 关断时 $v_L=-U_2<0$，$i_L$ \textcolor{codegreen!62!black}{下降}（释能）。};
+  \end{scope}
 
-    % ================== (b) Boost ==================
-    \begin{scope}[shift={(9.3,0)}]
-      \fsbbmini{swon}{swoff}{swpwm}{swpwm}
-      \node[font=\small\bfseries, anchor=north] at (3.55,-1.32)
-        {(b) Boost（升压）：$U_2>U_1$};
-      \node[mlab, anchor=north, align=center, font=\scriptsize, text width=6.6cm] at (3.55,-1.72)
-        {$S_1$ 常通、$S_2$ 常断\\[1pt]
-         \emph{左半桥被短路成导线}，退化为同步 Boost};
+  % ==================== 行 2：Boost ====================
+  \begin{scope}[shift={(0,-4.40)}]
+    \begin{scope}[shift={(0,1.40)}] \fsbbmini{swon}{swoff}{swpwm}{swpwm} \end{scope}
+    \begin{scope}[shift={(8.9,0.70)}]
+      \foreach \k in {0,1,2} {
+        \pgfmathsetmacro{\xa}{\k*2.0}
+        \pgfmathsetmacro{\xb}{\k*2.0+0.70}
+        \pgfmathsetmacro{\xc}{\k*2.0+2.0}
+        \fill[wband] (\xa,-0.10) rectangle (\xb,3.42);
+        \draw[eblue, thick] (\xa,1.95) -- (\xa,3.05) -- (\xb,3.05) -- (\xb,2.05) -- (\xc,2.05);
+        \draw[red!72!black, thick] (\xa,0.05) -- (\xb,0.62);
+        \draw[codegreen!62!black, thick] (\xb,0.62) -- (\xc,0.05);
+      }
+      \draw[gray!55] (0,0.40) -- (6.2,0.40);
+      \draw[gray!55] (0,2.50) -- (6.2,2.50);
+      \node[mlab, anchor=east, font=\scriptsize] at (-0.15,2.50) {$v_L$};
+      \node[mlab, anchor=east, font=\scriptsize] at (-0.15,0.40) {$i_L$};
+      \node[mlab, font=\tiny, text=eblue] at (0.35,3.21) {$U_1$};
+      \node[mlab, font=\tiny, text=eblue] at (1.40,1.89) {$U_1-U_2$};
     \end{scope}
+    \node[font=\small\bfseries, anchor=north west, text width=15.2cm] at (0,0.10)
+      {\textbf{(b) Boost（升压，$U_2>U_1$）}：$S_4$ 导通把电感短路，$v_L=U_1>0$、$i_L$ \textcolor{red!72!black}{上升}（储能）；
+       $S_4$ 关断后 $v_L=U_1-U_2<0$、$i_L$ \textcolor{codegreen!62!black}{下降}（释能）。};
+  \end{scope}
 
-    % ================== (c) Buck-Boost 过渡 ==================
-    \begin{scope}[shift={(0,-4.35)}]
-      \fsbbmini{swpwm}{swpwm}{swpwm}{swpwm}
-      \node[font=\small\bfseries, anchor=north] at (3.55,-1.32)
-        {(c) Buck-Boost（过渡）：$U_2\approx U_1$};
-      \node[mlab, anchor=north, align=center, font=\scriptsize, text width=6.6cm] at (3.55,-1.72)
-        {\emph{四个管都参与 PWM 开关}\\[1pt]
-         占空比不必跑到 $0\%$ 或 $100\%$ 的极端值；
-         代价是开关损耗翻倍、效率下降};
+  % ==================== 行 3：过渡 ====================
+  \begin{scope}[shift={(0,-8.80)}]
+    \begin{scope}[shift={(0,1.40)}] \fsbbmini{swpwm}{swpwm}{swpwm}{swpwm} \end{scope}
+    \begin{scope}[shift={(8.9,0.70)}]
+      \foreach \k in {0,1,2,3,4,5} {
+        \pgfmathsetmacro{\xa}{\k*1.0}
+        \pgfmathsetmacro{\xb}{\k*1.0+0.55}
+        \pgfmathsetmacro{\xc}{\k*1.0+1.0}
+        \fill[wband] (\xa,-0.10) rectangle (\xb,3.22);
+        \draw[eblue, thick] (\xa,2.10) -- (\xa,2.90) -- (\xb,2.90) -- (\xb,2.10) -- (\xc,2.10);
+        \draw[red!72!black, thick] (\xa,0.12) -- (\xb,0.58);
+        \draw[codegreen!62!black, thick] (\xb,0.58) -- (\xc,0.12);
+      }
+      \draw[gray!55] (0,0.40) -- (6.2,0.40);
+      \draw[gray!55] (0,2.50) -- (6.2,2.50);
+      \node[mlab, anchor=east, font=\scriptsize] at (-0.15,2.50) {$v_L$};
+      \node[mlab, anchor=east, font=\scriptsize] at (-0.15,0.40) {$i_L$};
     \end{scope}
+    \node[font=\small\bfseries, anchor=north west, text width=15.2cm] at (0,0.10)
+      {\textbf{(c) 过渡（$U_2\approx U_1$）}：两桥同时开关，储能区间变成两倍密，
+       $i_L$ 纹波频率升到 $2f$、幅度更小，但\emph{开关次数翻倍、损耗翻倍}。};
+  \end{scope}
 
-    % ================== (d) 直通 ==================
-    \begin{scope}[shift={(9.3,-4.35)}]
-      \fsbbmini{swon}{swoff}{swon}{swoff}
-      \node[font=\small\bfseries, anchor=north] at (3.55,-1.32)
-        {(d) 直通（bypass）：与电压比无关};
-      \node[mlab, anchor=north, align=center, font=\scriptsize, text width=6.6cm] at (3.55,-1.72)
-        {$S_1$、$S_3$ 常通，$S_2$、$S_4$ 常断\\[1pt]
-         \emph{两侧经 $L$ 直接连通}，超电等于不存在；
-         用于电容耗尽或故障时旁路};
+  % ==================== 行 4：直通 ====================
+  \begin{scope}[shift={(0,-13.20)}]
+    \begin{scope}[shift={(0,1.40)}] \fsbbmini{swon}{swoff}{swon}{swoff} \end{scope}
+    \begin{scope}[shift={(8.9,0.70)}]
+      \draw[gray!55] (0,0.40) -- (6.2,0.40);
+      \draw[gray!55] (0,2.50) -- (6.2,2.50);
+      \draw[eblue, thick] (0,2.66) -- (6.0,2.66);
+      \draw[red!72!black, thick] (0,0.10) -- (6.0,0.90);
+      \node[mlab, anchor=east, font=\scriptsize] at (-0.15,2.50) {$v_L$};
+      \node[mlab, anchor=east, font=\scriptsize] at (-0.15,0.40) {$i_L$};
+      \node[mlab, font=\tiny, text=eblue] at (3.0,2.84) {$U_1-U_2$（恒定）};
+      \node[mlab, font=\tiny, text=red!72!black] at (3.0,0.28) {单调上升};
     \end{scope}
+    \node[font=\small\bfseries, anchor=north west, text width=15.2cm] at (0,0.10)
+      {\textbf{(d) 直通（bypass，与电压比无关）}：完全不开关，没有储能/释能的交替，
+       $i_L$ 单调变化、\emph{没有纹波}，损耗只剩导通损耗与铜损。};
+  \end{scope}
   \end{tikzpicture}
 
   % ============ 图例 ============
   \vspace{2pt}
-  \begin{tikzpicture}[>=Stealth, font=\small]
-    \draw[swon]  (0.0,0) rectangle (0.44,0.32);
-    \node[mlab, anchor=west] at (0.52,0.16) {MOS 常通};
-    \draw[swoff] (2.70,0) rectangle (3.14,0.32);
-    \node[mlab, anchor=west] at (3.22,0.16) {MOS 常断};
-    \draw[swpwm] (5.40,0) rectangle (5.84,0.32);
-    \node[mlab, anchor=west] at (5.92,0.16) {MOS 开关（PWM，与同桥另一管互补）};
+  \begin{tikzpicture}[>=Stealth, font=\scriptsize]
+    \draw[swon]  (0.00,0) rectangle (0.40,0.30);
+    \node[mlab, anchor=west] at (0.46,0.15) {MOS 常通};
+    \draw[swoff] (2.20,0) rectangle (2.60,0.30);
+    \node[mlab, anchor=west] at (2.66,0.15) {MOS 常断};
+    \draw[swpwm] (4.40,0) rectangle (4.80,0.30);
+    \node[mlab, anchor=west] at (4.86,0.15) {MOS 开关（PWM）};
+    \fill[wband] (7.90,0) rectangle (8.40,0.30);
+    \node[mlab, anchor=west] at (8.46,0.15) {储能区间（$i_L$ 上升）};
+    \draw[red!72!black, thick] (11.90,0.15) -- (12.40,0.15);
+    \node[mlab, anchor=west] at (12.46,0.15) {$i_L$ 上升};
+    \draw[codegreen!62!black, thick] (14.30,0.15) -- (14.80,0.15);
+    \node[mlab, anchor=west] at (14.86,0.15) {$i_L$ 下降};
   \end{tikzpicture}
-  \caption{四开关 Buck-Boost 的\emph{四种工作模式}对比。
-  四种模式的差别只有一个：\textbf{哪一对管子在工作}。
-  前两种靠\emph{固定一个半桥}把电路退化成基本变换器，是日常运行的主力；
-  后两种是特殊情况——
-  \textbf{(c) 过渡模式}出现在两侧电压接近时：
-  此时单靠 Buck 或 Boost，占空比都要跑到 $0\%$ 或 $100\%$ 的极端值，
-  开关管无法正常工作，必须让两个半桥同时参与，
-  好处是占空比回到合理区间，代价是四管同时开关、损耗翻倍、效率下降；
-  \textbf{(d) 直通模式}把 $S_1$、$S_3$ 常通，两侧经电感直接连通，
-  此时超电等于\emph{不存在}，用于电容耗尽或模块故障时的旁路，
-  保证底盘不会因为超电而断电。
-  开关管的颜色沿用全篇约定：\textbf{绿}＝导通、\textbf{灰}＝关断、
-  \textbf{蓝}＝正在做 PWM 开关。}
-  \label{fig:fsbbmodes2}
+  \caption{四种工作模式的\emph{示意电路}（左）与\emph{对应波形}（右）。
+  波形只画两个量：加在电感上的电压 $v_L$ 与流过的电流 $i_L$。
+  \emph{浅蓝底色}标出各模式的\emph{储能区间}——
+  也就是 $v_L>0$、电感被充能的那些时段；
+  在这些区间里 $i_L$ 画成\textcolor{red!72!black}{红色上升}，
+  区间之外画成\textcolor{codegreen!62!black}{绿色下降}。
+  于是四种模式的差别可以一眼看出：
+  \textbf{(a) Buck} 与 \textbf{(b) Boost} 的底色带宽相同，$i_L$ 都是频率 $f$ 的三角波，
+  区别只在 $v_L$ 的两个电平不同（前者以 $U_2$ 为参考，后者以 $U_1$ 为参考）。
+  \textbf{(c) 过渡模式}的底色带\emph{密度翻倍}，$i_L$ 纹波频率变成 $2f$、幅度更小；
+  纹波小本身是好事，\emph{但开关次数翻倍、开关损耗随之翻倍}，
+  这正是过渡模式效率下降的原因，也是它只能\emph{短暂}经过、不宜长期停留的理由。
+  \textbf{(d) 直通模式}没有交替的储能/释能区间，$v_L$ 恒定、$i_L$ 单调，
+  损耗只剩导通损耗与铜损。
+  波形为示意，幅值未按真实比例，周期数与占空比按各模式的关系画出。}
+  \label{fig:modewave}
 \end{figure}
 
 \subsection{电感、开关频率与纹波}
