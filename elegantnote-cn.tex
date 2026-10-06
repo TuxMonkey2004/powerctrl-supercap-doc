@@ -28,7 +28,25 @@
 \usepackage{multirow}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.17}
-\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,patterns}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,patterns,decorations.pathmorphing,decorations.markings}
+
+%------------------------------------------------------------------ 电路元件样式
+% 供 Part II 的变换器原理图使用
+\tikzset{
+  % 开关管：用带标注的方框表示，含义明确、排版稳定
+  msw/.style={draw=eblue, thick, fill=eblue!6, minimum width=7.5mm, minimum height=5mm,
+              inner sep=1pt, font=\scriptsize},
+  % 普通元件（电感、电容、负载）
+  mcmp/.style={draw=black!78, thick, fill=papercolor},
+  % 电路连线
+  mwire/.style={draw=black!78, thick},
+  % 元件旁的标注
+  mlab/.style={font=\scriptsize, inner sep=1.5pt},
+  % 波形图里的信号名
+  wlab/.style={font=\scriptsize, anchor=east},
+  % 背景色带（用于标注导通区间）
+  wband/.style={fill=eblue!12, draw=none},
+}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{listings}
@@ -2919,9 +2937,16 @@ $K_{\mathrm{coe}}$ 在误差总和小于下阈值时取 $0$、大于上阈值时
 \part{超级电容}
 
 \begin{note}
-本部分目前只给出总体框架与若干必要的定量关系，
-用于说明超级电容在整套控制体系中处于什么位置、与 Part I 的功率控制如何分工。
-详细的电路设计、控制环实现、CAN 协议与实测数据将在后续版本中补充。
+本部分按\textbf{硬件}、\textbf{软件}、\textbf{使用注意事项}三条线展开：
+先说明超电在整套控制体系中的位置与分工（第~\ref{sec:supercap} 节），
+再讲双向 DC--DC 的主电路与采样设计（第~\ref{sec:schw} 节），
+然后是控制环、状态机与通信协议（第~\ref{sec:scsw} 节），
+最后是调试与使用中最容易踩的坑（第~\ref{sec:scnotes} 节）。
+
+\textbf{关于复刻对象}：硬件与控制板部分以桂林理工大学群星战队开源的
+RM2025 超级电容控制板 Plus 为参照~\cite{glutplushw,glutplusmanual,glutcubemx,glutmaintain}，
+电容组取香港科技大学 ENTERPRIZE 战队约 $1980\ \mathrm{J}$ 的方案~\cite{hkust1980j}。
+凡引用开源资料的具体数值均标注出处；凡属本文估算或推断的，都会写明“估算”二字。
 \end{note}
 
 \section{超级电容系统的总体框架}\label{sec:supercap}
@@ -3100,21 +3125,1228 @@ cap_measure.cap_percent;      /* 上行：电容剩余电量百分比 */
   必须在电量低于阈值时自动退回充电模式。
 \end{description}
 
-\subsection{待补充的内容}
+\subsection{母线电压为什么必须稳住}
 
-后续版本计划在本部分补充以下内容（欢迎补充资料）：
+第~\ref{sec:supercap} 节已经说明：电容不能直接并在母线上。这里把原因讲得更具体一点，
+因为它决定了后面所有硬件设计的方向。
+
+母线电压 $U_{\mathrm{bus}}$ 一旦随电容放电而下降，会同时引发三件事：
+
+\begin{enumerate}
+  \item \textbf{电机的力矩常数会变。} C620 内部是一个电流环，
+  它把“目标电流”变成 PWM 占空比。母线电压降低时，
+  同样的占空比只能产生更小的电流，于是力矩标度整体漂移。
+  \item \textbf{Part I 的功率模型会系统性失准。} 第~\ref{sec:model} 节的模型
+  $\Pin=k_2\omega^2+\CT\Icmd\omega+k_1\Icmd^2+a$ 里\emph{没有} $U_{\mathrm{bus}}$ 这一项。
+  它之所以成立，前提正是“母线电压基本恒定”。
+  \item \textbf{电调可能欠压重启。} 电调有欠压保护，母线塌陷会让它重启，
+  在比赛中表现为整车瞬间失去动力。
+\end{enumerate}
+
+所以双向 DC--DC 的核心任务可以一句话概括：
+
+\begin{quote}
+\textbf{让电容电压 $U_{\mathrm{cap}}$ 在 $15\sim30\ \mathrm{V}$ 这样一个宽范围内自由变化，
+而把母线电压 $U_{\mathrm{bus}}$ 稳稳钉在电池电压附近。}
+\end{quote}
+
+这就要求变换器\emph{既能降压也能升压}：
+当 $U_{\mathrm{cap}}>U_{\mathrm{bus}}$ 时把电压降下来用，
+当 $U_{\mathrm{cap}}<U_{\mathrm{bus}}$ 时把电压升上去用。
+下面先用三张原理图把三种基本变换器讲清楚，再说明工程上常用的组合方式。
+
+\section{硬件：双向 DC--DC 与被控对象}\label{sec:schw}
+
+\subsection{三种基本变换器}
+
+开关电源的全部原理都建立在同一个工具上：\textbf{伏秒平衡}。
+把电感看成一个“电流惯性元件”——它抗拒电流突变，
+在一个开关周期内，电感两端电压对时间的积分必须为零，否则电流会周期性地净增或净减。
+本节反复使用这一条，因此先把它的形式写下来：
+
+\begin{equation}\label{eq:voltsecond}
+  \int_{0}^{T} u_L(t)\,\dd t = 0
+  \quad\Longleftrightarrow\quad
+  \sum_{k} U_{L,k}\,\Delta t_k = 0 ,
+\end{equation}
+式中 $u_L(t)$ 为电感两端的瞬时电压（V）；
+$T=1/f_{\mathrm{sw}}$ 为一个\emph{开关周期}（s），$f_{\mathrm{sw}}$ 为开关频率（Hz）；
+$U_{L,k}$ 为第 $k$ 个区间内电感电压的近似常值（V）；
+$\Delta t_k$ 为该区间的持续时间（s）。
+左式是积分形式、右式是分段求和形式，两者等价。
+它的物理含义是：\emph{电感在一个周期内“充进去”的伏秒数必须等于“放出来”的伏秒数}。
+
+\subsubsection{Buck（降压）}
+
+Buck 把高电压变成低电压，电路如图~\ref{fig:buck} 所示。
+它由四个元件构成：开关管 $S_1$、续流二极管 $D_1$、电感 $L$、输出电容 $C_{\mathrm{out}}$。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, font=\small, scale=0.98]
+    % ---- 上下母线 ----
+    \draw[mwire] (-0.6,0) -- (9.2,0);
+    \draw[mwire] (-0.6,-3.0) -- (9.2,-3.0);
+
+    % ---- 输入电源 ----
+    \draw[mwire] (-0.6,0) -- (-0.6,-1.05);
+    \draw[mwire] (-1.05,-1.05) -- (-0.15,-1.05);
+    \draw[mwire] (-0.85,-1.40) -- (-0.35,-1.40);
+    \draw[mwire] (-0.6,-1.40) -- (-0.6,-3.0);
+    \node[mlab, left] at (-1.15,-1.15) {$U_{\mathrm{in}}$};
+
+    % ---- 输入电容 ----
+    \draw[mwire] (0.9,0) -- (0.9,-1.05);
+    \draw[mwire] (0.5,-1.05) -- (1.3,-1.05);
+    \draw[mwire] (0.5,-1.40) -- (1.3,-1.40);
+    \draw[mwire] (0.9,-1.40) -- (0.9,-3.0);
+    \node[mlab, right] at (1.38,-1.22) {$C_{\mathrm{in}}$};
+
+    % ---- 开关管 S1 ----
+    \node[msw] (s1) at (2.6,0) {$S_1$};
+    \draw[mwire] (1.5,0) -- (s1.west);
+    \draw[mwire] (s1.east) -- (3.9,0);
+    \coordinate (A) at (3.9,0);
+    \fill[eblue] (A) circle (1.3pt);
+
+    % ---- 续流二极管（阴极在上，三角形朝上）----
+    \draw[mwire] (A) -- (3.9,-0.95);
+    \draw[fill=black!78] (3.55,-1.55) -- (4.25,-1.55) -- (3.9,-0.95) -- cycle;
+    \draw[mwire] (3.55,-0.95) -- (4.25,-0.95);
+    \draw[mwire] (3.9,-1.55) -- (3.9,-3.0);
+    \node[mlab, right] at (4.32,-1.25) {$D_1$};
+
+    % ---- 电感 ----
+    \draw[mwire] (A) -- (4.7,0);
+    \draw[decorate, decoration={coil, segment length=1.7mm, amplitude=1.35mm},
+          black!78, thick] (4.7,0) -- (6.5,0);
+    \node[mlab, above] at (5.6,0.22) {$L$};
+    \draw[mwire] (6.5,0) -- (7.3,0);
+
+    % ---- 输出电容 ----
+    \draw[mwire] (7.3,0) -- (7.3,-1.05);
+    \draw[mwire] (6.95,-1.05) -- (7.65,-1.05);
+    \draw[mwire] (6.95,-1.40) -- (7.65,-1.40);
+    \draw[mwire] (7.3,-1.40) -- (7.3,-3.0);
+    \node[mlab, right] at (7.78,-1.22) {$C_{\mathrm{out}}$};
+
+    % ---- 负载 ----
+    \node[mcmp, minimum width=3.2mm, minimum height=9mm] (rl) at (8.7,-1.5) {};
+    \draw[mwire] (8.7,0) -- (rl.north);
+    \draw[mwire] (rl.south) -- (8.7,-3.0);
+    \node[mlab, right] at (9.0,-1.5) {$R_{\mathrm{L}}$};
+
+    % ---- 电压标注 ----
+    \draw[<->, gray!70] (9.0,0.05) -- (9.0,-3.05);
+    \node[mlab, right, text=black!70] at (9.05,-3.25) {$U_{\mathrm{out}}$};
+
+    % ---- 两种电流路径 ----
+    \draw[red!70!black, very thick, -{Stealth[length=1.7mm]}]
+      (1.55,0.42) -- (2.05,0.42)
+      node[midway, above, mlab, text=red!70!black] {\;导通};
+    \draw[codegreen!75!black, very thick, -{Stealth[length=1.7mm]}]
+      (3.9,-2.6) -- (3.9,-2.05)
+      node[midway, right, mlab, text=codegreen!75!black] {\;续流};
+  \end{tikzpicture}
+  \caption{Buck（降压）变换器。红色箭头是 $S_1$ 导通时的电流方向，
+  绿色箭头是 $S_1$ 关断时电感经 $D_1$ 续流的路径。
+  注意 $D_1$ 的\emph{阴极朝上}接在开关节点，阳极接地。}
+  \label{fig:buck}
+\end{figure}
+
+\textbf{两种状态。} 设开关周期为 $T$，$S_1$ 在一个周期内导通的时间为 $D\,T$，
+其中 $D\in(0,1)$ 称为\emph{占空比}（duty cycle，无量纲）。
+
 \begin{itemize}
-  \item 电容组选型与均衡电路的详细设计与实测数据；
-  \item 双向 DC--DC 的拓扑对比、开关器件选型与热设计；
-  \item 内层控制环（电容电流环、母线功率环）的建模与整定，
-  包括“恒功率”与“恒流”两种模式的取舍；
-  \item 电流采样方案（分流电阻 + 双向电流监测）的量程与精度设计，
-  以及开关噪声对采样的影响；
-  \item CAN 通信协议的完整报文定义与容错策略（超时、校验、状态机）；
-  \item 能量调度的优化策略：在整车能量池约束下，
-  如何决定“何时放电、放电多少”；
-  \item 实测波形、效率曲线与故障案例。
+  \item \textbf{状态一（$S_1$ 导通，历时 $D\,T$）。}
+  电流由 $U_{\mathrm{in}}$ 经 $S_1$、$L$ 流向负载，$D_1$ 反偏截止。
+  此时电感两端电压为
+  \begin{equation}\label{eq:buck-on}
+    U_{L,\mathrm{on}} = U_{\mathrm{in}} - U_{\mathrm{out}} .
+  \end{equation}
+  \item \textbf{状态二（$S_1$ 关断，历时 $(1-D)T$）。}
+  电感电流不能突变，于是 $D_1$ 导通续流，电感两端电压被钳在
+  \begin{equation}\label{eq:buck-off}
+    U_{L,\mathrm{off}} = -U_{\mathrm{out}} .
+  \end{equation}
 \end{itemize}
+
+把这两段代入伏秒平衡 \fref{eq:voltsecond}：
+
+\begin{equation}\label{eq:buckvs}
+  \underbrace{(U_{\mathrm{in}}-U_{\mathrm{out}})\;D\,T}_{\text{充}}
+  + \underbrace{(-U_{\mathrm{out}})\;(1-D)T}_{\text{放}} = 0 .
+\end{equation}
+
+两边同除以 $T$ 并展开：
+
+\begin{equation}
+  U_{\mathrm{in}}D - U_{\mathrm{out}}D - U_{\mathrm{out}} + U_{\mathrm{out}}D = 0
+  \quad\Longrightarrow\quad
+  U_{\mathrm{in}}D = U_{\mathrm{out}} ,
+\end{equation}
+
+于是得到 Buck 的\emph{电压传输比}：
+
+\begin{equation}\label{eq:buckgain}
+  \boxed{\;U_{\mathrm{out}} = D\,U_{\mathrm{in}}\;}
+\end{equation}
+式中 $U_{\mathrm{out}}$ 为输出电压（V）；$U_{\mathrm{in}}$ 为输入电压（V）；
+$D$ 为占空比（无量纲，$0<D<1$）。
+因为 $D$ 恒小于 $1$，所以 $U_{\mathrm{out}}$ 必然低于 $U_{\mathrm{in}}$——
+这就是“降压”二字的来源。反过来看，若希望把 $U_{\mathrm{cap}}$ 降到母线电压，
+所需的占空比就是 $D=U_{\mathrm{bus}}/U_{\mathrm{cap}}$。
+
+\textbf{电感电流纹波。} 在状态一里电感电流线性上升，上升量为
+\begin{equation}\label{eq:buckripple}
+  \Delta I_L = \frac{U_{L,\mathrm{on}}}{L}\,D\,T
+             = \frac{(U_{\mathrm{in}}-U_{\mathrm{out}})\,D}{L\,f_{\mathrm{sw}}}
+             = \frac{U_{\mathrm{out}}\,(1-D)}{L\,f_{\mathrm{sw}}} ,
+\end{equation}
+式中 $\Delta I_L$ 为电感电流的\emph{峰峰}纹波（A）；
+$L$ 为电感量（H）；$f_{\mathrm{sw}}=1/T$ 为开关频率（Hz）。
+最后一个等号是把 $U_{\mathrm{in}}=U_{\mathrm{out}}/D$ 代回得到的，
+它说明纹波在 $D=0$ 与 $D=1$ 两端都趋于零、在 $D=0.5$ 附近最大。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, font=\small, x=1.05cm, y=0.62cm]
+    \def\Dt{0.62}      % 占空比（示意）
+    \def\per{2.0}      % 一个开关周期的长度
+    % ---------- 辅助：给每个周期画导通区间底色 ----------
+    \foreach \k in {0,1,2} {
+      \fill[wband] (\k*\per, -0.2) rectangle (\k*\per+\Dt*\per, 1.5);
+      \fill[wband] (\k*\per, -2.6) rectangle (\k*\per+\Dt*\per, -1.0);
+      \fill[wband] (\k*\per, -5.4) rectangle (\k*\per+\Dt*\per, -3.8);
+    }
+    % ---------- 行 1：门极驱动 ----------
+    \draw[gray!60] (-0.3,0) -- (6.5,0);
+    \draw[eblue, very thick] (0,0) -- (0,1.2) -- (\Dt*\per,1.2) -- (\Dt*\per,0)
+      -- (\per,0) -- (\per,1.2) -- (1.62,1.2) -- (1.62,0) -- (2,0)
+      -- (2,1.2) -- (3.24,1.2) -- (3.24,0) -- (4,0) -- (4,1.2) -- (4.86,1.2)
+      -- (4.86,0) -- (6,0);
+    \node[wlab] at (-0.4,0.6) {$V_{gs1}$};
+    \draw[dashed, gray!60] (0,0) -- (0,-7.4);
+
+    % ---------- 行 2：开关节点电压 ----------
+    \draw[gray!60] (-0.3,-1.8) -- (6.5,-1.8);
+    \draw[eblue, very thick] (0,-1.8) -- (0,-0.9) -- (\Dt*\per,-0.9) -- (\Dt*\per,-1.8)
+      -- (\per,-1.8) -- (\per,-0.9) -- (1.62,-0.9) -- (1.62,-1.8)
+      -- (2,-1.8) -- (2,-0.9) -- (3.24,-0.9) -- (3.24,-1.8)
+      -- (4,-1.8) -- (4,-0.9) -- (4.86,-0.9) -- (4.86,-1.8) -- (6,-1.8);
+    \node[wlab] at (-0.4,-1.35) {$u_{\mathrm{sw}}$};
+    \node[mlab, anchor=west, text=black!60] at (0.15,-0.75) {$U_{\mathrm{in}}$};
+    \node[mlab, anchor=west, text=black!60] at (0.15,-2.05) {$0$};
+
+    % ---------- 行 3：电感电流 ----------
+    \draw[gray!60] (-0.3,-4.0) -- (6.5,-4.0);
+    \node[wlab] at (-0.4,-4.0) {$i_L$};
+    \node[mlab, anchor=west, text=black!60] at (0.15,-3.55) {$\overline{I_L}$};
+    \draw[gray!55, densely dashed] (-0.2,-3.75) -- (6.3,-3.75);
+    \draw[red!70!black, very thick] (0,-3.75) -- (\Dt*\per,-3.05)
+      -- (\per,-3.75) -- (1.62,-3.05) -- (2,-3.75)
+      -- (2.62,-3.05) -- (3.24,-3.75) -- (4,-3.05)
+      -- (4.62,-3.75) -- (4.86,-3.75) -- (5.48,-3.05) -- (6,-3.05);
+    % 纹波标注
+    \draw[<->, gray!70] (0.35,-3.75) -- (0.35,-3.05);
+    \node[mlab, anchor=west] at (0.42,-3.40) {$\Delta I_L$};
+
+    % ---------- 行 4：电容电流 ----------
+    \draw[gray!60] (-0.3,-6.4) -- (6.5,-6.4);
+    \node[wlab] at (-0.4,-6.4) {$i_C$};
+    \draw[codegreen!75!black, very thick] (0,-6.4) -- (0,-5.75) -- (\Dt*\per,-5.75)
+      -- (\Dt*\per,-6.4) -- (\per,-6.4) -- (1.62,-6.4) -- (1.62,-5.75)
+      -- (2,-5.75) -- (2,-6.4) -- (2.62,-6.4) -- (3.24,-6.4)
+      -- (4,-6.4) -- (4,-5.75) -- (4.86,-5.75) -- (4.86,-6.4) -- (6,-6.4);
+    \node[mlab, anchor=west, text=black!60] at (0.15,-6.65) {充} ;
+    \node[mlab, anchor=west, text=black!60] at (1.05,-6.65) {放};
+
+    % ---------- 时间刻度 ----------
+    \draw[gray!70] (0,-7.15) -- (6.5,-7.15);
+    \foreach \k in {0,1,2,3} {
+      \draw[gray!70] (\k*\per,-7.15) -- (\k*\per,-7.35);
+    }
+    \node[mlab, below] at (0,-7.4) {$0$};
+    \node[mlab, below] at (\per,-7.4) {$T$};
+    \node[mlab, below] at (2*\per,-7.4) {$2T$};
+    \draw[<->, gray!70] (0,-7.02) -- (\Dt*\per,-7.02);
+    \node[mlab, above] at (0.62,-7.00) {$D\,T$};
+    \draw[<->, gray!70] (\Dt*\per,-7.02) -- (\per,-7.02);
+    \node[mlab, above] at (1.31,-7.00) {$(1-D)T$};
+    % 底色图例
+    \fill[wband] (4.6,-7.62) rectangle (4.85,-7.45);
+    \node[mlab, anchor=west] at (4.9,-7.55) {$S_1$ 导通区间};
+  \end{tikzpicture}
+  \caption{Buck 变换器的关键波形（示意，占空比 $D\approx0.62$）。
+  自上而下依次是：$S_1$ 的门极驱动、开关节点电压 $u_{\mathrm{sw}}$、
+  电感电流 $i_L$（红色，在导通区间上升、在关断区间下降）、电容电流 $i_C$。
+  浅蓝底色标出 $S_1$ 的导通区间。}
+  \label{fig:buckwave}
+\end{figure}
+
+从图~\ref{fig:buckwave} 可以读出三件事，它们对后面的调试很有用：
+
+\begin{enumerate}
+  \item 电感电流是\emph{三角波}，它的平均值 $\overline{I_L}$ 就是负载电流。
+  峰值必须小于电感的饱和电流，否则电感会失效。
+  \item 电容电流在导通区间为“充电”（$i_L$ 高于负载电流的部分）、
+  关断区间为“放电”，两者面积相等，所以输出电压保持稳定。
+  这也解释了输出纹波的来源。
+  \item $u_{\mathrm{sw}}$ 在 $U_{\mathrm{in}}$ 与 $0$ 之间跳变，
+  跳变速率由开关管与驱动决定——这正是后面要谈的\emph{开关噪声}来源。
+\end{enumerate}
+
+\subsubsection{Boost（升压）}
+
+Boost 把低电压变成高电压。它把电感放在\emph{输入侧}，
+用开关管把电感\emph{短路}来储能，再靠二极管把电感与电源的电压\emph{串联}起来送给输出，
+如图~\ref{fig:boost} 所示。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, font=\small, scale=0.98]
+    \draw[mwire] (-0.6,0) -- (9.2,0);
+    \draw[mwire] (-0.6,-3.0) -- (9.2,-3.0);
+
+    % 输入电源
+    \draw[mwire] (-0.6,0) -- (-0.6,-1.05);
+    \draw[mwire] (-1.05,-1.05) -- (-0.15,-1.05);
+    \draw[mwire] (-0.85,-1.40) -- (-0.35,-1.40);
+    \draw[mwire] (-0.6,-1.40) -- (-0.6,-3.0);
+    \node[mlab, left] at (-1.15,-1.15) {$U_{\mathrm{in}}$};
+
+    % 电感（在输入侧）
+    \draw[mwire] (0.5,0) -- (1.0,0);
+    \draw[decorate, decoration={coil, segment length=1.7mm, amplitude=1.35mm},
+          black!78, thick] (1.0,0) -- (2.8,0);
+    \node[mlab, above] at (1.9,0.22) {$L$};
+    \draw[mwire] (2.8,0) -- (3.6,0);
+    \coordinate (A) at (3.6,0);
+    \fill[eblue] (A) circle (1.3pt);
+
+    % 开关管（对地短路电感）
+    \node[msw] (s1) at (3.6,-2.0) {$S_1$};
+    \draw[mwire] (A) -- (s1.north);
+    \draw[mwire] (s1.south) -- (3.6,-3.0);
+
+    % 二极管（阳极在左，阴极朝右）
+    \draw[mwire] (A) -- (4.5,0);
+    \draw[fill=black!78] (4.5,-0.38) -- (4.5,0.38) -- (5.15,0) -- cycle;
+    \draw[mwire] (5.15,-0.38) -- (5.15,0.38);
+    \draw[mwire] (5.15,0) -- (6.4,0);
+    \node[mlab, above] at (4.85,0.42) {$D_1$};
+
+    % 输出电容
+    \draw[mwire] (6.4,0) -- (6.4,-1.05);
+    \draw[mwire] (6.05,-1.05) -- (6.75,-1.05);
+    \draw[mwire] (6.05,-1.40) -- (6.75,-1.40);
+    \draw[mwire] (6.4,-1.40) -- (6.4,-3.0);
+    \node[mlab, right] at (6.88,-1.22) {$C_{\mathrm{out}}$};
+
+    % 负载
+    \node[mcmp, minimum width=3.2mm, minimum height=9mm] (rl) at (8.0,-1.5) {};
+    \draw[mwire] (8.0,0) -- (rl.north);
+    \draw[mwire] (rl.south) -- (8.0,-3.0);
+    \draw[mwire] (6.55,0) -- (8.0,0);
+    \node[mlab, right] at (8.3,-1.5) {$R_{\mathrm{L}}$};
+
+    \draw[<->, gray!70] (8.5,0.05) -- (8.5,-3.05);
+    \node[mlab, right, text=black!70] at (8.55,-3.25) {$U_{\mathrm{out}}$};
+
+    % 电流路径
+    \draw[red!70!black, very thick, -{Stealth[length=1.7mm]}]
+      (3.05,-1.3) -- (3.05,-1.8)
+      node[midway, left, mlab, text=red!70!black] {储能};
+    \draw[codegreen!75!black, very thick, -{Stealth[length=1.7mm]}]
+      (4.35,0.72) -- (4.95,0.72)
+      node[midway, above, mlab, text=codegreen!75!black] {释能};
+  \end{tikzpicture}
+  \caption{Boost（升压）变换器。电感在输入侧：$S_1$ 导通时电感被短路储能，
+  $S_1$ 关断时电感与输入电源\emph{串联}经 $D_1$ 向输出释能，
+  因此输出电压可以高于输入电压。}
+  \label{fig:boost}
+\end{figure}
+
+用同样的伏秒平衡分析。$S_1$ 导通时电感两端就是输入电压：
+\begin{equation}
+  U_{L,\mathrm{on}} = U_{\mathrm{in}} \quad(\text{历时 }D\,T);
+\end{equation}
+$S_1$ 关断时，电感与电源串联向输出供电，电感两端电压为
+\begin{equation}
+  U_{L,\mathrm{off}} = U_{\mathrm{in}} - U_{\mathrm{out}} \quad(\text{历时 }(1-D)T).
+\end{equation}
+代入伏秒平衡：
+\begin{equation}
+  U_{\mathrm{in}}\,D\,T + (U_{\mathrm{in}}-U_{\mathrm{out}})(1-D)T = 0 ,
+\end{equation}
+整理得
+\begin{equation}
+  U_{\mathrm{in}}\bigl[D+(1-D)\bigr] = U_{\mathrm{out}}(1-D)
+  \quad\Longrightarrow\quad
+  U_{\mathrm{in}} = U_{\mathrm{out}}(1-D),
+\end{equation}
+于是 Boost 的电压传输比为
+\begin{equation}\label{eq:boostgain}
+  \boxed{\;U_{\mathrm{out}} = \frac{U_{\mathrm{in}}}{1-D}\;}
+\end{equation}
+式中各符号的含义与 Buck 相同。
+因为 $1-D<1$，所以 $U_{\mathrm{out}}>U_{\mathrm{in}}$，即升压。
+当 $D\to1$ 时理论上电压趋于无穷大，实际上受寄生电阻与器件耐压限制，
+工程上 $D$ 一般不超过 $0.85$ 左右。
+
+\begin{note}[Boost 的“右半平面零点”]
+Boost 有一个 Buck 没有的坏脾气：它的控制到输出传递函数里存在一个
+\emph{右半平面零点}（right-half-plane zero, RHPZ）。
+直观解释是：当你要提高输出电压而加大占空比时，
+$S_1$ 导通时间变长，意味着\emph{二极管导通时间变短}，
+输出端在这一瞬间得到的能量反而\emph{减少}了，电压会先掉一下再升上去。
+
+后果是：Boost 的闭环带宽必须压得比这个零点低很多（通常取其 $1/5\sim1/3$），
+否则环路会“反着使劲”而振荡。这也是为什么四开关 Buck-Boost 在
+$U_{\mathrm{in}}$ 接近 $U_{\mathrm{out}}$ 时需要专门的过渡策略，
+而不能简单地在 Buck 与 Boost 之间硬切。
+\end{note}
+
+\subsubsection{Buck-Boost 与四开关 Buck-Boost}
+
+最经典的 Buck-Boost 是\emph{反相型}：只用一只开关管与一只二极管，
+电感一端接地，输出与输入反相，传输比为
+\begin{equation}\label{eq:invbbgain}
+  U_{\mathrm{out}} = -\frac{D}{1-D}\,U_{\mathrm{in}} .
+\end{equation}
+它的优点是结构最简、$D<0.5$ 降压、$D>0.5$ 升压，用一个电路就能覆盖两种需求；
+缺点是输出反相（负极不共地）、效率偏低、且同样有右半平面零点。
+
+工程上（尤其是本文复刻的方案）更常用的是\textbf{四开关 Buck-Boost}
+（Four-Switch Buck-Boost，FSBB）：把两个半桥与一个电感接成对称结构，
+如图~\ref{fig:fsbb} 所示。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, font=\small, scale=0.98]
+    % 布局：两侧各一个垂直半桥，电感接在两个中点之间
+    \def\xl{3.2} \def\xr{8.2} \def\ytop{0.9} \def\ybot{-3.7} \def\ymid{-1.55}
+
+    % ---- 左半桥 ----
+    \node[msw] (s1) at (\xl,0) {$S_1$};
+    \node[msw] (s2) at (\xl,-3.2) {$S_2$};
+    \draw[mwire] (\xl,\ytop) -- (s1.north);
+    \draw[mwire] (s1.south) -- (\xl,\ymid);
+    \draw[mwire] (\xl,\ymid) -- (s2.north);
+    \draw[mwire] (s2.south) -- (\xl,\ybot);
+    \fill[eblue] (\xl,\ymid) circle (1.4pt);
+    \node[mlab, left] at (\xl-0.5,\ymid) {$A$};
+
+    % ---- 右半桥 ----
+    \node[msw] (s3) at (\xr,0) {$S_3$};
+    \node[msw] (s4) at (\xr,-3.2) {$S_4$};
+    \draw[mwire] (\xr,\ytop) -- (s3.north);
+    \draw[mwire] (s3.south) -- (\xr,\ymid);
+    \draw[mwire] (\xr,\ymid) -- (s4.north);
+    \draw[mwire] (s4.south) -- (\xr,\ybot);
+    \fill[eblue] (\xr,\ymid) circle (1.4pt);
+    \node[mlab, right] at (\xr+0.5,\ymid) {$B$};
+
+    % ---- 电感接在两个中点之间 ----
+    \draw[mwire] (\xl,\ymid) -- (\xl+0.8,\ymid);
+    \draw[decorate, decoration={coil, segment length=1.9mm, amplitude=1.6mm},
+          black!78, thick] (\xl+0.8,\ymid) -- (\xr-0.8,\ymid);
+    \draw[mwire] (\xr-0.8,\ymid) -- (\xr,\ymid);
+    \node[mlab, above] at (5.7,\ymid+0.30) {$L$};
+
+    % ---- 输入侧（母线） ----
+    \draw[mwire] (-0.6,\ytop) -- (\xl,\ytop);
+    \draw[mwire] (-0.6,\ybot) -- (\xl,\ybot);
+    \draw[mwire] (-0.6,\ytop) -- (-0.6,-1.55);
+    \draw[mwire] (-1.1,-1.55) -- (-0.1,-1.55);
+    \draw[mwire] (-0.9,-1.95) -- (-0.3,-1.95);
+    \draw[mwire] (-0.6,-1.95) -- (-0.6,\ybot);
+    \node[mlab, left] at (-1.2,-1.65) {$U_1$};
+    \node[mlab, left, text=black!60] at (-1.2,-2.55) {\scriptsize 母线侧};
+    \draw[mwire] (1.3,\ytop) -- (1.3,-1.55);
+    \draw[mwire] (0.9,-1.55) -- (1.7,-1.55);
+    \draw[mwire] (0.9,-1.95) -- (1.7,-1.95);
+    \draw[mwire] (1.3,-1.95) -- (1.3,\ybot);
+    \node[mlab, right] at (1.78,-1.75) {\scriptsize $C_1$};
+
+    % ---- 输出侧（电容） ----
+    \draw[mwire] (\xr,\ytop) -- (10.7,\ytop);
+    \draw[mwire] (\xr,\ybot) -- (10.7,\ybot);
+    \draw[mwire] (9.9,\ytop) -- (9.9,-1.55);
+    \draw[mwire] (9.5,-1.55) -- (10.3,-1.55);
+    \draw[mwire] (9.5,-1.95) -- (10.3,-1.95);
+    \draw[mwire] (9.9,-1.95) -- (9.9,\ybot);
+    \node[mlab, right] at (10.38,-1.75) {\scriptsize $C_2$};
+    \draw[<->, gray!70] (10.95,\ytop) -- (10.95,\ybot);
+    \node[mlab, right, text=black!70] at (11.0,-1.2) {$U_2$};
+    \node[mlab, right, text=black!60] at (11.0,-2.3) {\scriptsize 电容侧};
+
+    % ---- 半桥标注 ----
+    \node[mlab, text=black!60] at (\xl,-4.3) {\scriptsize 左半桥};
+    \node[mlab, text=black!60] at (\xr,-4.3) {\scriptsize 右半桥};
+  \end{tikzpicture}
+  \caption{四开关 Buck-Boost（FSBB）主电路。
+  左右各是一个由两只开关管串成的\emph{半桥}，$A$、$B$ 是它们的中点，
+  电感 $L$ 接在两个中点之间。$U_1$ 跨在左半桥上（母线侧），
+  $U_2$ 跨在右半桥上（电容侧）。
+  把左半桥当 Buck 用、让 $S_3$ 常通，就是降压；
+  把右半桥当 Boost 用、让 $S_1$ 常通，就是升压。
+  注意两侧的上轨\emph{并不相连}——能量只能经由电感 $L$ 传递。}
+  \label{fig:fsbb}
+\end{figure}
+
+FSBB 的妙处在于：\textbf{它用同一个电感覆盖了 Buck、Boost 与直通三种工况}，
+而且两侧都不反相、可以共地。代价是用了四个开关管，控制逻辑也更复杂。
+表~\ref{tab:bbcompare} 把三种基本结构与 FSBB 放在一起比较。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{几种双向 DC--DC 结构的对比}
+  \label{tab:bbcompare}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.14\textwidth}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.21\textwidth}>{\raggedright\arraybackslash}p{0.23\textwidth}@{}}
+    \toprule
+    结构 & 电压关系 & 开关数 & 优点 & 缺点 \\
+    \midrule
+    Buck & $U_{\mathrm{out}}=DU_{\mathrm{in}}$ &
+    1 管 $+$ 1 二极管 &
+    最简单、效率最高 & 只能降压，本场景不适用 \\[3pt]
+    Boost & $U_{\mathrm{out}}=\dfrac{U_{\mathrm{in}}}{1-D}$ &
+    1 管 $+$ 1 二极管 &
+    升压效率高 & 只能升压；有右半平面零点 \\[3pt]
+    反相 Buck-Boost & $U_{\mathrm{out}}=-\dfrac{D}{1-D}U_{\mathrm{in}}$ &
+    1 管 $+$ 1 二极管 &
+    一个电路覆盖升降压 & 输出反相、不共地；效率低；有右半平面零点 \\[3pt]
+    \textbf{四开关 Buck-Boost} & 由模式决定，见 \ref{sec:fsbbmode} 节 &
+    4 管 &
+    共地、双向、可直通、两边都无右半平面零点 &
+    器件多、驱动与逻辑复杂、需处理死区与体二极管 \\[3pt]
+    串联式 Buck/Boost & 两套独立变换器 &
+    $\ge 4$ 管 &
+    控制最直观，可用成品模块 & 体积大；电容低压时效率差 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{note}[本文复刻的方案]
+本文配套复刻的是桂林理工大学群星战队开源的控制板（Plus 版），
+它采用的就是\emph{四开关 Buck-Boost} 结构~\cite{glutplushw,glutplusmanual}；
+电容组则取自香港科技大学 ENTERPRIZE 战队
+$1980\ \mathrm{J}$ 量级的方案~\cite{hkust1980j}。
+后文凡涉及具体参数（开关频率、电感量、采样量程等）都以这两者为参照，
+并标明其来源或估算依据；凡是估算值都会写明“估算”二字，不会伪装成实测。
+\end{note}
+
+\subsection{四开关 Buck-Boost 的四种工作模式}\label{sec:fsbbmode}
+
+FSBB 之所以能同时覆盖升降压，靠的是\emph{改变哪一对管子在工作}。
+四种模式与判据列在表~\ref{tab:fsbbmodes}，工作区间如图~\ref{fig:fsbbmodes} 所示。
+
+记母线侧电压为 $U_1$、电容侧电压为 $U_2$，两者之比
+\begin{equation}\label{eq:alphadef}
+  \alpha \;\triangleq\; \frac{U_1}{U_2}
+\end{equation}
+称为\emph{电压比}，式中 $\alpha$ 为无量纲量，
+$U_1$、$U_2$ 的单位均为 V。$\alpha>1$ 表示母线电压高于电容电压，
+$\alpha<1$ 则相反。这个量在后面推导控制律时会反复出现。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{FSBB 的四种工作模式}
+  \label{tab:fsbbmodes}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.24\textwidth}>{\raggedright\arraybackslash}p{0.42\textwidth}@{}}
+    \toprule
+    模式 & 判据 & 开关管状态 & 说明 \\
+    \midrule
+    Buck（降压） & $U_2<U_1$ &
+    $S_3$ 常通、$S_4$ 常断；$S_1/S_2$ 互补 PWM &
+    右半桥被“短路”成一根导线，左半桥按 Buck 工作；
+    占空比 $D_1=U_2/U_1$ \\[4pt]
+    Boost（升压） & $U_2>U_1$ &
+    $S_1$ 常通、$S_2$ 常断；$S_3/S_4$ 互补 PWM &
+    左半桥被“短路”，右半桥按 Boost 工作；
+    占空比 $D_3=1-U_1/U_2$ \\[4pt]
+    Buck-Boost（过渡） & $U_2\approx U_1$ &
+    四个管都开关 &
+    单靠一种模式在电压比接近 $1$ 时占空比会跑到极端值，必须过渡；
+    代价是开关损耗翻倍、效率下降 \\[4pt]
+    直通（bypass） & 任意 &
+    $S_1,S_3$ 常通、$S_2,S_4$ 常断 &
+    把两侧直接连起来，用于电容电量耗尽或故障时的旁路，
+    此时超电等于不存在 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, font=\small]
+    % 三段区间
+    \fill[eblue!10]  (0,0) rectangle (4.2,1.3);
+    \fill[red!10]    (4.2,0) rectangle (6.4,1.3);
+    \fill[codegreen!16] (6.4,0) rectangle (10.6,1.3);
+    \draw[gray!70, thick] (0,0) rectangle (10.6,1.3);
+    \draw[gray!70, thick] (4.2,0) -- (4.2,1.3);
+    \draw[gray!70, thick] (6.4,0) -- (6.4,1.3);
+    \node[font=\small] at (2.1,0.65) {\textbf{Buck}};
+    \node[font=\scriptsize] at (5.3,0.65) {过渡};
+    \node[font=\small] at (8.5,0.65) {\textbf{Boost}};
+
+    % 横轴：电压比
+    \draw[gray!70, ->] (-0.3,-0.5) -- (11.0,-0.5) node[right, font=\small]{$\alpha=U_1/U_2$};
+    \draw[gray!70] (2.1,-0.5) -- (2.1,-0.62);
+    \draw[gray!70] (8.5,-0.5) -- (8.5,-0.62);
+    \draw[gray!70, very thick] (5.3,-0.36) -- (5.3,-0.64);
+    \node[mlab, below] at (5.3,-0.72) {$1$};
+    \node[mlab, below] at (1.0,-0.72) {$\alpha>1$};
+    \node[mlab, below] at (9.6,-0.72) {$\alpha<1$};
+
+    % 每个模式下的开关管状态
+    \node[font=\scriptsize, text=eblue, align=center] at (2.1,-1.35)
+      {$S_3$ 常通、$S_4$ 常断\\$S_1/S_2$ 互补 PWM};
+    \node[font=\scriptsize, text=red!70!black, align=center] at (5.3,-1.45)
+      {四管\\都开关};
+    \node[font=\scriptsize, text=codegreen!60!black, align=center] at (8.5,-1.35)
+      {$S_1$ 常通、$S_2$ 常断\\$S_3/S_4$ 互补 PWM};
+
+    % 说明
+    \node[mlab, anchor=west, text=black!60] at (0,-2.25)
+      {电容电压低于母线时降压使用；高于母线时升压使用；两者接近时进入过渡模式。};
+  \end{tikzpicture}
+  \caption{FSBB 的工作区间划分（示意）。
+  横轴是电压比 $\alpha=U_1/U_2$。
+  实际实现中过渡区间不是一条线而是一个带，
+  带宽取得太窄会在 $\alpha\approx1$ 附近频繁来回切换、引起振荡；
+  取得太宽则长时间工作在效率较低的四管模式。
+  工程上常见的做法是留出 $\pm5\%\sim\pm10\%$ 的过渡带。}
+  \label{fig:fsbbmodes}
+\end{figure}
+
+\subsection{电感、开关频率与纹波}
+
+纹波是开关电源设计里第一个要算的量：纹波太大，电感会饱和、电容会发热；
+纹波太小，则意味着电感体积与成本都不必要地高。把 \fref{eq:buckripple} 写成
+与占空比无关的形式：
+
+\begin{equation}\label{eq:ripplegen}
+  \Delta I_L = \frac{U_2\,(1-D)}{L\,f_{\mathrm{sw}}}
+             = \frac{U_1\,D\,(1-D)}{L\,f_{\mathrm{sw}}} ,
+\end{equation}
+式中 $\Delta I_L$ 为电感电流的峰峰纹波（A）；
+$U_1$、$U_2$ 为两侧电压（V）；$D$ 为占空比（无量纲）；
+$L$ 为电感量（H）；$f_{\mathrm{sw}}$ 为开关频率（Hz）。
+第二个等号用到了 $U_2=DU_1$（Buck 情形）。
+这个式子的形状值得记住：$D(1-D)$ 在 $D=0.5$ 处取最大值 $1/4$，
+所以\textbf{占空比一半时纹波最大}，设计要按这个最坏情况留裕量。
+
+反解出所需电感量：
+\begin{equation}\label{eq:Lchoose}
+  L = \frac{U_1\,D\,(1-D)}{\Delta I_L\,f_{\mathrm{sw}}}
+    \;\xrightarrow{\;D=0.5\;}\;
+    L_{\min} = \frac{U_1}{4\,\Delta I_L\,f_{\mathrm{sw}}} ,
+\end{equation}
+式中 $L_{\min}$ 为满足纹波要求所需的\emph{最小}电感量（H）。
+
+\begin{note}[一组估算示例]
+以本文复刻的场景为例：母线侧 $U_1=24\ \mathrm{V}$、
+电容侧最高 $U_2=30\ \mathrm{V}$、开关频率取 $f_{\mathrm{sw}}=300\ \mathrm{kHz}$
+（这是双向超电控制器的常见取值），
+若希望额定工况下纹波不超过 $\Delta I_L=6\ \mathrm{A}$，则
+\begin{equation}
+  L_{\min} = \frac{24}{4\times 6\times 3\times10^{5}} \approx 3.3\ \mu\mathrm{H}.
+\end{equation}
+实际选型还会考虑直流偏置下电感量下降（饱和）、以及轻载时进入
+\emph{断续导通模式}（DCM）的影响，因此工程上常取计算值的
+$2\sim3$ 倍作为标称电感量，例如 $10\ \mu\mathrm{H}$ 量级。
+
+\textbf{上述数值是本文按公式估算的示例，不是对该控制板的实测值}；
+具体取值请以硬件设计文档与实测波形为准。
+\end{note}
+
+\subsubsection{连续与断续导通模式}
+
+上面所有推导都默认电感电流\emph{始终大于零}，即
+\textbf{连续导通模式}（Continuous Conduction Mode, CCM）。
+当负载很轻时，电感电流在一个周期结束前就降到零并被二极管“卡住”，
+于是进入\textbf{断续导通模式}（Discontinuous Conduction Mode, DCM）。
+两者的分界是
+\begin{equation}\label{eq:ccmbound}
+  \overline{I_L} = \frac{\Delta I_L}{2} ,
+\end{equation}
+式中 $\overline{I_L}$ 为电感电流的平均值，也就是负载电流（A）；
+$\Delta I_L$ 为峰峰纹波（A）。左端大于右端即为 CCM。
+
+DCM 会带来两个后果：一是电压传输比不再只由占空比决定、
+还与负载有关（对于需要精确控制功率的超电来说这是坏事）；
+二是环路模型改变，原本整定好的 PI 参数会失配。
+超电控制器一般在轻载时会\emph{降低}开关频率或让电容侧保持一点基础负载来避开 DCM，
+具体做法各家不同。
+
+\subsection{驱动、死区与体二极管}
+
+\subsubsection{死区：半桥设计里唯一不能省的东西}
+
+图~\ref{fig:fsbb} 里每个半桥的上下两只管子\emph{绝不能同时导通}：
+那等于把 $U_1$ 直接短路，瞬间电流只受几毫欧的回路电阻限制，
+结果一定是炸管。因此必须在两只管子都关断时插入一段
+\textbf{死区时间}（dead time）$t_{\mathrm{d}}$，如图~\ref{fig:deadtime} 所示。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, font=\small, x=1.5cm, y=0.62cm]
+    % 上管驱动
+    \draw[gray!60] (-0.2,0) -- (4.4,0);
+    \draw[eblue, very thick] (0,0) -- (0,1.1) -- (1.85,1.1) -- (1.85,0)
+      -- (2.15,0) -- (2.15,1.1) -- (4.0,1.1) -- (4.0,0) -- (4.3,0);
+    \node[wlab] at (-0.3,0.55) {$V_{gs,\mathrm{H}}$};
+    % 下管驱动
+    \draw[gray!60] (-0.2,-2.2) -- (4.4,-2.2);
+    \draw[codegreen!70!black, very thick] (0,-2.2) -- (0,-1.1) -- (0.30,-1.1)
+      -- (0.30,-2.2) -- (2.15,-2.2) -- (2.15,-1.1) -- (2.45,-1.1) -- (2.45,-2.2)
+      -- (4.0,-2.2) -- (4.0,-1.1) -- (4.3,-1.1);
+    \node[wlab] at (-0.3,-1.65) {$V_{gs,\mathrm{L}}$};
+    % 死区标注
+    \fill[red!18] (1.85,0.25) rectangle (2.15,1.35);
+    \fill[red!18] (1.85,-1.95) rectangle (2.15,-0.85);
+    \fill[red!18] (4.0,0.25) rectangle (4.30,1.35);
+    \node[mlab, text=red!70!black, anchor=west] at (2.22,1.45) {死区};
+    \draw[red!70!black, ->] (2.30,1.35) -- (2.05,1.15);
+    % 电流路径说明
+    \node[mlab, anchor=west, text=black!65, align=left] at (0,-3.05)
+      {死区期间两只管子都关断，电感电流只能经\emph{下管的体二极管}续流；};
+    \node[mlab, anchor=west, text=black!65, align=left] at (0,-3.55)
+      {因此死区不能太长（体二极管压降大、损耗高），也不能太短（可能直通）。};
+  \end{tikzpicture}
+  \caption{半桥驱动的死区。上下管的驱动信号之间存在一小段两者都为低的区间，
+  这就是死区 $t_{\mathrm{d}}$。典型取值在几十纳秒到几百纳秒之间。}
+  \label{fig:deadtime}
+\end{figure}
+
+死区时间的取舍是一个典型的“两难”：
+
+\begin{itemize}
+  \item \textbf{取太短}：开关管的关断有延迟，上管还没完全关断下管就开了，
+  出现\emph{直通}（shoot-through），轻则效率骤降，重则炸管。
+  \item \textbf{取太长}：死区期间电流被迫走体二极管，
+  而体二极管的正向压降（约 $0.7\sim1.5\ \mathrm{V}$）远高于 MOS 导通压降，
+  损耗明显增加；在低压大电流场合尤其严重。
+\end{itemize}
+
+工程上通常先按驱动芯片手册与管子关断时间取一个保守值，
+再用示波器看半桥中点波形与电流波形逐步收紧。
+常见的量级是几十到几百纳秒。
+
+\subsubsection{体二极管与“僵尸车”}
+
+MOSFET 内部天然带一个体二极管（body diode），方向是从源极到漏极。
+它在死区期间提供了必要的续流路径，但同时也带来一个安全隐患：
+
+\begin{quote}
+\textbf{当机器人断电（或超电控制板停机）时，四个开关管全部关断，
+但电容组仍可能储有上千焦耳的能量。
+此时电容侧的高压会经上管的体二极管“漏”到母线上，
+把母线顶到一个不受控的电压——这就是所谓的“僵尸车”。}
+\end{quote}
+
+危害有两层：一是母线上出现不受控的高压，可能损坏电调与其他外设；
+二是电容器会通过这条路径缓慢放电，长期存放时电量悄悄流失。
+
+\begin{note}[硬件上的常见对策]
+\begin{itemize}
+  \item 在电容侧与半桥之间串入\emph{理想二极管}（ORing 控制器 $+$ MOS），
+  停机时主动切断这条通路；
+  \item 或使用带\emph{背靠背}结构的开关，使体二极管不再构成通路；
+  \item 或在软件上保证“只要检测到异常就主动把电容侧放电到安全电压”。
+\end{itemize}
+具体采用哪种，取决于对成本、体积与可靠性的取舍。
+\end{note}
+
+\begin{note}[一个真实的翻车案例（驱动欠压锁定）]
+港科广 PnX 战队在版本迭代记录中提到：早期版本在\emph{推车}时，
+底盘电机被反拖发电，把母线电压泵升上去，
+意外满足了驱动芯片的启动条件，超电被“唤醒”并开始工作，
+而此时占空比计算依赖的电压采样还没稳定，
+结果占空比算错，MOS 直接炸掉。
+
+他们的修法是把使能分压电阻改大，让启动门限从约 $4.5\ \mathrm{V}$ 提到约 $17\ \mathrm{V}$，
+从根源上避免“推车等意外上电”。
+
+这件事的启示是通用的：\textbf{凡是“上电”这件事，
+都要明确定义在什么条件下允许发生，而不能依赖默认状态。}
+\end{note}
+
+\subsection{采样链路}
+
+控制环的输入全部来自采样，因此采样错了环一定错。超电控制器至少要测四个量：
+母线电压 $U_1$、电容电压 $U_2$、母线电流 $I_1$、电感（或电容）电流 $I_L$。
+表~\ref{tab:sampling} 汇总了它们的量程要求与常见做法。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{超电控制器的采样链路}
+  \label{tab:sampling}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.15\textwidth}>{\raggedright\arraybackslash}p{0.16\textwidth}>{\raggedright\arraybackslash}p{0.28\textwidth}>{\raggedright\arraybackslash}p{0.33\textwidth}@{}}
+    \toprule
+    被测量 & 典型量程 & 常用方案 & 注意事项 \\
+    \midrule
+    $U_1$ 母线电压 & $0\sim36\ \mathrm{V}$ &
+    电阻分压 $+$ 运放跟随 & 分压比要与 ADC 基准一起校准；
+    高压侧走线要远离开关节点 \\[4pt]
+    $U_2$ 电容电压 & $0\sim36\ \mathrm{V}$ &
+    同上 & 这是\emph{能量}的计算依据（$E=\frac12CU_2^2$），
+    精度直接影响电量百分比 \\[4pt]
+    $I_1$ 母线电流 & $\pm40\ \mathrm{A}$ &
+    高侧或“高边 $+$ 隔离”双向采样 &
+    \textbf{不要用低侧采样}：裁判系统的超级电容管理模块与电源管理模块之间
+    有 $4$ pin 连线（含 GND），电流可能从那里回流，导致低侧采样失准 \\[4pt]
+    $I_L$ 电感电流 & $\pm20\ \mathrm{A}$ &
+    分流电阻 $+$ 双向电流放大器 &
+    \textbf{不要用 INA240 直接测半桥开关节点}：其共模抑制需要约 $1\ \mu\mathrm{s}$ 恢复，
+    在 $300\ \mathrm{kHz}$ 下会吃掉大半个周期，读数严重失真 \\[4pt]
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{note}[三条很容易踩的采样坑]
+\begin{enumerate}
+  \item \textbf{ADC 基准必须与电路上的基准芯片一致。}
+  如果 PCB 上焊的是 REF3033（$3.3\ \mathrm{V}$）而软件里按 $3.0\ \mathrm{V}$ 换算，
+  所有电压读数会系统性地偏差 $10\%$——这个错误不会报错、
+  只会让控制环悄悄跑偏，是最常见也最隐蔽的一类故障。
+  有些 MCU 提供内部基准的出厂校验值，可以用它反推实际 VDDA：
+  \begin{equation}\label{eq:vrefcal}
+    V_{\mathrm{DDA}} = 3.3\ \mathrm{V}\times\frac{\text{vrefint\_cal}}{\text{vrefint\_data}} ,
+  \end{equation}
+  式中 $V_{\mathrm{DDA}}$ 为实际模拟供电电压（V）；
+  \texttt{vrefint\_cal} 为出厂校准值（只读常量）；
+  \texttt{vrefint\_data} 为当前实测值。两者都是芯片内部通道的 ADC 读数（无量纲）。
+  \item \textbf{双向电流采样需要偏置。} 电流可正可负，
+  因此放大器输出要偏置到基准中点附近。
+  偏置不准会让“零电流”对应一个非零读数，
+  积分后表现为电容电量缓慢漂移。
+  \item \textbf{开关噪声会串进采样。} ADC 采样时刻应尽量避开开关动作瞬间，
+  常见做法是让 ADC 由 PWM 定时器触发、在开关管导通的中点采样，
+  并对电流读数做一阶低通。
+\end{enumerate}
+\end{note}
+
+\subsection{电容组与均衡}
+
+电容组的两个基本设计参数是\textbf{耐压}与\textbf{储能}，
+它们由串联数与单体容量共同决定。本文复刻方案采用的是
+香港科技大学 ENTERPRIZE 战队约 $1980\ \mathrm{J}$ 的方案~\cite{hkust1980j}，
+其量级可以通过基本关系核算：
+
+\begin{equation}\label{eq:capbank}
+  E = \tfrac{1}{2}C_{\mathrm{bank}}U_{\max}^{2},
+  \qquad
+  C_{\mathrm{bank}} = \frac{C_{\mathrm{cell}}}{N_{\mathrm{s}}},
+  \qquad
+  U_{\max} = N_{\mathrm{s}}\,U_{\mathrm{cell}} ,
+\end{equation}
+式中 $E$ 为电容组储能（J）；
+$C_{\mathrm{bank}}$ 为串联后的等效电容值（F）；
+$C_{\mathrm{cell}}$ 为单体电容值（F）；
+$N_{\mathrm{s}}$ 为串联只数（无量纲）；
+$U_{\max}$ 为电容组最高电压（V）；
+$U_{\mathrm{cell}}$ 为单体最高电压（V，超级电容单体通常取 $2.7\sim3.0\ \mathrm{V}$）。
+注意串联会让\emph{等效电容变小}、耐压变大，而储能按上面的公式计算。
+
+\begin{note}[为什么必须做均衡]
+理想情况下串联的每个单体会均分电压。但实际上：
+\begin{itemize}
+  \item 单体容量存在个体差异（通常 $\pm20\%$ 甚至更大），
+  容量小的那个会先被充满、然后继续升压；
+  \item 漏电流也存在差异，长期静置后各单体电压会逐渐散开。
+\end{itemize}
+超级电容单体的耐压只有约 $2.7\ \mathrm{V}$，一旦某只超压，
+漏电流会急剧增大并发热，很快失效。
+因此\textbf{均衡电路不是可选项}。
+
+常见做法是每只单体并联一个“电压检测 $+$ 泄放”电路
+（如 BW6103 之类的专用均衡芯片，或运放比较器 $+$ 功率 MOS $+$ 泄放电阻）：
+当某只单体电压超过阈值时，给它并联一个电阻把多余的能量放掉。
+\end{note}
+
+\begin{note}[均衡能力的现实]
+专用均衡芯片的泄放电流通常只有百毫安量级（例如 $200\ \mathrm{mA}$），
+对于“一次充放电就流过几十安培”的超电组来说杯水车薪。
+因此不少队伍的做法是：
+\textbf{用专用芯片做“触发与指示”，另用外置功率 MOS $+$ 大功率电阻做主要泄放}，
+或者干脆在充电时限制总电压、从源头避免某只单体过压。
+
+另外，电容组的\textbf{等效串联电阻}（ESR）会在大电流时产生
+$I\!\cdot\!\mathrm{ESR}$ 的额外压降与 $I^2\!\cdot\!\mathrm{ESR}$ 的发热。
+$11$ 串、单体 ESR 约 $22\ \mathrm{m}\Omega$ 的组，其总 ESR 约 $240\ \mathrm{m}\Omega$；
+在 $20\ \mathrm{A}$ 放电时仅这一项就有约 $4.8\ \mathrm{V}$ 的压降与约 $96\ \mathrm{W}$ 的瞬时发热。
+这也是为什么“ESR 尽可能小”是选型的首要原则之一。
+\end{note}
+
+\subsection{硬件总体框图}
+
+把上面所有环节连起来，就得到一张完整的硬件框图（图~\ref{fig:schw}）。
+它也是调试时的排查顺序：\emph{先确认供电与基准，再看驱动与开关波形，
+最后才动控制环参数}。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, node distance=4mm, font=\small]
+    % ---- 上位：主控与裁判 ----
+    \node[fio, minimum width=26mm] (mcu) at (0,0) {主控};
+    \node[fio, minimum width=30mm] (ref) at (5.6,0) {裁判系统\\电源管理模块};
+    \node[fio, minimum width=30mm] (capm) at (11.2,0) {超级电容\\管理模块};
+
+    % ---- 中位：超电控制器内部 ----
+    \node[fsoft, minimum width=34mm, minimum height=11mm] (ctrl) at (2.2,-2.6)
+      {超电 MCU\\ \scriptsize 环路 $+$ 状态机 $+$ CAN};
+    \node[fsys, minimum width=30mm, minimum height=10mm] (drv) at (7.0,-2.6)
+      {半桥驱动\\ \scriptsize 死区 $+$ 自举};
+    \node[fblock, minimum width=32mm, minimum height=10mm] (bridge) at (11.6,-2.6)
+      {四开关\\ \scriptsize FSBB $+$ 电感 $L$};
+
+    % ---- 采样与电源 ----
+    \node[fwarn, minimum width=56mm, minimum height=11mm, align=center] (samp) at (4.5,-4.9)
+      {采样：$U_1$、$U_2$、$I_1$、$I_L$\\[1pt]
+       \scriptsize 分流电阻 $+$ 双向放大器 $+$ ADC 基准};
+    \node[fwarn, minimum width=32mm, minimum height=11mm, align=center] (prot) at (11.0,-4.9)
+      {保护\\[1pt]\scriptsize 过压 / 欠压\\ \scriptsize 过流 / 过温};
+
+    % ---- 下位：电容组 ----
+    \node[fsys, minimum width=56mm, minimum height=10mm] (capbank) at (6.4,-7.2)
+      {电容组 $N_{\mathrm{s}}$ 串 $+$ 均衡电路\\ \scriptsize 约 $1980\ \mathrm{J}$};
+
+    % ---- 电源母线 ----
+    \node[fio, minimum width=22mm] (bat) at (0,-9.2) {电池};
+    \node[fio, minimum width=22mm] (bus) at (6.4,-9.2) {母线};
+
+    % ---- 连线 ----
+    \draw[fbio] (mcu) -- node[flab, right]{CAN} (ctrl);
+    \draw[fbio] (ref) -- node[flab, right]{$4$ pin} (capm);
+    \draw[fbio] (ref.south) -- ++(0,-0.7) -| (ctrl.north east);
+    \draw[farr] (ctrl) -- node[flab, above]{PWM} (drv);
+    \draw[farr] (drv) -- node[flab, above]{$V_{gs}$} (bridge);
+    \draw[fdarr] (samp.north) -- ++(0,0.5) -| (ctrl.south);
+    \draw[farr] (bridge.south) -- (prot.north);
+    \draw[fdarr] (samp.east) -- (prot.west);
+    \draw[fbio] (bridge.south west) -- ++(-0.6,-0.9) -| (capbank.north east);
+    \draw[fbio] (bat) -- (bus);
+    \draw[farr] (bus.north) -- ++(0,0.8) -| (capbank.south east);
+  \end{tikzpicture}
+  \caption{超电系统的硬件总体框图。信号链自左向右：
+  主控经 CAN 下达功率意向，超电 MCU 把它翻译成 PWM，
+  驱动与四开关半桥执行，电感把能量在母线侧与电容侧之间搬运；
+  采样与保护构成反馈回路。调试顺序建议自上而下、自左向右。}
+  \label{fig:schw}
+\end{figure}
+
+\section{软件：控制环、状态机与通信}\label{sec:scsw}
+
+\subsection{控制目标的两层含义}
+
+超电控制器的软件要同时满足两个目标，而且它们的优先级不同：
+
+\begin{enumerate}
+  \item \textbf{内层（快，$10\sim100\ \mu\mathrm{s}$ 级）：}
+  让\emph{母线侧实际取用的功率}跟随主控下达的目标。
+  这一层是纯粹的电流/功率伺服，不需要知道比赛规则。
+  \item \textbf{外层（慢，$1\sim10\ \mathrm{ms}$ 级）：}
+  决定\emph{现在允许用多少功率}，包括电量保护、模式切换、
+  以及在电容电压过低时主动收缩。
+\end{enumerate}
+
+分清这两层是能否调通的关键。一个常见的错误是把电量保护写进内层，
+结果在电容电压下降时内层环路增益跟着变，整定好的参数突然失稳。
+
+\subsection{电压比与占空比的关系}
+
+FSBB 的控制量最终落在占空比上。由图~\ref{fig:fsbb} 的拓扑，
+在 Buck 模式下（$S_3$ 常通、$S_4$ 常断）有
+\begin{equation}\label{eq:d1}
+  U_2 = D_1\,U_1 \quad\Longleftrightarrow\quad D_1 = \frac{U_2}{U_1} = \frac{1}{\alpha},
+\end{equation}
+式中 $D_1$ 为 $S_1$ 的占空比（无量纲）；
+$U_1$、$U_2$ 为两侧电压（V）；
+$\alpha=U_1/U_2$ 为 \fref{eq:alphadef} 定义的电压比。
+在 Boost 模式下（$S_1$ 常通、$S_2$ 常断）有
+\begin{equation}\label{eq:d3}
+  U_2 = \frac{U_1}{1-D_3} \quad\Longleftrightarrow\quad D_3 = 1-\frac{U_1}{U_2} = 1-\alpha ,
+\end{equation}
+式中 $D_3$ 为 $S_3$ 的占空比。
+
+观察这两式可以发现一个漂亮的对称性：
+\begin{equation}\label{eq:dualsym}
+  \alpha = \frac{U_1}{U_2} = \frac{D_2}{D_1} = \frac{1-D_1}{D_1} ,
+\end{equation}
+式中 $D_2=1-D_1$ 为同一半桥下管的占空比。
+换句话说，\textbf{电压比完全由同一半桥的上下管占空比之比决定}。
+这个关系可以反过来用：由测得的 $U_1$、$U_2$ 直接算出所需占空比，
+作为前馈量送给环路，让 PI 只需要修正很小的残差。
+
+\subsection{双环结构：为什么内环必须是电流环}
+
+不同队伍对超电控制环的探索过程很值得参考：
+早期做法是“高压电压环、低压电压环、充电电流环、放电电流环、功率环”
+五个环\emph{并联}、谁的输出大听谁的；
+结果是模式切换时响应很差，切换耗时要几十毫秒。
+受集成控制器（如 ADI LT8708，其内部本质是
+“多个误差放大器并联后共同驱动一个电感电流环”）的启发，
+把结构改成\textbf{以电感电流为内环、电压/功率环并联作为外环}之后，
+响应时间降到了毫秒级~\cite{hitszsupercap}。
+
+原因是清楚的：\emph{电感电流是变换器里唯一的储能状态量}，
+直接控制它就等于直接控制能量流；
+而并联电压环的输出只是给电流环一个\emph{参考值}，
+环与环之间不再互相“抢控制权”。结构如图~\ref{fig:scloop}。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, node distance=3.5mm, font=\small]
+    % 外环并联
+    \node[fblock, minimum width=26mm] (pwr) at (0,0) {功率环\\ \scriptsize 目标功率 $\to$ 电流参考};
+    \node[fblock, minimum width=26mm] (vlo) at (0,-2.1) {低压保护环\\ \scriptsize $U_2<U_{\min}$ 时收缩};
+    \node[fblock, minimum width=26mm] (vhi) at (0,-4.2) {高压保护环\\ \scriptsize $U_2>U_{\max}$ 时停充};
+
+    % 取最小值
+    \node[fsum, minimum size=6mm] (min) at (3.9,-2.1) {$\min$};
+    \node[flab, anchor=north, text=black!65] at (3.9,-2.95) {三个环的输出取\emph{最小}};
+
+    % 内环
+    \node[fblock, minimum width=26mm] (il) at (7.4,-2.1) {电感电流环\\ \scriptsize PI $\to$ 占空比};
+    \node[fsoft, minimum width=30mm] (plant) at (11.6,-2.1)
+      {FSBB $+$ 电容组\\ \scriptsize 被控对象};
+
+    \draw[farr] (pwr.east) -- ++(0.6,0) |- (min.west);
+    \draw[farr] (vlo.east) -- (min.west);
+    \draw[farr] (vhi.east) -- ++(0.6,0) |- (min.west);
+    \draw[farr] (min) -- node[flab, above]{$i_L^{\ast}$} (il);
+    \draw[farr] (il) -- node[flab, above]{$D$} (plant);
+
+    % 反馈
+    \draw[farr] (plant.south) -- ++(0,-1.2) -| (il.south);
+    \node[flab, anchor=west] at (9.2,-3.5) {$i_L$ 反馈（快）};
+    \draw[fdarr] (plant.north) -- ++(0,1.3) -| (pwr.north);
+    \node[flab, anchor=west] at (6.2,0.85) {$U_2$、功率反馈（慢）};
+  \end{tikzpicture}
+  \caption{超电控制器的双环结构。
+  外层的三个环（功率环、低压保护环、高压保护环）\emph{并联},
+  它们的输出取最小值后作为内层的电流参考——
+  这样任何一条保护条件成立都能立即压住内环，而不需要“切换模式”。
+  内层是快速的电流环，直接控制能量流。}
+  \label{fig:scloop}
+\end{figure}
+
+“取最小值”这个细节很关键，值得单独解释：
+三个外环各自的输出都是“我允许的最大电流”，
+实际能用的显然不能超过其中任何一个，
+因此取最小值就等价于“所有约束同时生效”，
+而不需要在环与环之间做状态切换。
+这也是保护逻辑最不容易出错的一种写法。
+
+\subsection{前馈：用公式先算一遍，再让 PI 修残差}
+
+纯反馈控制的缺点是“先错后改”，在负载突变时必然有一次超调。
+更好的做法是先用物理关系算出大致需要的占空比作为\emph{前馈}，
+再让 PI 去修正残差。电容侧功率与电压变化率之间有精确关系：
+
+\begin{equation}\label{eq:capvff}
+  P = C\,U_2\,\frac{\dd U_2}{\dd t}
+  \quad\Longrightarrow\quad
+  \Delta U_2 = \frac{P}{C\,U_2\,f_{\mathrm{sw}}} ,
+\end{equation}
+式中 $P$ 为电容侧的功率（W，充电为正）；
+$C$ 为电容组电容值（F）；$U_2$ 为电容电压（V）；
+$\dd U_2/\dd t$ 为电压变化率（V/s）；
+$\Delta U_2$ 为\emph{一个开关周期内}的电压增量（V）；
+$f_{\mathrm{sw}}$ 为开关频率（Hz）。
+第二个等号是把导数近似成一个周期内的差商得到的。
+
+有了 $\Delta U_2$ 就可以由“电压比 $\to$ 占空比”的关系（\fref{eq:dualsym}）
+算出这一周期应当给出的占空比增量，直接送给 PWM。
+开源实现的经验是：\emph{功率控制完全可以由公式算出来，
+但由于存在能量损失与采样误差，最好以公式为前馈、用 PI 补足误差}~\cite{hkustgzpnx}。
+
+\subsection{状态机与保护}
+
+超电控制器上电后不能立刻开始工作，必须先完成自检与预充电。
+典型状态机如图~\ref{fig:scstatemachine} 所示。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, node distance=6mm, font=\small]
+    \node[fblock, minimum width=20mm] (init) at (0,0) {初始化\\ \scriptsize 时钟 / ADC / CAN};
+    \node[fblock, minimum width=22mm] (pre) at (3.4,0) {预充电\\ \scriptsize 限制浪涌电流};
+    \node[fsoft, minimum width=20mm] (run) at (7.0,0) {运行\\ \scriptsize 双环工作};
+    \node[fwarn, minimum width=22mm] (prot) at (10.6,0) {保护\\ \scriptsize 关断 PWM};
+
+    \draw[farr] (init) -- node[flab, above, font=\scriptsize]{自检通过} (pre);
+    \draw[farr] (pre) -- node[flab, above, font=\scriptsize]{$U_2$ 达阈值} (run);
+    \draw[farr] (run) -- node[flab, above, font=\scriptsize]{过压/过流/过温} (prot);
+    \draw[farr] (prot.south) -- ++(0,-1.0) -| node[flab, below, pos=0.25, font=\scriptsize]
+      {故障排除后重新自检} (init.south);
+
+    % 运行内部的子状态
+    \node[flab, anchor=west, text=black!65, align=left] at (0,-2.2)
+      {运行态内部还有子状态：\textbf{充电}（母线功率低于目标，多余能量存入电容）、
+      \textbf{放电}（补足差额）、};
+    \node[flab, anchor=west, text=black!65, align=left] at (0,-2.75)
+      {\textbf{待机}（电容接近满且无需补偿时，只维持微弱充电以抵消自放电）。};
+  \end{tikzpicture}
+  \caption{超电控制器的状态机。
+  预充电一步常被忽略：电容组从 $0\ \mathrm{V}$ 直接接入会瞬间抽取极大的浪涌电流，
+  必须在主回路上串限流或让占空比从小慢慢加大。}
+  \label{fig:scstatemachine}
+\end{figure}
+
+保护阈值的设置原则是“外层保护先于硬件损坏生效”，
+常见条目与建议动作列在表~\ref{tab:scprotect}。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{超电控制器的保护条目}
+  \label{tab:scprotect}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.20\textwidth}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.42\textwidth}@{}}
+    \toprule
+    保护项 & 判据 & 建议动作 \\
+    \midrule
+    电容过压 & $U_2 > U_{\max}$（如 $33\ \mathrm{V}$） &
+    禁止充电，允许放电；若持续超压则泄放 \\[3pt]
+    电容欠压 & $U_2 < U_{\min}$（如 $15\ \mathrm{V}$） &
+    禁止继续放电，把功率预算收缩到规则上限，并上报低电量 \\[3pt]
+    母线过压 & $U_1$ 超过电调耐压 &
+    立即关断 PWM（同时这也是“推车泵升”的检测点） \\[3pt]
+    过流 & $I_1$ 或 $I_L$ 超过硬件限值 &
+    逐周期限流（cycle-by-cycle），不做长时间积分 \\[3pt]
+    过温 & 散热器或电感温度超限 &
+    降额运行（把最大功率按温度线性下调），而不是直接关断 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+“降额而不是关断”这一条值得强调：
+在比赛中，超电突然关断往往比“功率小一点”危险得多，
+因为它会让底盘瞬间失去补偿能力，可能出现超功率扣血甚至失去动力。
+
+\subsection{CAN 通信协议}
+
+主控与超电控制器之间只需要很少的信息量，因此协议可以设计得非常紧凑。
+本文复刻的方案参照开源实现的常见做法~\cite{glutplusmanual,hitszsupercap,pspsupercap}，
+约定如表~\ref{tab:scCAN} 所示。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{主控与超电控制器之间的 CAN 约定（示例）}
+  \label{tab:scCAN}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.11\textwidth}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.38\textwidth}@{}}
+    \toprule
+    方向 & 标识符 & 数据内容 & 说明 \\
+    \midrule
+    主控 $\to$ 超电 & \texttt{0x210} &
+    目标功率（$2$ 字节，$\mathrm{W}\times100$ 定点） &
+    即 Part I 中的 $\Plim$；发送周期与控制周期一致 \\[4pt]
+    超电 $\to$ 主控 & \texttt{0x211} &
+    电容电压、母线电压、当前功率、电量百分比 &
+    电量百分比由 $E=\frac12CU_2^2$ 归一化得到 \\[4pt]
+    超电 $\to$ 主控 & \texttt{0x212} &
+    状态字（充电 / 放电 / 保护中）、温度 &
+    用于主控侧的界面显示与降级决策 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+协议实现上有两条经验：
+
+\begin{itemize}
+  \item \textbf{超时要有确定的缺省行为。} 若在预期时间内没收到主控报文，
+  超电不能“维持上一次的目标功率”（那可能在主控已经挂了的情况下继续放电），
+  而应当\emph{主动退回安全值}。
+  \item \textbf{关键字段要能自检。} 例如约定一个固定常量字段，
+  收到的值不对就整帧丢弃，可以挡住大部分总线错位与内存错乱。
+\end{itemize}
+
+\section{使用注意事项}\label{sec:scnotes}
+
+这一节汇总调试与使用中最容易出问题的地方。每一条都对应一个具体的失效模式，
+而不是泛泛的“注意安全”。
+
+\subsection{上电与断电顺序}
+
+\begin{itemize}
+  \item \textbf{先合控制电，再合动力电。}
+  超电控制器需要先完成自检与预充电，
+  如果动力电先上，电容组的浪涌电流会在 MCU 还没准备好的时候冲击主回路。
+  \item \textbf{断电时相反：先断动力，再断控制。}
+  避免控制器在失去供电的瞬间输出一个错误的占空比。
+  \item \textbf{避免“推车”造成意外上电。} 见 \ref{sec:schw} 节的案例：
+  推车时电机会反拖发电、把母线电压顶上去，
+  如果驱动芯片的使能门限设得太低，超电会意外启动。
+  对策是把使能门限提高到正常母线电压附近。
+  \item \textbf{长期存放要放电。} 电容组长期保持高压会加速单体老化，
+  且一旦有意外通路就可能造成危险。建议存放前放电到安全电压。
+\end{itemize}
+
+\subsection{调试顺序}
+
+按“信号链”的顺序排查，可以最快定位问题：
+
+\begin{enumerate}
+  \item \textbf{先看供电与基准。} 用万用表确认 ADC 基准芯片输出电压
+  与软件里换算用的数值一致。这一步花两分钟，能省掉后面几小时的困惑。
+  \item \textbf{再看驱动波形。} 不接主功率、只给控制电，
+  用示波器看两路 $V_{gs}$ 是否有死区、是否有明显的振铃或台阶。
+  \item \textbf{然后看开环。} 给定一个固定的小占空比，
+  观察电感电流是否与计算值相符、波形是否干净。
+  \item \textbf{最后闭电流环}，再闭外环。
+  每闭一个环都要重新确认没有振荡、没有异常发热。
+\end{enumerate}
+
+\subsection{几条反直觉但重要的结论}
+
+\begin{itemize}
+  \item \textbf{“电容还有电却仍然超功率”时，先查超电侧而不是主控 PID。}
+  这通常意味着超电的功率环没有跟上、或硬件能力不足，
+  继续调主控的参数只会让问题更难定位~\cite{zjuwiki}。
+  \item \textbf{电容电压低时要主动降低底盘功率。}
+  电容电压越低，同样电流能提供的功率越小，
+  此时若仍按满额下达目标，就会出现“补偿不足”从而实际超功率~\cite{hitszsupercap}。
+  \item \textbf{不要因为“效率高”就忽略待机功耗。}
+  超电在待机时仍在耗电（驱动、采样、MCU），
+  这个静态功耗会持续从电池抽取能量。
+  开源实现中有把空载功耗做到 $0.8\ \mathrm{W}$ 量级的案例~\cite{hkustgzpnx}，
+  对于要打满整场比赛的队伍来说，这个数字值得认真对待。
+  \item \textbf{改硬件参数必须重新标定。} 换了电感、改了开关频率、
+  换了电容组，都要重新确认环路参数与保护阈值，不能沿用旧值。
+\end{itemize}
+
+\subsection{一张检查清单}
+
+装机与上电前，建议逐条核对：
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{超电系统上电前检查清单}
+  \label{tab:scchecklist}
+  \begin{tabular}{@{}cl>{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
+    \toprule
+    \# & 检查项 & 要点 \\
+    \midrule
+    1 & 电容组均衡 & 逐只测量单体电压，确认没有明显离散；均衡电路工作正常 \\
+    2 & 极性 & 电容组、母线、CAN 线的极性再三确认（反接是炸板第一原因） \\
+    3 & ADC 基准 & 实测基准芯片输出，与软件换算值一致 \\
+    4 & 死区 & 示波器确认半桥上下管驱动之间存在死区 \\
+    5 & 预充电 & 确认上电瞬间浪涌电流被限制在安全范围 \\
+    6 & 保护阈值 & 过压 / 欠压 / 过流 / 过温阈值已在软件中设置并实测触发 \\
+    7 & CAN 通信 & 超时缺省行为已实现；拔掉 CAN 线后行为符合预期 \\
+    8 & 散热 & 电感与开关管的温升在满载下不超过器件额定 \\
+    9 & 断电行为 & 断电后母线电压不会长时间停在高位（确认无“僵尸车”路径） \\
+    10 & 存放电压 & 长期存放前已放电到安全电压 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 % ============================================================================
 \appendix
