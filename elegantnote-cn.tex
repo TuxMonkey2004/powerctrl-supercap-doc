@@ -2499,6 +2499,26 @@ $36\ \mathrm{J/s}$ 等具体数值并无可查证的官方依据，不应作为�
   这解释了为什么“宁可保守也不要超功率”。
 \end{itemize}
 
+\begin{note}[2025 赛季的两条规则变化，改变了这一节的地位]
+在使用手册里明确记着两条变化，它们直接动摇了“纯靠缓冲能量做闭环”的根基：
+\begin{enumerate}
+  \item \textbf{裁判系统删除了【Chassis 功率】的反馈。}
+  2025 赛季起，参赛队伍必须\emph{自行检测底盘功率}来完成功率闭环，
+  对功率控制的要求显著提高。
+  这也正是超电控制板要把功率回读做准、并专门做远端补偿的原因。
+  \item \textbf{缓冲能量耗尽后的后果从“扣血”改成了“底盘断电”。}
+  以往缓冲能量耗尽只是扣血，而现在会直接断电。
+  这意味着“基于缓冲能量的功率控制算法”的\emph{容错率大幅降低}——
+  使用手册里明确写着“不建议使用这种算法来进行底盘功率控制”。
+\end{enumerate}
+所以本节描述的缓冲能量闭环，在今天更合适的定位是\textbf{兜底与保护}，
+而不是主要的功率分配手段；主要手段应当是第~\ref{sec:model} 节的功率模型
+配合第~\ref{sec:redistribute} 节的功率再分配。
+另外，手册也提醒能量与功率不是一回事：
+$60\ \mathrm{J}$ 的缓冲能量并不等于可以超 $60\ \mathrm{W}$ 用——
+超 $10\ \mathrm{W}$ 能用 $6\ \mathrm{s}$，超 $60\ \mathrm{W}$ 只能用 $1\ \mathrm{s}$。
+\end{note}
+
 \subsection{为什么需要闭环}
 
 设本周期实际执行时，电机功率与指令之间存在一个偏差 $\delta$（模型误差、电压波动、
@@ -3119,7 +3139,9 @@ $K_{\mathrm{coe}}$ 在误差总和小于下阈值时取 $0$、大于上阈值时
 
 \textbf{关于复刻对象}：硬件与控制板部分以桂林理工大学群星战队开源的
 RM2025 超级电容控制板 Plus 为参照~\cite{glutplushw,glutplusmanual,glutcubemx,glutmaintain}，
-电容组取香港科技大学 ENTERPRIZE 战队约 $1980\ \mathrm{J}$ 的方案~\cite{hkust1980j}。
+电容组取香港科技大学 ENTERPRIZE 战队 $1980\ \mathrm{J}$ 的开源方案~\cite{hkust1980j}
+（$10$ 串，每串 $34\ \mathrm{F}\parallel10\ \mathrm{F}$，最高 $30\ \mathrm{V}$）；
+注意控制板官方配套的是 $7$ 串 $1890\ \mathrm{J}$ 电容组，两者电压口径不同，见 \ref{sec:capbank} 节的说明。
 凡引用开源资料的具体数值均标注出处；凡属本文估算或推断的，都会写明“估算”二字。
 \end{note}
 
@@ -3186,22 +3208,55 @@ $E_{\max}$ 为充满时的总储能，
 $U_{\max}$ 为允许的最高电压，$U_{\min}$ 为允许放到的最低电压。
 这个式子的含义是：电压窗口越宽，可利用的能量比例越高。
 
-举例：某开源设计~\cite{adernal} 采用 $11$ 串 $50\ \mathrm{F}/3\ \mathrm{V}$ 单体
-（单体 ESR 约 $22\ \mathrm{m}\Omega$），则电容值、耐压与等效串联电阻分别为
+本文配套使用的电容组，来自香港科技大学 ENTERPRIZE 战队的
+$1980\ \mathrm{J}$ 开源方案~\cite{hkust1980j}。
+它的结构是\textbf{$10$ 串}：每一串由 $3.0\ \mathrm{V}/34\ \mathrm{F}$ 与
+$3.0\ \mathrm{V}/10\ \mathrm{F}$ 两只单体\emph{并联}而成（并联后 $44\ \mathrm{F}$），
+$10$ 串再首尾相接。于是
+
 \begin{equation}
-  C = \frac{50}{11} \approx 4.55\ \mathrm{F},\qquad
-  U_{\max} = 33\ \mathrm{V},\qquad
-  R_{\mathrm{ESR}} = 11\times 22\ \mathrm{m}\Omega \approx 242\ \mathrm{m}\Omega .
+  C = \frac{44}{10} = 4.4\ \mathrm{F},\qquad
+  U_{\max} = 10\times 3.0\ \mathrm{V} = 30\ \mathrm{V},\qquad
+  R_{\mathrm{ESR}} = 10\times\bigl(68\ \mathrm{m}\Omega \parallel 45\ \mathrm{m}\Omega\bigr)
+                   \approx 271\ \mathrm{m}\Omega .
 \end{equation}
-其中 $R_{\mathrm{ESR}}$ 是电容组的\emph{等效串联电阻}
-（equivalent series resistance），它会在大电流充放电时产生额外的压降与发热。
-用上面算出的 $C$，充到 $30\ \mathrm{V}$ 时储能
-\begin{equation}
-  E = \tfrac{1}{2}\times 4.55\times 30^{2} \approx 2045\ \mathrm{J}.
+
+式中 $C$ 为电容组等效电容（F）；$U_{\max}$ 为最高电压（V）；
+$R_{\mathrm{ESR}}$ 为等效串联电阻（$\Omega$）。
+$\parallel$ 表示并联，两只单体的 ESR 并联后再乘串联数就是整组的内阻。
+把它充满到 $30\ \mathrm{V}$，储能是
+
+\begin{equation}\label{eq:1980j}
+  E = \tfrac{1}{2}\,C\,U_{\max}^{2}
+    = \tfrac{1}{2}\times 4.4\times 30^{2} = 1980\ \mathrm{J},
 \end{equation}
-若允许放电到 $15\ \mathrm{V}$，则可用能量占比为
-$1-(15/30)^2 = 75\%$，即约 $1534\ \mathrm{J}$——
+
+\emph{“$1980\ \mathrm{J}$”这个名字就是这么来的}。
+设计时用的通式是 $E=\frac12\cdot\frac{C}{b}\cdot(bU)^{2}<2000\ \mathrm{J}$，
+其中 $C$ 为单体电容（F）、$b$ 为串联数（无量纲）、$U$ 为单体电压（V）——
+串联数越大电压越高、储能越多，但受规则对总能量的限制（不超过 $2000\ \mathrm{J}$）。
+
+方案本身给出三条使用限制，复刻时必须遵守：
+\textbf{最高电压不超过 $30\ \mathrm{V}$}、\textbf{充放电电流不超过 $15\ \mathrm{A}$}
+（放电峰值约 $30\ \mathrm{A}$）、外壳（TPU 打印）尺寸
+$78\times44\times66\ \mathrm{mm}$。
+
+若允许放电到 $15\ \mathrm{V}$，可用能量占比为
+$1-(15/30)^{2}=75\%$，即约 $1485\ \mathrm{J}$——
 \emph{一半的电压窗口里藏着四分之三的能量}，这是电容储能的一个基本特征。
+
+\begin{note}[与 Plus 控制板的电压口径要对齐]
+控制板使用手册标明的\emph{电容侧电压范围是 $1\sim21\ \mathrm{V}$}
+（因为官方配套的是 $7$ 串 $3\ \mathrm{V}$ 单体、$1890\ \mathrm{J}$ 的电容组），
+而本电容组的最高电压是 $30\ \mathrm{V}$。
+两者直接搭配时，控制板会在 $21\ \mathrm{V}$ 附近就停止充电，
+电容组永远充不满，实际可用能量只有 $\tfrac12\times4.4\times21^{2}\approx970\ \mathrm{J}$，
+不到标称值的一半。
+\textbf{这是复刻时必须以自己的实测为准核对的一处}：
+要么把电容组按控制板的电压口径重新配置串联数，
+要么确认固件里的电容侧过压阈值已经相应放宽——
+无论哪种，都要在整机联调时用万用表与示波器确认，不能想当然。
+\end{note}
 
 恒功率放电时电压随时间的演化为
 \begin{equation}\label{eq:capdischarge}
@@ -4212,65 +4267,283 @@ MOSFET 内部天然带一个体二极管（body diode），方向是从源极到
 \subsection{采样链路}
 
 控制环的输入全部来自采样，因此采样错了环一定错。超电控制器至少要测四个量：
-母线电压 $U_1$、电容电压 $U_2$、母线电流 $I_1$、电感（或电容）电流 $I_L$。
-表~\ref{tab:sampling} 汇总了它们的量程要求与常见做法。
+电池端口电压 $U_1$、电容电压 $U_2$、电池端口电流 $I_1$、超电支路电流 $I_L$。
+Plus 版的实际选型列在表~\ref{tab:sampling}。
 
 \begin{table}[htbp]
   \centering
   \small
-  \caption{超电控制器的采样链路}
+  \caption{超电控制板的采样链路（按 Plus 版的实测选型）}
   \label{tab:sampling}
-  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.15\textwidth}>{\raggedright\arraybackslash}p{0.16\textwidth}>{\raggedright\arraybackslash}p{0.28\textwidth}>{\raggedright\arraybackslash}p{0.33\textwidth}@{}}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.14\textwidth}>{\raggedright\arraybackslash}p{0.17\textwidth}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.31\textwidth}@{}}
     \toprule
-    被测量 & 典型量程 & 常用方案 & 注意事项 \\
+    被测量 & 器件 & 采样方式 & 选型理由与代价 \\
     \midrule
-    $U_1$ 母线电压 & $0\sim36\ \mathrm{V}$ &
-    电阻分压 $+$ 运放跟随 & 分压比要与 ADC 基准一起校准；
-    高压侧走线要远离开关节点 \\[4pt]
-    $U_2$ 电容电压 & $0\sim36\ \mathrm{V}$ &
-    同上 & 这是\emph{能量}的计算依据（$E=\frac12CU_2^2$），
-    精度直接影响电量百分比 \\[4pt]
-    $I_1$ 母线电流 & $\pm40\ \mathrm{A}$ &
-    高侧或“高边 $+$ 隔离”双向采样 &
-    \textbf{不要用低侧采样}：裁判系统的超级电容管理模块与电源管理模块之间
-    有 $4$ pin 连线（含 GND），电流可能从那里回流，导致低侧采样失准 \\[4pt]
-    $I_L$ 电感电流 & $\pm20\ \mathrm{A}$ &
-    分流电阻 $+$ 双向电流放大器 &
-    \textbf{不要用 INA240 直接测半桥开关节点}：其共模抑制需要约 $1\ \mu\mathrm{s}$ 恢复，
-    在 $300\ \mathrm{kHz}$ 下会吃掉大半个周期，读数严重失真 \\[4pt]
+    $U_1$ 电池端口电压 & STM32G4 内部运放 &
+    电阻分压 $+$ \textbf{远端补偿}（见 \ref{sec:remotesense} 节） &
+    把采样点搬到裁判系统的 Chassis 端口，消除导线压降带来的功率误差 \\[4pt]
+    $U_2$ 电容电压 & 同上 &
+    电阻分压 & 它是\emph{能量}的计算依据（$E=\frac12CU_2^2$），
+    直接决定电量百分比 \\[4pt]
+    $I_1$ 电池端口电流 & \textbf{INA139} &
+    高侧采样 & 底盘功率计算的关键量；
+    精度预算重点放在它和 $U_1$ 上 \\[4pt]
+    $I_L$ 超电支路电流 & \textbf{TLV9061} &
+    \textbf{下管续流采样} &
+    取代 Lite 版的 INA181；成本更低、无共模电压之忧，
+    代价是下管占空比过小时误差变大 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\begin{note}[三条很容易踩的采样坑]
+\subsubsection{为什么把电容电流采样换成“下管续流”}
+
+Lite 版用电容支路串分流电阻 $+$ INA181 的方案。INA181 的 $28\ \mathrm{V}$ 耐压
+对 $21\ \mathrm{V}$ 的电容组本有较大冗余，但仍会\emph{偶尔烧毁}——
+推测是上电尖峰或热插拔浪涌所致。
+更麻烦的是它的失效后果：INA181 烧掉之后代码改一改还能跑，
+但\textbf{再也测不到底盘的真实功率}，于是开启超电时就无法精确控制底盘消耗的功率。
+
+Plus 因此改成\textbf{下管续流采样}（用 TLV9061），好处有两条：
+
+\begin{enumerate}
+  \item \textbf{成本更低}——省掉了专门的隔离/高共模仿真器件；
+  \item \textbf{没有共模电压的担忧}——采样点取在下管源极与地之间，共模电压几乎为零，
+  不像半桥开关节点那样让放大器难以招架。
+\end{enumerate}
+
+代价是：\textbf{下管开通时间过短时误差会变大}。文献给出的实测数据是
+
+\begin{quote}
+下管 $10\%$ 占空比、$10\ \mathrm{A}$ 负载时，会产生约 $2\ \mathrm{A}$ 的误差；
+空载（$0\ \mathrm{A}$）时误差约 $0.2\ \mathrm{A}$。
+\end{quote}
+
+这个误差能不能接受，要看它出现的条件。下管占空比小\emph{只发生在压降很小时}：
+以 $21\ \mathrm{V}$ 电容组为例，下管占空比 $10\%$ 对应最低输入电压约 $23.3\ \mathrm{V}$，
+而此时电池电量本身也已经偏低；再加上软件限制了下管的最小占空比，
+所以工程上可以忽略。
+
+还有一个概念上的理由值得说清楚：
+\textbf{这个下管电流检测只负责超电充放电支路的功率检测与限流保护}，
+底盘运行功率是由它与【电池端口】的输入功率运算得到的。
+因此\textbf{只要保证电池端口的功率检测准确，就能避免底盘功率超限}——
+这也解释了为什么 Plus 把精度预算的重点放在电池端口（$U_1$ 与 $I_1$）上，
+甚至专门为它做了远端补偿。
+
+关于全差分低边电流采样的设计细节，可参考 TI 的《高速低侧电流检测参考设计》。
+
+\begin{note}[两条很容易踩的采样坑]
 \begin{enumerate}
   \item \textbf{ADC 基准必须与电路上的基准芯片一致。}
-  如果 PCB 上焊的是 REF3033（$3.3\ \mathrm{V}$）而软件里按 $3.0\ \mathrm{V}$ 换算，
+  如果 PCB 上焊的是 $3.3\ \mathrm{V}$ 基准而软件里按 $3.0\ \mathrm{V}$ 换算，
   所有电压读数会系统性地偏差 $10\%$——这个错误不会报错、
   只会让控制环悄悄跑偏，是最常见也最隐蔽的一类故障。
-  有些 MCU 提供内部基准的出厂校验值，可以用它反推实际 VDDA：
+  有些 MCU 提供内部基准的出厂校验值，可以用它反推实际模拟供电电压：
   \begin{equation}\label{eq:vrefcal}
     V_{\mathrm{DDA}} = 3.3\ \mathrm{V}\times\frac{\text{vrefint\_cal}}{\text{vrefint\_data}} ,
   \end{equation}
   式中 $V_{\mathrm{DDA}}$ 为实际模拟供电电压（V）；
   \texttt{vrefint\_cal} 为出厂校准值（只读常量）；
   \texttt{vrefint\_data} 为当前实测值。两者都是芯片内部通道的 ADC 读数（无量纲）。
-  \item \textbf{双向电流采样需要偏置。} 电流可正可负，
-  因此放大器输出要偏置到基准中点附近。
-  偏置不准会让“零电流”对应一个非零读数，
-  积分后表现为电容电量缓慢漂移。
-  \item \textbf{开关噪声会串进采样。} ADC 采样时刻应尽量避开开关动作瞬间，
-  常见做法是让 ADC 由 PWM 定时器触发、在开关管导通的中点采样，
-  并对电流读数做一阶低通。
+  \item \textbf{与功率线路相连的引脚要加 ESD 保护。}
+  Lite 版把 INA181 的 REF 引脚与 MCU 的运放输出引脚直连，
+  该引脚要承受较大的共模电压，已经出现过烧毁现象。
+  凡是与功率线路\emph{直接或间接}相连的引脚，都应加 ESD 器件。
 \end{enumerate}
 \end{note}
 
-\subsection{电容组与均衡}
+\subsection{远端补偿：把电压采样点搬到裁判系统那一端}\label{sec:remotesense}
+
+这是 Plus 相对 Lite 最有价值的一项改进，值得单独讲一节。
+
+\subsubsection{问题：导线压降让回读功率偏小}
+
+底盘功率等于电压乘电流。但控制板测的电压是\emph{它自己的电池端口}上的电压，
+而裁判系统测的是\emph{电源管理模块 Chassis 端口}上的电压。
+这两个点之间隔着一段导线，导线有电阻，大电流流过时会产生压降：
+\begin{equation}\label{eq:vdrop}
+  V_{\mathrm{drop}} = I\,R ,
+\end{equation}
+式中 $V_{\mathrm{drop}}$ 为导线上的压降（V）；
+$I$ 为流过导线的电流（A）；$R$ 为导线电阻（$\Omega$）。
+于是控制板端口的电压必然\emph{低于} Chassis 端口，
+控制板按偏低的电压算功率，算出来的功率就\textbf{偏小}。
+
+\subsubsection{为什么“偏小”很危险}
+
+文献里算了一笔很直观的账，值得完整引述：
+
+\begin{quote}
+设功率限制为 $100\ \mathrm{W}$，控制板回读功率偏小 $5\ \mathrm{W}$。
+你设定底盘跑 $100\ \mathrm{W}$，实际也确实是 $100\ \mathrm{W}$，
+但控制板回读只有 $95\ \mathrm{W}$——代码认为“还没到设定值”，
+于是继续加功率到 $105\ \mathrm{W}$，此时就\textbf{小幅超功率}了。
+\end{quote}
+
+如果此时缓冲能量已经很低（文献提到降到 $10\ \mathrm{J}$ 的情况），
+或者底盘代码本身在特定工况下存在超调，就可能出现
+“缓冲能量耗尽导致底盘断电”。文献还提到一个具体现象：
+纯用缓冲能量闭环时，全功率行驶中\emph{猛转头}就会把缓冲能量耗尽。
+
+能不能干脆把设定功率调低一点来避免？可以，但代价是性能；
+而且不同机器人的走线长度不同，线损多少不一样，
+\textbf{统一减多少很难定}——减多了得不偿失。所以要从根上解决，
+就必须把采样点搬过去。
+
+\subsubsection{做法与两个关键细节}
+
+用一根 MMCX 转 SMA 同轴线，把 Chassis 端口的电压引回控制板，
+再配合一块“电源管理模块 Chassis 采样小板”完成远端补偿。
+
+\begin{enumerate}
+  \item \textbf{必须使用全差分放大器。}
+  这是最关键的一条。如果不用全差分，输出就是以板子的 GND 做差，
+  而导线的\emph{正负极}都会产生线损——
+  以板 GND 做差只能补偿正极，\textbf{负极导线的线损补偿不了}，仍然有误差。
+  采用全差分之后，输出以两端的电压\emph{差值}、经衰减后给出，
+  从而真正采样到 Chassis 端口（更接近电源管理模块）的电压。
+  Plus 用的是 STM32G4 芯片\emph{内部}的运放，不需要额外器件。
+  \item \textbf{MMCX 与 SMA 的外壳不属于 GND}，
+  不能与任何金属接触，否则远端采样会引入误差；
+  不使用远端补偿时，该端口\textbf{悬空即可}。
+\end{enumerate}
+
+\subsubsection{实测效果}
+
+文献给出的对比很干净：
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{远端补偿的实测效果（$50\ \mathrm{cm}$、$18\ \mathrm{AWG}$ 硅胶线，
+  $24\ \mathrm{V}$、$0\sim10\ \mathrm{A}$ 负载）}
+  \label{tab:remotesense}
+  \begin{tabular}{@{}lcc@{}}
+    \toprule
+    工况 & 功率检测误差 & 说明 \\
+    \midrule
+    加远端补偿   & $\pm1\ \mathrm{W}$ & 与裁判系统显示基本一致 \\
+    不加远端补偿 & $-5\ \mathrm{W}$    & 系统性偏小，且随线长与电流变化 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+剩下的误差来源是“\emph{参考源不同}”：控制板自己用四位半万用表校准过，
+绝对精度足够；但与裁判系统的\emph{相对一致性}无法自行保证，
+只能相信裁判系统出厂时做过校准——否则不同电源管理模块读出的功率不一样，
+比赛就失去公平性了。
+
+\subsection{硬件保护：Plus 相对 Lite 的核心增量}
+
+Plus 之所以叫 Plus，主要就是把这一整套硬件保护补齐了。
+文献里解释了动机：Lite 版当年认为软件保护足以应对所有问题，
+后来在与兄弟队伍交流以及自己出现莫明炸板之后，
+才认识到\textbf{必须有硬件保护作为最后的保险}。
+
+\subsubsection{电源浪涌保护}
+
+电池端口与电容端口都加了 SMC 封装的 TVS，用于削减热插拔产生的尖峰电压。
+辅助电源之前还额外加了“自恢复保险丝 $+$ 限流电阻 $+$ 小功率 TVS”，
+原因是：MLCC 的阻抗极低，上电瞬间会产生很大的浪涌电流，
+可能把设计余量不足的 DCDC 芯片直接烧掉。
+
+限制电阻的取值并不随意。文献给出的依据是：
+自恢复保险丝额定 $100\ \mathrm{mA}$、熔断电流 $250\ \mathrm{mA}$；
+通过 $250\ \mathrm{mA}$ 时限流电阻上产生 $11.75\ \mathrm{V}$ 压降，
+后级仍可获得
+\begin{equation}\label{eq:auxpower}
+  P_{\mathrm{aux}} \approx (V_{\mathrm{bat}} - 11.75\ \mathrm{V})\times 0.25\ \mathrm{A}
+  \approx 3\ \mathrm{W},
+\end{equation}
+式中 $V_{\mathrm{bat}}$ 为电池电压（V）；
+$11.75\ \mathrm{V}$ 为限流电阻在 $250\ \mathrm{mA}$ 下的压降（V）；
+$0.25\ \mathrm{A}$ 为保险丝熔断电流（A）。
+$3\ \mathrm{W}$ 对辅助电源与后级电路已经足够，
+所以这个电阻不会影响正常运行。
+
+\subsubsection{保险丝与熔断检测}
+
+保险丝选用\textbf{5A 慢断}，理由有两条：
+
+\begin{enumerate}
+  \item 它是\emph{插件}封装，熔断后拆焊更换方便
+  （焊盘也兼容 1808 贴片快断保险丝；但不建议使用保险座，多次更换后会松动）；
+  \item 慢断的\emph{熔断曲线}比快断更接近裁判系统的保护曲线。
+  即使超电以 $10\ \mathrm{A}$（$240\ \mathrm{W}$）放电，持续时间也就 $5\ \mathrm{s}$ 左右，
+  不会熔断；而 $240\ \mathrm{W}$ 已经是额定功率的两倍，
+  再高受规则与电容物理限制也没有明显收益。
+\end{enumerate}
+
+文献特别叮嘱：\textbf{不要因为保险丝频繁熔断就擅自换更大的}——
+超出设计参数的保险丝不一定还能起到保护作用。
+如果保险丝熔断了而板子没有其他故障，说明使用环境已经超出设计极限。
+
+\textbf{熔断检测}的原理是测保险丝两侧的电压差。
+最常见的一种熔断原因是半桥 MOS 烧毁导致半桥对地短路，
+短路电流把保险丝熔断，此时升压侧与电容侧都被拉地，
+检测引脚电压跌到 0，从而触发保护。
+
+正常工作时，该引脚分压后应高于 $0.7\,V_{\mathrm{DD}}$
+（$3.3\ \mathrm{V}$ 供电下约 $2.3\ \mathrm{V}$）判为高电平，
+对应电池端口电压约 $13\ \mathrm{V}$ 以上。
+而 $13\ \mathrm{V}$ 恰好是控制板能够运行的\emph{最低极限电压}
+（低于它栅极驱动无法工作），
+所以正常运行时只有保险丝熔断会把电压拉到 $13\ \mathrm{V}$ 以下，
+\textbf{不会误触发}。这个阈值设计得很巧：保护门限与工作下限刚好重合。
+
+\subsubsection{PMOS 与 PWM 的时序延迟保护}
+
+这一条机理最值得讲清楚。Plus 用逻辑门搭了一个硬件延迟电路，
+保证 \textbf{PMOS 永远在 PWM 输出\emph{之前}导通、在 PWM 停止\emph{之后}关断}。
+
+为什么必须这样？分两种工况看：
+
+\begin{itemize}
+  \item \textbf{Buck（充电）工况}：PMOS 通不通影响不大，
+  只是电流会走 PMOS 的体二极管，损耗大一些。
+  \item \textbf{Boost（放电）工况}：如果 PMOS 没有导通，
+  而“电感电流不能突变”，电流需要经 PMOS 向底盘流动，
+  但 PMOS 关断、电流无处可去，就会在 PMOS 前面产生一个\textbf{电压尖峰}，
+  这个尖峰可能同时击穿 PMOS 与半桥 MOS。
+\end{itemize}
+
+实现方式是用与门、或门搭建延迟：输入是 ENABLE 信号，
+输出分别控制定时器的 \textbf{BREAK} 信号与 PMOS 栅极。
+规定 BREAK 为高时定时器输出 PWM、为低时停止输出。
+
+\begin{description}
+  \item[接通时序（ENABLE 由低变高）。]
+  或门先输出高电平 $\to$ PMOS 由关断变导通；
+  此时与门只有一个高电平输入，保持低输出，定时器仍不输出 PWM；
+  随着 ENABLE 持续给电容充电，电容电压升到高电平阈值后，
+  与门得到两个高电平，输出高，定时器才开始输出 PWM。
+  \item[关断时序（ENABLE 由高变低）。]
+  或门因电容上还存着电压而保持高输出 $\to$ PMOS 继续导通；
+  与门输出变低，定时器先停止输出 PWM；
+  电容放电到低电平阈值后，或门两个输入均为低，输出低，PMOS 才关断。
+\end{description}
+
+注意两侧的延迟时间\textbf{不一定对称}，具体由逻辑门的高低电平阈值决定。
+文献也提到，软件层面（V1.1.2517 版）已经做过同样的时序控制，
+但作者更相信硬件实现的可靠性，所以又用逻辑门做了一遍——
+这属于“关键安全逻辑用硬件兜底”的典型思路。
+
+\subsection{电容组与均衡}\label{sec:capbank}
 
 电容组的两个基本设计参数是\textbf{耐压}与\textbf{储能}，
-它们由串联数与单体容量共同决定。本文复刻方案采用的是
-香港科技大学 ENTERPRIZE 战队约 $1980\ \mathrm{J}$ 的方案~\cite{hkust1980j}，
-其量级可以通过基本关系核算：
+它们由串联数与单体容量共同决定。
+
+这里要区分两套数字：\textbf{Plus 控制板官方配套的是
+Hcccap $3\ \mathrm{V}/60\ \mathrm{F}$ 单体串联 $7$ 只}，
+即 $21\ \mathrm{V}$、标称 $1890\ \mathrm{J}$，均衡板用 BW6103 被动均衡~\cite{glutplusmanual}；
+而\emph{本文这套复刻}在电容组上选用了香港科技大学 ENTERPRIZE 战队
+$1980\ \mathrm{J}$ 的方案~\cite{hkust1980j}——
+$10$ 串，每串 $3.0\ \mathrm{V}/34\ \mathrm{F}$ 与 $3.0\ \mathrm{V}/10\ \mathrm{F}$
+并联成 $44\ \mathrm{F}$，故最高 $30\ \mathrm{V}$、内阻约 $271\ \mathrm{m}\Omega$。
+两套的串联数与电压口径不同，\textbf{控制参数必须按实际电容值重新核算}。
+
+储能可以用下面的基本关系计算：
 
 \begin{equation}\label{eq:capbank}
   E = \tfrac{1}{2}C_{\mathrm{bank}}U_{\max}^{2},
@@ -4317,7 +4590,95 @@ $11$ 串、单体 ESR 约 $22\ \mathrm{m}\Omega$ 的组，其总 ESR 约 $240\ \
 这也是为什么“ESR 尽可能小”是选型的首要原则之一。
 \end{note}
 
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{超电控制板 Plus 的主要规格（引自使用手册）}
+  \label{tab:scspec}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.32\textwidth}@{}}
+    \toprule
+    项目 & 数值 & 说明 \\
+    \midrule
+    母线电压 $V_{\mathrm{bat}}$ & $20\sim35\ \mathrm{V}$ & 欠压保护阈值可调 \\
+    电容组电压 $V_{\mathrm{cap}}$ & $1\sim21\ \mathrm{V}$ & 对应 $7$ 串单体 \\
+    最大瞬时电容电流 & $30\ \mathrm{A}$ & 受硬件与保护限制 \\
+    额定功率 & $150\ \mathrm{W}$ @ $24\ \mathrm{V_{bat}}$、$12\ \mathrm{V_{cap}}$ &
+    温升 $50\,^{\circ}\mathrm{C}$（室温 $20\,^{\circ}\mathrm{C}$、六面悬空自然冷却） \\
+    额定效率 & $96\%$ & 额定功率下 \\
+    CAN 波特率 & $1\ \mathrm{Mbps}$ & 标准帧 \\
+    体积 & $75\times45\times25\ \mathrm{mm}$ & 与电容组面积一致，可直接堆叠 \\
+    工作温度 & $0\sim40\,^{\circ}\mathrm{C}$ & — \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \subsection{硬件总体框图}
+
+\begin{figure}[htbp]
+  \centering
+  % 接线框图：控制板与电容组之间要经过【裁判系统】电容管理模块，这是最容易画错的一处
+  \begin{tikzpicture}[>=Stealth, font=\small, node distance=6mm,
+      scale=0.87, transform shape]
+
+    % ---------------- 节点 ----------------
+    \node[fsoft, minimum width=44mm, minimum height=13mm, align=center] (board) at (1.6,0)
+      {超电控制板 Plus\\[1pt]\scriptsize 本文复刻对象};
+    \node[fio, minimum width=32mm, minimum height=13mm, align=center] (capm) at (7.0,0)
+      {【裁判系统】\\电容管理模块};
+    \node[fsys, minimum width=24mm, minimum height=13mm, align=center] (cap) at (11.2,0)
+      {超级\\电容组};
+    \node[fio, minimum width=20mm, align=center] (pdb) at (-3.4,0) {分电板};
+    \node[flab, anchor=north] at (-3.4,-0.85) {\scriptsize $\to$ 底盘电机};
+    \node[fio, minimum width=30mm, align=center] (pwr) at (1.6,3.4)
+      {【裁判系统】\\电源管理模块};
+    \node[fblock, minimum width=28mm, align=center] (can) at (1.6,-3.5)
+      {C 板 CAN 总线};
+
+    % ---------------- 连接 ----------------
+    % 控制板 ⇄ 电容管理模块 ⇄ 电容组
+    \draw[fbio] (board.east) -- node[flab, above, align=center]
+      {\scriptsize [5]「电容」\\[-2pt]\scriptsize $\leftrightarrow$ [1] PwrCtrl} (capm.west);
+    \draw[fbio] (capm.east) -- node[flab, above]{\scriptsize [2] SuperCap} (cap.west);
+
+    % 电源管理模块 → 控制板「电池」端口
+    \draw[fbio] (pwr.south) -- node[flab, anchor=east, align=right]
+      {\scriptsize [18] Chassis\\[-2pt]\scriptsize $\to$ [13]「电池」} (board.north);
+
+    % 电源管理模块 ⇄ 电容管理模块（4 pin 通讯）
+    \draw[fbio] (pwr.east) -- (4.4,3.4) -- (4.4,1.6) -- (5.6,1.6) -- (5.6,0.65);
+    \node[flab, anchor=west] at (4.5,2.5) {\scriptsize [9] GH1.25-4PIN};
+
+    % 控制板「底盘」端口 → 分电板
+    \draw[fbio] (board.west) -- node[flab, above]{\scriptsize [3]「底盘」} (pdb.east);
+
+    % 控制板「CAN」端口
+    \draw[fbio] (board.south) -- node[flab, anchor=west]{\scriptsize [15]「CAN」} (can.north);
+
+    % 选装一：电容组 NTC → 控制板「温控」
+    \draw[fbio, dashed] (cap.south) -- (11.2,-2.2) -- (3.4,-2.2) -- (3.4,-0.78);
+    \node[flab, anchor=west] at (4.9,-2.02)
+      {\scriptsize [10] NTC $\to$ [16]「温控」（选装）};
+
+    % 选装二：远端补偿（兜底走最下方）
+    \draw[fbio, dashed] (-0.4,-0.78) -- (-0.4,-4.4) -- (10.4,-4.4) -- (10.4,-0.78);
+    \node[flab, anchor=west] at (0.6,-4.22)
+      {\scriptsize [4]/[14]「电容补偿」MMCX $\leftrightarrow$ [12] 远端补偿 SMA（选装）};
+  \end{tikzpicture}
+  \caption{超级电容模组的电气连接框图（端口编号沿用使用手册）。
+  有三处与直觉不同，值得注意：
+  \textbf{其一}，控制板与电容组之间\emph{并不是直连}——
+  要经过\emph{【裁判系统】电容管理模块}（[5]$\leftrightarrow$[1]、再接[2]）；
+  \textbf{其二}，控制板上标着「电池」的那个端口（[13]），
+  实际接的是\emph{【裁判系统】电源管理模块的 Chassis 端口}（[18]）；
+  之所以叫「电池」，是因为备赛期多数队伍还没有电源管理模块，
+  那时这个端口就直接接电池。
+  \textbf{其三}，控制板另有一个「底盘」端口（[3]）接到分电板再驱动底盘电机，
+  它才是{\rm 底盘}真正的供电通路。
+  两条虚线是选装项：NTC 测温（[10]$\to$[16]）与远端补偿（[4]/[14]$\leftrightarrow$[12]）。
+  另外注意：本项目\textbf{不支持无线充电}。}
+  \label{fig:scwiring}
+\end{figure}
+
 
 把上面所有环节连起来，就得到一张完整的硬件框图（图~\ref{fig:schw}）。
 它也是调试时的排查顺序：\emph{先确认供电与基准，再看驱动与开关波形，
@@ -4627,24 +4988,50 @@ $f_{\mathrm{sw}}$ 为开关频率（Hz）。
 \begin{table}[htbp]
   \centering
   \small
-  \caption{主控与超电控制器之间的 CAN 约定（示例）}
+  \caption{主控与超电控制板之间的 CAN 通信协议（按 Plus 版实测定义）}
   \label{tab:scCAN}
-  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.11\textwidth}>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}p{0.38\textwidth}@{}}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.10\textwidth}>{\raggedright\arraybackslash}p{0.09\textwidth}>{\raggedright\arraybackslash}p{0.37\textwidth}>{\raggedright\arraybackslash}p{0.36\textwidth}@{}}
     \toprule
-    方向 & 标识符 & 数据内容 & 说明 \\
+    方向 & 标识符 & 数据域 & 说明 \\
     \midrule
-    主控 $\to$ 超电 & \texttt{0x210} &
-    目标功率（$2$ 字节，$\mathrm{W}\times100$ 定点） &
-    即 Part I 中的 $\Plim$；发送周期与控制周期一致 \\[4pt]
-    超电 $\to$ 主控 & \texttt{0x211} &
-    电容电压、母线电压、当前功率、电量百分比 &
-    电量百分比由 $E=\frac12CU_2^2$ 归一化得到 \\[4pt]
-    超电 $\to$ 主控 & \texttt{0x212} &
-    状态字（充电 / 放电 / 保护中）、温度 &
-    用于主控侧的界面显示与降级决策 \\
+    主控 $\to$ 超电 & \texttt{0x001} &
+    \texttt{DATA[0]}【使能】：$1$ 使能 / $0$ 失能\newline
+    \texttt{DATA[2]}【功率上限】：单位 W &
+    $8$ 字节标准帧。控制板以 $100\ \mathrm{Hz}$ 刷新收到的数据；
+    发送频率须 $>10\ \mathrm{Hz}$，否则控制板判为\emph{离线} \\[5pt]
+    超电 $\to$ 主控 & \texttt{0x100} &
+    \texttt{DATA[0]}【可用】$1/0$\newline
+    \texttt{DATA[1]}【状态】标志\newline
+    \texttt{DATA[2]}【电容组能量】$0\sim100\%$\newline
+    \texttt{DATA[3]}【电机功率】W，$0\sim500$\newline
+    \texttt{DATA[4]} 电池电压（$\times10$）\newline
+    \texttt{DATA[5]}【Chassis 功率】W，$0\sim255$ &
+    发送频率 $200\ \mathrm{Hz}$（可调）。\textbf{注意
+    \texttt{DATA[3]} 发送时右移了一位（除 $2$）}，
+    接收端须左移还原（乘 $2$）并用 \texttt{uint16} 接收 \\
     \bottomrule
   \end{tabular}
 \end{table}
+
+\begin{note}[协议里几个容易用错的地方]
+\begin{itemize}
+  \item \textbf{\texttt{DATA[2]} 的【功率上限】是“参考值”，不是控制量。}
+  它应当被当作常量，且必须与裁判系统读到的底盘功率上限\emph{一致}，
+  否则会影响超电模组的性能。
+  \item \textbf{\texttt{DATA[0]} 的【可用】标志只读不可写。}
+  只有当模组处于充电、充满、放电或待机状态时它才为“可用”，
+  此时才能使其放电（\emph{无法强制放电}）。
+  处于不可用时只能等待它自行恢复。
+  \item \textbf{\texttt{DATA[2]} 的【电容组能量】建议只用于界面显示。}
+  不要自己另写一套“低于多少就关超电”的判断——
+  模组会在安全范围内自行关断并更新状态标志；
+  若坚持自己写，务必处理好临界状态，避免反复开关。
+  \item \textbf{\texttt{DATA[3]} 的【电机功率】才是功率闭环的反馈量。}
+  经拟合校准并启用远端补偿后，它与裁判系统电源管理模块的误差不超过 $1\ \mathrm{W}$。
+  \item \textbf{失能后的静态功耗极低}（$1\ \mathrm{W}$ 以下），
+  所以不用为了省电频繁地在使能/失能之间切换。
+\end{itemize}
+\end{note}
 
 协议实现上有两条经验：
 
@@ -4676,6 +5063,47 @@ $f_{\mathrm{sw}}$ 为开关频率（Hz）。
   \item \textbf{长期存放要放电。} 电容组长期保持高压会加速单体老化，
   且一旦有意外通路就可能造成危险。建议存放前放电到安全电压。
 \end{itemize}
+
+\subsection{指示灯故障对照表}
+
+控制板用三色指示灯表达运行状态，\emph{优先级从上到下}。
+读懂它可以省下大量示波器与万用表的时间——
+使用手册的原话是：\textbf{只要红灯亮起，就说明电容组处于保护状态、不可用}。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{指示灯状态与含义（默认固件，引自使用手册）}
+  \label{tab:led}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}p{0.37\textwidth}>{\raggedright\arraybackslash}p{0.28\textwidth}@{}}
+    \toprule
+    指示灯状态 & 含义 & 恢复方式 \\
+    \midrule
+    全部熄灭 & 程序未运行；或无匹配 UID 的 ADC 校准参数 & 检查供电与烧录 \\
+    跑马灯 & 上电初始化中 & 等待 \\
+    红、绿、蓝常亮 & \textbf{保险丝熔断}（超载或半桥炸管） & 换保险丝后重新上电 \\
+    红灯闪，绿、蓝交替闪 & 模组过温保护（$100\,^{\circ}\mathrm{C}$，$5\ \mathrm{s}$） & 降温 $5\ \mathrm{s}$ \\
+    红灯常亮 & 母线欠压保护（$20\ \mathrm{V}$，$1\ \mathrm{s}$） & 换电池后重新上电 \\
+    红灯闪，绿灯常亮、蓝灯闪 & 母线过流保护（$30\ \mathrm{A}$，$200\ \mathrm{ms}$） & 降低电流 $5\ \mathrm{s}$ \\
+    红灯闪，绿灯熄灭、蓝灯闪 & 母线过压保护（$35\ \mathrm{V}$，$200\ \mathrm{ms}$） & 降低电压 $5\ \mathrm{s}$ \\
+    三灯同时闪 & CAN 离线保护（$1\ \mathrm{s}$ 收不到报文） & $1\ \mathrm{s}$ 内收到 $10$ 次报文 \\
+    红灯闪，绿灯闪，蓝灯熄灭 & 电容组能量耗尽欠压（$8\ \mathrm{V}$，$500\ \mathrm{ms}$） & 充到 $10\ \mathrm{V}$ 后 $5\ \mathrm{s}$ \\
+    红灯熄灭，绿、蓝同时闪 & 电容组失能，不工作 & 收到使能指令 \\
+    红灯熄灭，绿、蓝常亮 & 电容组满电 & — \\
+    红灯熄灭，绿灯常亮 & 正在充电 & — \\
+    红灯熄灭，蓝灯常亮 & 正在放电 & — \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{note}[为什么会看到“保险丝熔断”]
+最常见的熔断原因是\emph{半桥 MOS 烧毁导致半桥对地短路}。
+短路电流把保险丝熔断之后，升压侧与电容侧都被拉地，
+熔断检测引脚电压跌到 $0$，于是三灯常亮报出这个状态。
+这也是 Plus 相对 Lite 增加硬件保护的主要动机之一——
+Lite 版没有保险丝，一旦半桥炸管就可能在裁判系统侧表现为
+“\emph{通道 0 超载}”，后果更严重。
+\end{note}
 
 \subsection{调试顺序}
 

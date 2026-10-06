@@ -237,26 +237,38 @@
   note         = {故障排查与维护流程}
 }
 
-@misc{glutdocs,
-  author       = {{桂林理工大学群星战队}},
-  title        = {超级电容控制板与模组技术文档（在线版）},
-  howpublished = {\url{https://donotfreeze.github.io/robomaster/}},
-  year         = {2025},
-  note         = {硬件篇、软件篇、测试篇与使用手册的在线镜像}
-}
-
-@misc{gkdsupercap,
-  author       = {{GKD-RM-Lab}},
-  title        = {{SuperCap\_GKD}：{RM2025} 超级电容控制器开源},
-  howpublished = {GitHub 仓库},
-  year         = {2025},
-  url          = {https://github.com/GKD-RM-Lab/SuperCap_GKD}
-}
-
 @misc{hkust1980j,
   author       = {{香港科技大学 ENTERPRIZE 战队}},
-  title        = {{RM2025} 超级电容组选型与能量核算（{$1980\ \mathrm{J}$} 方案）},
-  howpublished = {队内技术资料},
+  title        = {{RM2025}-超级电容 {$1980\ \mathrm{J}$} 电容组开源},
+  howpublished = {RoboMaster 论坛开源帖},
   year         = {2025},
-  note         = {本文复刻模组配套的电容组来源}
+  url          = {https://bbs.robomaster.com/article/760959},
+  note         = {$10$ 串，每串 $3.0\ \mathrm{V}/34\ \mathrm{F}\parallel 3.0\ \mathrm{V}/10\ \mathrm{F}$；
+                  最高 $30\ \mathrm{V}$、内阻约 $271\ \mathrm{m}\Omega$、标称 $1980\ \mathrm{J}$；
+                  充放电电流不超过 $15\ \mathrm{A}$}
+}
+
+@misc{glutlitehw,
+  author       = {{桂林理工大学群星战队}},
+  title        = {{RM2024} 超级电容控制板 {Lite}「硬件篇」},
+  howpublished = {RoboMaster 论坛开源帖},
+  year         = {2024},
+  note         = {Plus 版在此基础上增加了硬件保护}
+}
+
+@misc{glutsoftware,
+  author       = {{桂林理工大学群星战队}},
+  title        = {{RM24-25} 超级电容控制板 {Lite} \& {Plus}「软件篇」},
+  howpublished = {RoboMaster 论坛开源帖},
+  year         = {2024},
+  url          = {https://bbs.robomaster.com/article/426424},
+  note         = {{SuperCapCtrl} 库与充放电环路逻辑}
+}
+
+@misc{glutshortprot,
+  author       = {{桂林理工大学群星战队}},
+  title        = {通用型超级电容模组短路保护板},
+  howpublished = {RoboMaster 论坛开源帖},
+  year         = {2025},
+  note         = {Plus 加入保险丝保护的背景}
 }
