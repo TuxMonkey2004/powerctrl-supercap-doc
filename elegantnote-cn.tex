@@ -1917,9 +1917,11 @@ $C$ 的符号则取决于目标功率与该转速下\emph{空载损耗}的比较
       \addlegendentry{功率预算 $P^{\ast} = 40$ W}
       \addplot[only marks, mark=*, mark size=1.8pt, black]
         coordinates {(2497,40) (5898,40)};
-      \node[anchor=south west, font=\scriptsize, text=black] at (axis cs:2550,42)
+      \node[anchor=north east, font=\scriptsize, text=black,
+            fill=papercolor, inner sep=1.5pt] at (axis cs:2380,36)
         {$x_+\!\approx\!2497$};
-      \node[anchor=south east, font=\scriptsize, text=black] at (axis cs:5880,42)
+      \node[anchor=south west, font=\scriptsize, text=black,
+            fill=papercolor, inner sep=1.5pt] at (axis cs:6050,48)
         {$x_+\!\approx\!5898$};
     \end{axis}
   \end{tikzpicture}
@@ -2651,7 +2653,7 @@ $u$ 是外环控制器的输出（W），
 
 \subsection{工程上的若干改进}
 
-\paragraph{(a) 用 $\sqrt{\cdot}$ 误差映射代替线性误差。}
+\paragraph{(a) 用能量平方根的误差映射代替线性误差。}
 一个被多个队伍采用的技巧~\cite{hkustpowermodule} 是把误差定义在“能量平方根”上：
 \begin{equation}\label{eq:sqrterror}
   e = \sqrt{\Ebuf^{\ast}} - \sqrt{\Ebuf},
@@ -3480,7 +3482,7 @@ Buck 把高电压变成低电压，电路如图~\ref{fig:buck} 所示。
       \draw[codegreen!62!black, very thick] (\xB,-1.55) -- (\xC,-2.45);
     }
     \node[wlab] at (-0.4,-2.0) {$i_L$};
-    \node[mlab, anchor=west, text=black!60] at (7.15,-1.95) {$\overline{I_L}$};
+    \node[mlab, anchor=west, text=black!60, fill=papercolor, inner sep=1pt] at (7.10,-2.82) {$\overline{I_L}$};
     \draw[<->, gray!70] (0.28,-2.45) -- (0.28,-1.55);
     \node[mlab, anchor=south] at (0.28,-1.48) {$\Delta I_L$};
     % ---- 时间轴 ----
@@ -3609,7 +3611,7 @@ $L$ 为电感量（H）；$f_{\mathrm{sw}}=1/T$ 为开关频率（Hz）。
       \draw[red!72!black, very thick] (\xA,-3.35) -- (\xB,-2.65) -- (\xC,-3.35);
     }
     \node[wlab] at (-0.5,-3.0) {$i_L$};
-    \node[mlab, anchor=west, text=black!60] at (6.05,-3.02) {$\overline{I_L}$};
+    \node[mlab, anchor=west, text=black!60, fill=papercolor, inner sep=1pt] at (6.05,-2.40) {$\overline{I_L}$};
     \draw[<->, gray!70] (0.30,-3.35) -- (0.30,-2.65);
     \node[mlab, anchor=south] at (0.30,-2.58) {$\Delta I_L$};
 
@@ -3625,21 +3627,21 @@ $L$ 为电感量（H）；$f_{\mathrm{sw}}=1/T$ 为开关频率（Hz）。
     \node[wlab] at (-0.5,-4.6) {$i_C$};
 
     % ================= 时间轴 =================
-    \draw[gray!70] (0,-5.55) -- (6.6,-5.55);
+    \draw[gray!70] (0,-5.75) -- (6.6,-5.75);
     \foreach \k in {0,1,2,3} {
-      \draw[gray!70] (\k*\per,-5.55) -- (\k*\per,-5.75);
+      \draw[gray!70] (\k*\per,-5.75) -- (\k*\per,-5.95);
     }
-    \node[mlab, below] at (0,-5.78) {$0$};
-    \node[mlab, below] at (\per,-5.78) {$T$};
-    \node[mlab, below] at (2*\per,-5.78) {$2T$};
-    \draw[<->, gray!70] (0,-6.10) -- (\ton,-6.10);
-    \node[mlab, below] at (0.62,-6.12) {$D\,T$};
-    \draw[<->, gray!70] (\ton,-6.10) -- (\per,-6.10);
-    \node[mlab, below] at (1.62,-6.12) {$(1-D)T$};
+    \node[mlab, below] at (0,-5.99) {$0$};
+    \node[mlab, below] at (\per,-5.99) {$T$};
+    \node[mlab, below] at (2*\per,-5.99) {$2T$};
+    \draw[<->, gray!70] (0,-5.52) -- (\ton,-5.52);
+    \node[mlab, above] at (0.62,-5.50) {$D\,T$};
+    \draw[<->, gray!70] (\ton,-5.52) -- (\per,-5.52);
+    \node[mlab, above] at (1.62,-5.50) {$(1-D)T$};
 
     % ================= 图例 =================
-    \fill[wband] (0.0,-6.95) rectangle (0.28,-6.78);
-    \node[mlab, anchor=west] at (0.34,-6.87) {浅蓝底色 $=S_1$ 导通区间};
+    \fill[wband] (0.0,-6.75) rectangle (0.28,-6.58);
+    \node[mlab, anchor=west] at (0.34,-6.67) {浅蓝底色 $=S_1$ 导通区间};
   \end{tikzpicture}
   \caption{Buck 变换器的关键波形（示意，占空比 $D=0.62$）。
   自上而下依次是：$S_1$ 的门极驱动、开关节点电压 $u_{\mathrm{sw}}$、
@@ -3750,7 +3752,7 @@ Boost 把低电压变成高电压。它把电感放在\emph{输入侧}，
         (\xA,-4.3) -- (\xB,-4.3) -- (\xB,-1.69) -- (\xC,-2.35) -- (\xC,-4.3);
     }
     \node[wlab] at (-0.4,-4.3) {$i_D$};
-    \node[mlab, anchor=west, text=black!60] at (6.05,-4.18) {只在关断相导通};
+    \node[mlab, anchor=west, text=black!60] at (6.15,-3.60) {只在关断相导通};
     % ---- 时间轴 ----
     \draw[gray!70] (0,-5.05) -- (8.2,-5.05);
     \foreach \k in {0,1,2,3,4} { \draw[gray!70] (\k*\per,-5.05) -- (\k*\per,-5.22); }
@@ -4344,8 +4346,8 @@ Plus 因此改成\textbf{下管续流采样}（用 TLV9061），好处有两条�
     V_{\mathrm{DDA}} = 3.3\ \mathrm{V}\times\frac{\text{vrefint\_cal}}{\text{vrefint\_data}} ,
   \end{equation}
   式中 $V_{\mathrm{DDA}}$ 为实际模拟供电电压（V）；
-  \texttt{vrefint\_cal} 为出厂校准值（只读常量）；
-  \texttt{vrefint\_data} 为当前实测值。两者都是芯片内部通道的 ADC 读数（无量纲）。
+  \texttt{vrefint\_\allowbreak{}cal} 为出厂校准值（只读常量）；
+  \texttt{vrefint\_\allowbreak{}data} 为当前实测值。两者都是芯片内部通道的 ADC 读数（无量纲）。
   \item \textbf{与功率线路相连的引脚要加 ESD 保护。}
   Lite 版把 INA181 的 REF 引脚与 MCU 的运放输出引脚直连，
   该引脚要承受较大的共模电压，已经出现过烧毁现象。
@@ -4656,12 +4658,12 @@ $11$ 串、单体 ESR 约 $22\ \mathrm{m}\Omega$ 的组，其总 ESR 约 $240\ \
 
     % 选装一：电容组 NTC → 控制板「温控」
     \draw[fbio, dashed] (cap.south) -- (11.2,-2.2) -- (3.4,-2.2) -- (3.4,-0.78);
-    \node[flab, anchor=west] at (4.9,-2.02)
+    \node[flab, anchor=west, fill=papercolor, inner sep=1.5pt] at (4.9,-2.22)
       {\scriptsize [10] NTC $\to$ [16]「温控」（选装）};
 
     % 选装二：远端补偿（兜底走最下方）
     \draw[fbio, dashed] (-0.4,-0.78) -- (-0.4,-4.4) -- (10.4,-4.4) -- (10.4,-0.78);
-    \node[flab, anchor=west] at (0.6,-4.22)
+    \node[flab, anchor=west, fill=papercolor, inner sep=1.5pt] at (0.6,-4.42)
       {\scriptsize [4]/[14]「电容补偿」MMCX $\leftrightarrow$ [12] 远端补偿 SMA（选装）};
   \end{tikzpicture}
   \caption{超级电容模组的电气连接框图（端口编号沿用使用手册）。
@@ -4933,7 +4935,8 @@ $f_{\mathrm{sw}}$ 为开关频率（Hz）。
     \draw[farr] (init) -- node[flab, above, font=\scriptsize]{自检通过} (pre);
     \draw[farr] (pre) -- node[flab, above, font=\scriptsize]{$U_2$ 达阈值} (run);
     \draw[farr] (run) -- node[flab, above, font=\scriptsize]{过压/过流/过温} (prot);
-    \draw[farr] (prot.south) -- ++(0,-1.0) -| node[flab, below, pos=0.25, font=\scriptsize]
+    \draw[farr] (prot.south) -- ++(0,-1.0) -| node[flab, below, pos=0.25,
+      font=\scriptsize, fill=papercolor, inner sep=1.5pt]
       {故障排除后重新自检} (init.south);
 
     % 运行内部的子状态
@@ -5042,6 +5045,416 @@ $f_{\mathrm{sw}}$ 为开关频率（Hz）。
   \item \textbf{关键字段要能自检。} 例如约定一个固定常量字段，
   收到的值不对就整帧丢弃，可以挡住大部分总线错位与内存错乱。
 \end{itemize}
+
+\subsection{先分清“数字电源”与“数控电源”}
+
+开源作者在软件篇开头先划了一条界线，这条界线决定了后面所有代码的组织方式：
+
+\begin{description}
+  \item[数字电源。] 电源的\emph{控制环路完全由软件算法实现}——
+  采样、运算、输出占空比都在代码里完成。
+  好处是修改与调试都方便，代价是必须自己写环路。
+  \item[数控电源。] 用成品电源芯片，\emph{环路是硬件实现的}，
+  单片机只能通过通信修改输出电压等参数，
+  \textbf{无法介入反馈环路}。
+\end{description}
+
+本文复刻的方案属于前者。为什么不用成品芯片？作者给的理由很实在：
+RM 这种“基于功率限制”的用法本身就不是正常应用场景，
+市面上基本没有对应芯片；而若要纯硬件搭一套功率反馈运算，
+对基础与造诣的要求远非本科阶段能培养出来。
+把反馈控制搬到软件层，是一种\emph{降低门槛}的路径。
+
+\subsection{同一时刻只能闭环一个量}
+
+这是电源控制里最容易搞混、也最要紧的一条。
+
+\begin{quote}
+\textbf{电压、电流、功率三者，同一时间只能实现一个量的闭环控制。}
+比如做电流闭环时，电压与功率都无法被控制，只能测量出来。
+\end{quote}
+
+由此推出三条实用结论：
+
+\begin{itemize}
+  \item \textbf{充电本质上是恒流（或恒功率）控制，不是恒压控制。}
+  超级电容的内阻只有几百毫欧，若直接按“输出电压 = 目标电压”去控，
+  初始压差会产生极大的电流。开源文档给了一个很直观的算式：
+  某赛季电容组内阻约 $350\ \mathrm{m}\Omega$，
+  若在 $0\ \mathrm{V}$ 时直接用 $21\ \mathrm{V}$ 去充，
+  \begin{equation}\label{eq:inrush}
+    I = \frac{U}{R} = \frac{21\ \mathrm{V}}{0.35\ \Omega} = 60\ \mathrm{A},
+  \end{equation}
+  式中 $I$ 为浪涌电流（A）；$U$ 为充电电压（V）；$R$ 为电容组内阻（$\Omega$）。
+  $60\ \mathrm{A}$ 显然不可接受。
+  \item \textbf{正确做法是把电流（或功率）作为 PID 的反馈量。}
+  设定一个目标电流，PID 的输出直接去调占空比，
+  由 PID 自己去找那个“合适的压差”，从而实现恒流充电。
+  恒功率同理，只是把反馈量换成功率。
+  \item \textbf{“恒流源”是\emph{限制}电流，而不是\emph{控制}电流。}
+  这一点值得说清楚：普通电源是恒压源，输出电流由负载通过
+  $I=U/R$ 决定，电源控制不了；
+  只有当电流超过供电能力时，电源才转为恒流模式，
+  此时电压反过来随负载变化（$U = I_{\text{limit}}R$）。
+  所以严格说，恒流源限制的是“上限”，
+  真正意义上的“任意控制电流”是不存在的。
+\end{itemize}
+
+PID 的调节方向也要先想清楚，否则容易把符号写反。
+以充电为例：目标功率 $50\ \mathrm{W}$、实际只有 $30\ \mathrm{W}$，
+说明充得太慢，要\emph{提高}充电功率 $\to$ 提高充电电压 $\to$
+\textbf{提高占空比}。反过来若实际是 $70\ \mathrm{W}$，则每一步都取反。
+
+\subsection{充电看 Buck，放电看 Boost}
+
+作者强调了一个简化前提：\textbf{充电与放电这两个状态不会、也不可能同时运行}，
+因此可以完全独立地分析。代价是两者\emph{切换的过渡}可能产生小问题，
+这正是后面要做时序保护的原因。
+
+\subsubsection{充电：同步 Buck}
+
+充电时把电路当作同步 Buck 看，控制关系只需记一条：
+\begin{equation}\label{eq:capbuck}
+  U_{\mathrm{cap}} = U_{\mathrm{bat}}\times D ,
+\end{equation}
+式中 $U_{\mathrm{cap}}$ 为电容组电压（V）；
+$U_{\mathrm{bat}}$ 为电池电压（V）；
+$D$ 为开关占空比（无量纲，$0\sim100\%$）。
+
+这里的 $D$ 有一个\emph{必须固定的定义}：
+\textbf{PWM 为高电平定义为上管导通、下管关断}，
+于是 $D$ 就是“上管导通时间占开关周期的比例”。全文（以及代码）都沿用这个定义。
+
+为什么电池电压可以被当成恒定的 $24\ \mathrm{V}$，而电容电压不行？作者的类比很清楚：
+
+\begin{itemize}
+  \item 锂电池有\emph{平台电压}：TB47/TB48 是 $6$ 串，
+  平台约 $22.2\ \mathrm{V}$、满电 $26\ \mathrm{V}$，
+  八成以上的电量都落在这个平台附近，平均按 $24\ \mathrm{V}$ 处理没有问题。
+  \item 超级电容\emph{没有平台电压}，充放电全过程电压变化范围极大，
+  所以电容电压的变化绝不可以忽略——
+  这也正是第~\ref{sec:inverse} 节强调“功率同时依赖转速与电压”的同类问题。
+\end{itemize}
+
+\subsubsection{放电：同步 Boost，但公式不是简单移项}
+
+书本上的 Boost 公式是
+\begin{equation}\label{eq:boosttextbook}
+  U_{\mathrm{out}} = \frac{U_{\mathrm{in}}}{1-D'},
+\end{equation}
+式中 $D'$ 是\emph{非同步} Boost 电路里“下管（开关管）导通时间”的比例。
+而本项目统一使用前面定义的 $D$（上管导通比），两者互补，
+换算之后 Boost 的控制关系变成
+\begin{equation}\label{eq:capboost}
+  U_{\mathrm{bat}} = \frac{U_{\mathrm{cap}}}{D} .
+\end{equation}
+
+作者特别提醒：\textbf{这不是简单地把 Buck 的公式移项}。
+原因是电流有方向——“电流流入的方向定义为输入，流出的方向定义为输出”，
+而 Boost 的输入输出正好与 Buck 互换。结果是两者的\emph{单调性相反}：
+
+\begin{itemize}
+  \item \textbf{Buck}：输出随 $D$ 增大而\emph{增大}，上限是输入电压；
+  \item \textbf{Boost}：输出随 $D$ 增大而\emph{减小}，下限是输入电压。
+\end{itemize}
+
+这一点直接决定了放电环路的 PID 符号——
+如果把两者的符号搞混，环路就变成正反馈。
+
+\subsection{放电时到底在控制什么：功率分配的等效电路}
+
+放电环节最反直觉的一点是：\textbf{电源管不了底盘用多少功率}。
+
+理由是底盘与电池直连，底盘电压正常情况下就在 $24\ \mathrm{V}$ 附近、
+变化范围极小；电机消耗多少电流与功率，完全取决于电控发给电机的指令。
+裁判系统的功率限制只是一种\emph{机制上}的限制，而不是对实际使用功率的限制。
+装了超电之后，模块做的是\textbf{自动分配}：
+
+\begin{equation}\label{eq:dischargealloc}
+  P_{\mathrm{discharge}} = P_{\mathrm{motor}} - P_{\mathrm{Chassis}},
+  \qquad
+  P_{\mathrm{Chassis}} \le P_{\mathrm{limit}} ,
+\end{equation}
+式中 $P_{\mathrm{discharge}}$ 为电容组经升压后补出的功率（W）；
+$P_{\mathrm{motor}}$ 为底盘电机实际消耗的功率（W）；
+$P_{\mathrm{Chassis}}$ 为电池（裁判系统 Chassis 端口）输出的功率（W）；
+$P_{\mathrm{limit}}$ 为底盘功率上限（W）。
+举例：限制 $50\ \mathrm{W}$ 而底盘实际跑 $100\ \mathrm{W}$ 时，
+电池出 $50\ \mathrm{W}$、超电补 $50\ \mathrm{W}$，
+且随着底盘功率动态变化，超电会动态补充，直到电容组能量耗尽才自动关闭输出。
+
+那么“自动分配”是如何实现的？作者给了一个\emph{自建的等效电路模型}来帮助理解
+（他本人注明这只是为了理解现象而假设的，未必是真实模型）：
+设电池 $24\ \mathrm{V}$、内阻 $0.2\ \Omega$、负载等效电阻 $4.6\ \Omega$，
+则回路电流 $5\ \mathrm{A}$，负载实得 $4.6\times5 = 23\ \mathrm{V}$，
+那 $1\ \mathrm{V}$ 被电池内阻吃掉并发热。
+此时并入一个内阻同为 $0.2\ \Omega$、升压到 $24\ \mathrm{V}$ 的超电模块，
+由于电压与内阻都相同，两者各供 $2.5\ \mathrm{A}$。
+\textbf{若把超电模块的输出电压调高，它分担的电流就变大；调低，就变小。}
+
+于是控制量找到了：\textbf{用电池端口功率作为 PID 的反馈量，
+设定目标功率（应等于或略小于裁判限制），PID 输出控制占空比}，
+让 PID 自动去调超电的输出电压。调节方向是：
+
+\begin{itemize}
+  \item 目标 $50\ \mathrm{W}$、实际只有 $30\ \mathrm{W}$：
+  要提高\emph{电池}分配到的功率 $\to$ 就要\emph{降低}超电分担的功率
+  $\to$ 降低超电输出电压 $\to$ \textbf{提高}占空比。
+  \item 实际 $70\ \mathrm{W}$ 时，每一步取反。
+\end{itemize}
+
+最后一条边界必须记住：\textbf{超电模块不对底盘运行功率做任何限制}，
+底盘功率永远由 CAN 指令决定。
+
+\begin{note}[电源环路只用 P 和 I]
+作者明确写着：在电源应用中，PID 只需要用 $P$ 与 $I$ 两个参数就能完成环路控制。
+这背后的道理在本篇第~\ref{sec:bufferloop} 节也出现过：
+电源的功率级本身已经是一个积分环节（电感电流、电容电压都是积分量），
+再引入微分项只会放大开关噪声。
+\end{note}
+
+\subsection{断电保护：PMOS 与体二极管}
+
+这是一个硬件拓扑上的固有缺陷，值得单独说：
+当机器人死亡、电源管理模块的 Chassis 口供电被切断时，
+超级电容模块会\textbf{通过 NMOS 的体二极管继续向底盘供电}——
+这不符合作规范。
+
+解法是在同步半桥与底盘之间加一只 \textbf{PMOS}，用来\emph{完全}切断输出。
+判据很朴素：\textbf{用电池端口的电流判断}——
+机器人活着时底盘一动就有电流，于是打开 PMOS；
+死亡时 Chassis 输出已被切断，自然没有电流，就把 PMOS 关断。
+
+这与第~\ref{sec:schw} 节讲的“僵尸车”是同一类问题的两个面向：
+那边是电容侧经体二极管倒灌到母线，这边是母线断了之后电容继续供电。
+
+\subsection{状态机：十条环路，按优先级排队}
+
+控制板把运行逻辑写成一组互斥的环路函数，
+\textbf{每个开关周期只会、也只能执行其中一条}，优先级如下（自上而下递减）：
+
+\begin{enumerate}
+  \item \texttt{CAN\_\allowbreak{}Offline\_\allowbreak{}Loop()}——CAN 离线
+  \item \texttt{Soft\_\allowbreak{}Start\_\allowbreak{}Loop()}——软启动
+  \item \texttt{Over\_\allowbreak{}Current\_\allowbreak{}Protection\_\allowbreak{}Loop()}——过流
+  \item \texttt{Bat\_\allowbreak{}Over\_\allowbreak{}Voltage\_\allowbreak{}Protection\_\allowbreak{}Loop()}——母线过压
+  \item \texttt{Bat\_\allowbreak{}Undervoltage\_\allowbreak{}Protection\_\allowbreak{}Loop()}——母线欠压
+  \item \texttt{CAP\_\allowbreak{}Undervoltage\_\allowbreak{}Protection\_\allowbreak{}Loop()}——电容组欠压
+  \item \texttt{Over\_\allowbreak{}Temperature\_\allowbreak{}Protect\_\allowbreak{}Loop()}——过温
+  \item \texttt{Charge\_\allowbreak{}Loop()}——充电
+  \item \texttt{Discharge\_\allowbreak{}Loop()}——放电
+  \item \texttt{Wait\_\allowbreak{}Loop()}——待机
+\end{enumerate}
+
+前七条都是保护，内容是“关半桥、关 PMOS、等异常恢复、重新运行”。
+把保护放在充放电\emph{之前}，含义很明确：
+\textbf{只要存在任何一个保护因素，就不执行 CAN 下发的命令}，
+并把当前状态反馈回去。
+
+这个设计里有一个很值得学的分工：
+
+\begin{quote}
+\textbf{状态判断函数只能让控制板\emph{进入}保护，不能让它\emph{退出}保护；
+退出的判据写在各个保护环路自己内部。}
+\end{quote}
+
+好处是“进入”与“退出”的条件分别集中在各自的那一小段代码里，
+不会出现“谁都能把它复位”的混乱。
+
+\subsection{采样时刻：为什么选在占空比的三分之一处}
+
+这是整个软件篇里最精细的一段，也是最能体现工程功力的地方。
+
+先算采样时间。ADC 的采样时间配置为 $24.5$ 个时钟周期、转换为固定 $12.5$ 个，
+ADC 时钟 $56.7\ \mathrm{MHz}$，于是单次采样转换耗时
+\begin{equation}\label{eq:adctime}
+  t_{\mathrm{conv}} = \frac{24.5+12.5}{56.7\times10^{6}} = 652\ \mathrm{ns},
+\end{equation}
+式中 $t_{\mathrm{conv}}$ 为一次采样加转换的总时间（s）；
+$24.5$、$12.5$ 分别为采样与转换占用的 ADC 时钟周期数（无量纲）；
+$56.7\times10^{6}$ 为 ADC 时钟频率（Hz）。
+
+半桥开关频率 $100\ \mathrm{kHz}$，周期 $10\ \mu\mathrm{s}$。
+考虑最坏情况：电容组电压很低（例如 $5\ \mathrm{V}$）、电池 $25\ \mathrm{V}$，
+此时只需要约 $20\%$ 的占空比，\emph{上管开通时间只有 $2\ \mu\mathrm{s}$}。
+
+而这个项目需要\emph{两次}采样——电容电压/电流、电池电压/电流各一次。
+作者的做法是把触发时刻定在\textbf{占空比的 $3/8$ 处}：
+这样两次采样一次略早于中点、一次略晚于中点，都落在上管开通区间之内。
+
+\paragraph{为什么非要在中点附近？}
+因为开关电源的输入输出纹波因为电容充放电，
+大致呈\emph{三角波}形式。在三角波的“半山腰”采样，
+得到的值近似等于多个三角波周期的平均值，精度最高。
+
+\begin{note}[三条采样经验]
+\begin{enumerate}
+  \item \textbf{尽量避免在开关瞬间采样。}
+  即使是带 PWM 抑制的电流放大器，开关瞬间也会产生误差——
+  PWM 抑制只是让它恢复更快、误差更小，而不是没有误差。
+  更要命的是开关瞬间会在整个电源轨上产生毛刺噪声，同样污染采样。
+  \item \textbf{PWM 抑制能力有频率上限。}
+  作者指出 INA240 的 PWM 抑制大约在 $100\ \mathrm{kHz}$ 以内有效
+  （其新型号 INA241 标称 $125\ \mathrm{kHz}$），
+  开关频率再高就无法保证性能。这与第~\ref{sec:schw} 节引用的
+  “INA240 不宜放在半桥开关节点”是同一件事的两种表述。
+  \item \textbf{想更准，就把采样频率提高。}
+  如果 ADC 采样率能做到开关频率的两倍以上，
+  就可以把整个三角波采完再求平均，精度会更高。
+  本项目是“采样率等于开关频率”的简化做法。
+\end{enumerate}
+\end{note}
+
+\subsection{控制时序与代码结构}
+
+\subsubsection{一篇中断跑完整个环路}
+
+代码是裸机环境，没有函数乱序执行的问题。
+上电初始化完成后，ADC 以 $100\ \mathrm{kHz}$ 触发，
+每次 DMA 搬运完成进入 \texttt{DMA1\_\allowbreak{}Channel1\_\allowbreak{}IRQHandler()}，
+在其中调用核心函数 \texttt{A\_\allowbreak{}Timing\_\allowbreak{}Ranking\_\allowbreak{}Idea()}。
+这个函数承担整个电源的状态判断与环路运算，\textbf{必须在最高优先级运行、不能被打断}。
+
+每次运行\emph{必执行}三个函数：
+
+\begin{enumerate}
+  \item \texttt{ADC\_\allowbreak{}Convert\_\allowbreak{}To\_\allowbreak{}Reality()}：把 ADC 原始值按拟合参数还原成真实物理量；
+  \item \texttt{State\_\allowbreak{}Change()}：状态判断与改变；
+  \item \texttt{Power\_\allowbreak{}Loop()}：执行当前状态对应的那一条环路。
+\end{enumerate}
+
+其余按\emph{分频}定时执行，以降低 CPU 占用、保证环路优先：
+\texttt{ADC\_\allowbreak{}Value\_\allowbreak{}AVG\_\allowbreak{}Compute()}（均值滤波）、\texttt{Power\_\allowbreak{}Calculations()}、
+\texttt{Can\_\allowbreak{}SendMess()}、\texttt{Temperature\_\allowbreak{}Calculations()}、
+\texttt{LED\_\allowbreak{}Refresh()}、\texttt{HAL\_\allowbreak{}IWDG\_\allowbreak{}Refresh()}（喂狗）。
+
+这里有一个容易误读的细节：
+\textbf{那个“ADC 均值滤波”是用于发给电控的，不用于环路运算}。
+环路用的是未经软件滤波的瞬时值。
+
+\subsubsection{环路时间预算是多少}
+
+实测每个周期的环路运算时间\emph{接近 $5\ \mu\mathrm{s}$}，
+而开关周期是 $10\ \mu\mathrm{s}$——留有余量。
+这带来一个关键好处：\textbf{每个开关周期都能用本周期的电压值
+去更新下一个周期的占空比}，从而获得最快的响应
+（因为本周期写入的占空比要到下一周期才生效）。
+
+作者对滤波的态度很明确，也很有代表性：
+
+\begin{quote}
+我只用了一个硬件 RC 低通滤波，不做软件滤波，
+以保证每次处理的数据都是最新、最实时的。
+代价是 ADC 拿到的是短时间瞬时值，抗噪差；
+但它能捕捉短时间的过冲与跳变。
+\textbf{在我看来，获得更高的响应速度远比获得精准的输出电压更好。}
+\end{quote}
+
+实测数据是：长时间观测的输出平均电压跳变幅度小于 $0.1\ \mathrm{V}$，
+而输出纹波本身就有 $0.2\ \mathrm{V_{pp}}$。
+
+\subsection{代码优化：把环路运算时间压掉一半}
+
+这一节对任何写高频控制环的人都有参考价值。
+
+\subsubsection{ATRI：用位运算做任务分频}
+
+\texttt{A\_\allowbreak{}Timing\_\allowbreak{}Ranking\_\allowbreak{}Idea()} 也就是作者自称的 ATRI 算法，
+解决的是“不是所有函数都需要在每个开关周期执行”这个问题。
+做法是用\textbf{二进制计数器 + 位操作}做分频：
+好处是可以用一条 AND 指令完成判断，效率最高；
+坏处是分频系数不够精确——但本应用不需要精确分频，所以无所谓。
+作者建议 \textbf{CAN 发送频率取 $500\ \mathrm{Hz}$ 左右}，
+就足以满足电控对底盘功率的实时控制。
+
+他也坦承这种方法的局限：适合少数几个函数的分时，
+任务一多就容易出现分配冲突、变得烧脑。
+
+\subsubsection{五条常规优化}
+
+\begin{enumerate}
+  \item \textbf{编译器开 \texttt{-Ofast}}。作者的评语是“遇事不决，编译器优化”。
+  \item \textbf{启用硬件浮点（FPU）}：STM32G4 有 FPU，
+  单精度浮点乘法 \texttt{vmul.f32} 可做到 $1$ 个时钟周期；
+  但真实速度还受 SRAM 访问速度影响。
+  \item \textbf{所有函数内联编译}：在编译阶段就把函数展开，
+  省掉跳转开销。
+  \item \textbf{不使用 CCMRAM}。这是个反直觉的决定——
+  G4 系列有一个 ART（Adaptive Real-time Accelerator）Flash 加速器，
+  可以做到 Flash 零等待执行；相比之下改用 CCMRAM 带来的提升\textbf{不超过 $5\%$}。
+  \item \textbf{定时器更新用寄存器地址直接赋值}，绕开库函数的层层封装。
+\end{enumerate}
+
+作者给了一组对照：\texttt{-O0} 编译出来的汇编里能看到两条带链接的分支指令
+（\texttt{bl ... <PID\_\allowbreak{}Preload\_\allowbreak{}Integral>}、\texttt{bl ... <PID\_\allowbreak{}Compute>}），
+而 \texttt{-Ofast} 之后汇编明显精简。
+他还指出\textbf{瓶颈并不在运算本身}，
+而在大量的 Load/Store 指令（\texttt{ldr}、\texttt{vldr}、\texttt{str}、\texttt{vstr}）
+以及函数跳转。综合以上优化，\textbf{两个 PI 运算的速度从 $4\ \mu\mathrm{s}$ 优化到约 $2\ \mu\mathrm{s}$}。
+
+\subsection{两个防炸机的细节}
+
+\subsubsection{PID 积分预加载}
+
+这是上电阶段最容易出事的地方。每次上电，电池端口电压基本固定，
+而电容组电压是\emph{不固定}的。如果 PID 首次运算时积分从 $0$ 开始累加，
+PWM 输出也会从 $0$ 起步，此时\emph{占空比与半桥两侧的电压比、以及当前所处状态完全不对应}，
+结果就是爆炸。
+
+对策是让 PID 首次运行时，\textbf{先由半桥两侧的电压比算出一个相近的占空比作为起点}，
+再从这个起点开始调节。作者把这一步叫做“积分预加载”。
+
+\subsubsection{PWM 刹车（TIM\_BREAK）}
+
+上电初始化执行到参数初始化函数时，会把 \texttt{TIM1\_\allowbreak{}BKIN} 引脚拉高，
+\textbf{在“启动 PWM”到“PID 算出正确值”这段空窗期里把半桥关掉}。
+若不这样做，你会听到电感“嗒”地响一下，那是一次很大的浪涌电流。
+
+有个细节值得记下来：\textbf{TIM1\_BKIN 只会关闭并拉低 PWM 输出，
+不影响定时器的计数，也不影响 ADC 的触发采样}——
+也就是说，环路仍在持续运行，只是不往半桥送波形。
+
+\begin{note}[与前文硬件保护的分工]
+第~\ref{sec:schw} 节讲过，Plus 版另用\emph{逻辑门}搭了一套硬件延迟电路，
+保证 PMOS 先于 PWM 导通、后于 PWM 关断。
+软件侧的 \texttt{TIM\_\allowbreak{}BREAK} 与它是两套独立机制：
+软件负责“上电时序”，硬件负责“任何情况下都不让 PMOS 与 PWM 错序”。
+作者的说法是——\emph{软件层面已经做了同样的时序控制，
+但我更相信硬件实现的可靠性}。
+关键安全逻辑用硬件兜底、软件再保一层，这是很稳的思路。
+\end{note}
+
+\subsection{代码版本}
+
+开源库有三个版本，选择时要注意对应关系：
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{SuperCapCtrl 库的版本}
+  \label{tab:sclibver}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.24\textwidth}>{\raggedright\arraybackslash}p{0.20\textwidth}>{\raggedright\arraybackslash}p{0.48\textwidth}@{}}
+    \toprule
+    版本 & 适用硬件 & 说明 \\
+    \midrule
+    V1.1.2517 & 仅 Lite &
+    较早的稳定版；充放电用较多标志位与单独的充放电循环函数，
+    使用前需要对模组运行有较清晰的理解 \\[4pt]
+    V1.2.2519 & 仅 Plus &
+    把控制指令精简为\emph{【使能】标志位}与\emph{【功率上限】}两项，
+    模组在使能后按底盘运行功率自动补偿，使用门槛明显降低 \\[4pt]
+    V1.2.2608-beta & Lite \& Plus &
+    测试版。作者已毕业、无法装车验证，仅依赖仪器测试完善，
+    上实车前需自行充分测试 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+V1.2 的接口简化值得单独一提：在此之前，电控需要理解超电模组的运行细节、
+操作多个标志位；改版之后\textbf{只保留【使能】与【功率上限】两个指令}，
+超电模组在使能状态下根据底盘运行功率自动补偿，
+电控只需在需要时手动把底盘功率上限调高即可激活超电。
+接口越简单，越不容易用错——这也是这套库能被大量复刻的原因之一。
 
 \section{使用注意事项}\label{sec:scnotes}
 
