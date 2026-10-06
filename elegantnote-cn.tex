@@ -4325,68 +4325,87 @@ $11$ 串、单体 ESR 约 $22\ \mathrm{m}\Omega$ 的组，其总 ESR 约 $240\ \
 
 \begin{figure}[htbp]
   \centering
-  % 三段式：上=信号链，中=采样与保护，下=能量层；功率通路走右侧
+  % 超电控制板画成一个实体方框（板上的模块都在里面）；
+  % 功率拓扑：母线 → 控制板 → {电容组, 底盘分电}
   \begin{tikzpicture}[>=Stealth, font=\small, node distance=5mm,
-      scale=0.95, transform shape]
+      scale=0.96, transform shape]
 
-    % ================= 信号链（主行） =================
-    \node[fio,   minimum width=22mm] (mcu)  at (-3.4,-1.6) {主控};
-    \node[fsoft, minimum width=30mm, align=center] (ctrl) at (1.4,-1.6)
+    % ================= 控制板（实体框） =================
+    \draw[draw=black!42, rounded corners=5pt, thick, fill=black!2]
+      (-0.75,1.75) rectangle (11.35,-4.75);
+    \node[font=\scriptsize, text=black!65, anchor=north west] at (-0.45,1.62)
+      {超电控制板（本文复刻对象）};
+
+    % ---- 板上的信号链 ----
+    \node[fsoft, minimum width=28mm, align=center] (ctrl) at (1.7,-0.6)
       {超电 MCU\\[1pt]\scriptsize 环路 $+$ 状态机 $+$ CAN};
-    \node[fsys,  minimum width=24mm, align=center] (drv) at (5.6,-1.6)
+    \node[fsys,  minimum width=24mm, align=center] (drv) at (5.4,-0.6)
       {半桥驱动\\[1pt]\scriptsize 死区 $+$ 自举};
-    \node[fblock, minimum width=30mm, align=center] (fsbb) at (9.8,-1.6)
+    \node[fblock, minimum width=30mm, align=center] (fsbb) at (9.0,-0.6)
       {四开关 FSBB\\[1pt]\scriptsize 电感 $L$};
 
-    \draw[fbio] (mcu.east) -- node[flab, above]{CAN} (ctrl.west);
     \draw[farr] (ctrl.east) -- node[flab, above]{PWM} (drv.west);
     \draw[farr] (drv.east) -- node[flab, above]{$V_{gs}$} (fsbb.west);
 
-    % ================= 上层：裁判系统与超电管理模块 =================
-    \node[fio, minimum width=26mm, align=center] (ref) at (1.4,1.4)
-      {裁判系统\\电源管理模块};
-    \node[fio, minimum width=26mm, align=center] (capm) at (8.6,1.4)
-      {超级电容\\管理模块};
-    \draw[fbio] (ref.east) -- node[flab, above]{$4$ pin} (capm.west);
-    \draw[fbio] (ref.south) -- (ctrl.north);
-    \node[flab, anchor=west] at (1.6,0.35) {\scriptsize 功率上限 / 缓冲能量};
-
-    % ================= 中层：采样与保护 =================
-    \node[fwarn, minimum width=52mm, align=center] (samp) at (2.0,-4.3)
+    % ---- 板上的采样与保护 ----
+    \node[fwarn, minimum width=62mm, align=center] (samp) at (5.4,-3.3)
       {采样与保护\\[1pt]
        \scriptsize $U_1$、$U_2$、$I_1$、$I_L$ $+$ 过压/欠压/过流/过温};
-    % FSBB 把待测量送给采样与保护
-    \draw[fdarr] (fsbb.south) -- (9.8,-3.35) -- (samp.east |- 0,-3.35) -- (5.6,-3.35);
-    \draw[fdarr] (5.6,-3.35) -- (5.6,-4.00);
-    \node[flab, anchor=west] at (5.7,-3.30) {\scriptsize 电压 / 电流};
-    % 采样与保护把结果送回 MCU
-    \draw[fdarr] (samp.west) -- (-2.2,-4.3) -- (-2.2,-2.75) -- (1.4,-2.75) -- (ctrl.south);
-    \node[flab, anchor=west] at (-0.4,-3.55) {\scriptsize 反馈 / 封波};
+    \draw[fdarr] (fsbb.south) -- (9.0,-2.1) -- (5.4,-2.1);
+    \draw[fdarr] (5.4,-2.1) -- (samp.north);
+    \draw[fdarr] (samp.west) -- (0.0,-3.3) -- (0.0,-1.35) -- (ctrl.south);
+    \node[flab, anchor=west] at (0.15,-2.9) {\scriptsize 反馈 / 封波};
 
-    % ================= 下层：能量层 =================
-    \node[fio,  minimum width=22mm] (bat) at (-3.4,-6.9) {电池};
-    \node[fio,  minimum width=22mm] (bus) at (0.4,-6.9)  {母线};
-    \node[fsys, minimum width=34mm, align=center] (cap) at (5.0,-6.9)
+    % ================= 板外：上位与裁判 =================
+    \node[fio, minimum width=22mm] (mcu) at (-2.9,-0.6) {主控};
+    \draw[fbio] (mcu.east) -- node[flab, above]{CAN} (-0.75,-0.6);
+    \node[fio, minimum width=26mm, align=center] (ref) at (2.6,3.0)
+      {裁判系统\\电源管理模块};
+    \node[fio, minimum width=26mm, align=center] (capm) at (8.4,3.0)
+      {超级电容\\管理模块};
+    \draw[fbio] (ref.east) -- node[flab, above]{$4$ pin} (capm.west);
+    \draw[fbio] (ref.south) -- (2.6,1.75);
+    \node[flab, anchor=east] at (2.45,2.35) {\scriptsize 功率上限 / 缓冲能量};
+
+    % ================= 板外：能量层 =================
+    \node[fio, minimum width=22mm] (bat) at (-2.9,-6.9) {电池};
+    \node[fio, minimum width=22mm] (bus) at (0.0,-6.9)  {母线};
+    \node[fsys, minimum width=34mm, align=center] (cap) at (9.0,-6.9)
       {电容组 $N_{\mathrm{s}}$ 串\\[1pt]\scriptsize $+$ 均衡，约 $1980\ \mathrm{J}$};
 
     \draw[fbio] (bat.east) -- (bus.west);
-    \draw[fbio, <->] (bus.east) -- node[flab, above, align=center]
-      {\scriptsize 经 FSBB\\[-2pt]\scriptsize 双向交换} (cap.west);
+    % 母线 → 控制板（输入）
+    \draw[fbio, -{Stealth[length=1.7mm]}] (bus.north) -- (0.0,-4.75);
+    \node[flab, anchor=west] at (0.12,-5.4) {\scriptsize 母线输入};
+    % 控制板 ⇄ 电容组
+    \draw[fbio, <->] (9.0,-4.75) -- (cap.north);
+    \node[flab, anchor=west, text=black!65] at (9.15,-5.5) {\scriptsize 双向};
 
-    % 电容组 → FSBB（功率通路，走右侧）
-    \draw[fbio] (cap.north) -- (5.0,-5.9) -- (11.6,-5.9) -- (11.6,-1.6) -- (fsbb.east);
-    \node[flab, rotate=90, anchor=south, text=black!65] at (11.85,-3.9) {功率通路};
+    % ================= 板外：底盘分电 =================
+    \node[fblock, minimum width=26mm, align=center] (pdb) at (2.9,-8.9)
+      {底盘分电};
+    \node[fblock, minimum width=28mm, align=center] (esc) at (6.6,-8.9)
+      {C620 电调 $\times4$};
+    \node[fblock, minimum width=30mm, align=center] (mot) at (10.4,-8.9)
+      {M3508 电机 $\times4$};
+    \draw[fbio, -{Stealth[length=1.7mm]}] (2.9,-4.75) -- (pdb.north);
+    \node[flab, anchor=west] at (3.05,-6.95) {\scriptsize 控制板给底盘分电};
+    \draw[farr] (pdb.east) -- (esc.west);
+    \draw[farr] (esc.east) -- (mot.west);
+    \draw[fdarr] (mot.north) -- (12.0,-8.9) -- (12.0,3.0) -- (11.3,3.0);
+    \node[flab, rotate=90, anchor=south, text=codegreen!60!black] at (12.22,-2.6)
+      {电机反馈};
   \end{tikzpicture}
-  \caption{超电系统的硬件总体框图，按\emph{三段}组织。
-  \textbf{上段是信号链}：主控经 CAN 下达功率意向，
-  超电 MCU 把它翻译成 PWM，经半桥驱动放大后交给四开关 FSBB 执行；
-  裁判系统通过 $4$ pin 线与超电管理模块交换信息，并把功率上限与缓冲能量送给 MCU。
-  \textbf{中段是采样与保护}：把两侧的电压电流测回来送给 MCU，
-  任何一项越限就立即封波。\textbf{下段是能量层}：
-  电池经母线供电，电容组通过 FSBB 与母线\emph{双向}交换能量
-  （底盘功率低于限值时充电、高于限值时放电）。
-  图中的\textbf{虚线}表示"测回来的量"、\textbf{实线}表示功率通路；
-  调试时按"先信号、后功率"的顺序排查即可。}
+  \caption{超电系统的硬件总体框图。
+  \textbf{虚线圆角框是超电控制板本身}——超电 MCU、半桥驱动、四开关 FSBB
+  与采样保护电路都在同一块板子上，这一点对理解职责划分很重要：
+  能量层与执行层在物理上是同一个节点，回路短、延迟低。
+  \textbf{功率拓扑}是：电池经\emph{母线先接到控制板}，
+  控制板再把能量分成两路——一路经四开关 FSBB 与\emph{电容组双向交换}，
+  另一路作为\emph{底盘分电}送给四路 C620 电调驱动 M3508。
+  也就是说，超电控制板既管"填谷削峰"，又是底盘供电的必经之路。
+  信号侧：主控经 CAN 下达功率意向，裁判系统通过 $4$ pin 线与超电管理模块交换信息，
+  并把功率上限与缓冲能量送给控制板。}
   \label{fig:schw}
 \end{figure}
 
