@@ -5,18 +5,20 @@
 %  模板：ElegantNote (https://github.com/ElegantLaTeX/ElegantNote)
 %  编译：XeLaTeX + Biber
 % ============================================================================
-\documentclass[cn,blue,11pt,device=normal,mode=geye]{elegantnote}
+\documentclass[cn,blue,11pt,device=normal]{elegantnote}
 
 %------------------------------------------------------------------ 页面
 % device=normal  ->  A4 纸张，1 英寸页边距
-% mode=geye      ->  护眼模式，纸张底色为绿豆沙浅绿 RGB(199,237,204)。
-%                    底色由模板在类文件里通过 \pagecolor{geyecolor} 设置，
-%                    因此这里不要再用 \pagecolor 覆盖它。
-%                    图里需要“遮住底纹”的地方统一用 fill=geyecolor，
-%                    这样以后换成 hazy / sepia 或去掉 mode 时会自动跟随。
-% 想改回纯白底：把上面的 mode=geye 去掉，并在此处加回
-%                    \definecolor{paperwhite}{RGB}{255,255,255}
-%                    \pagecolor{paperwhite}
+% 背景：显式设为纯白。
+%   模板自带的 mode=geye / hazy / sepia 会在类文件里用 \pagecolor{geyecolor}
+%   给纸张上底色；本文不使用它们，而是自己定义一个 papercolor 并显式铺满整页。
+%   图里所有需要“遮住底纹”的填充都统一用 fill=papercolor，
+%   因此换背景时只改下面这一处颜色即可（图和底色会保持一致）。
+%
+%   想换成护眼绿底：把上面的 papercolor 改成 {RGB}{199,237,204}
+%                   （即模板 geye 模式的底色），其余不用动。
+\definecolor{papercolor}{RGB}{255,255,255}
+\pagecolor{papercolor}
 
 %------------------------------------------------------------------ 宏包
 \usepackage{array}
@@ -137,7 +139,7 @@
   fwarn/.style    = {fblock, draw=red!65!black, fill=red!5},
   fsoft/.style    = {fblock, fill=eblue!10, minimum width=24mm},
   fsum/.style     = {draw=eblue, thick, circle, inner sep=0pt,
-                     minimum size=5.5mm, fill=geyecolor},
+                     minimum size=5.5mm, fill=papercolor},
   fio/.style      = {draw=gray!65, rounded corners=7pt, fill=gray!6,
                      align=center, font=\small, inner sep=4pt},
   fgroup/.style   = {draw=gray!55, dashed, rounded corners=3pt, inner sep=7pt},
@@ -269,8 +271,8 @@ $s^2 + K_p s + K_i = 0$ 与阻尼比、自然频率的对应关系。最后逐�
     \draw[eblue, very thick]
       (0,18) -- (1.6,44) -- (3.4,14) -- (5.2,60) -- (6.4,60) -- (8.2,0) -- (11.0,0);
     % 标注（白底，避免文字与曲线互相干扰）
-    \node[flab, fill=geyecolor, inner sep=1.5pt] at (0.55,40) {上升};
-    \node[flab, fill=geyecolor, inner sep=1.5pt] at (2.45,27) {下降};
+    \node[flab, fill=papercolor, inner sep=1.5pt] at (0.55,40) {上升};
+    \node[flab, fill=papercolor, inner sep=1.5pt] at (2.45,27) {下降};
     \node[flab, anchor=south] at (5.80,62)
       {到达上限后不再增加};
     \node[flab, text=red!65!black, align=center, anchor=north] at (9.20,55)
@@ -423,6 +425,10 @@ $\Pmax$、电机真实功耗、时间都在内。用符号 $\partial$ 而不是 
 \begin{equation}\label{eq:why-nonlinear}
   \Pin = k_2\omega^2 + \CT\,\Icmd\,\omega + k_1\Icmd^2 + a .
 \end{equation}
+式中 $\Icmd$ 是准备下发的力矩电流控制值（无量纲），$\omega$ 是当前转速（rpm），
+$k_1,k_2,a,\CT$ 是电机的模型参数——它们的物理含义、单位与数值
+在第~\ref{sec:model} 节给出，本处只需知道它们是\emph{固定常数}。
+关键是：式中的 $\omega$ 是自变量之一，所以同一个 $\Icmd$ 在不同转速下对应不同的功率。
 同一个指令 $\Icmd$，在 $1000\ \mathrm{rpm}$ 下可能只消耗几瓦，
 在 $6000\ \mathrm{rpm}$ 下却要消耗几十瓦；反过来，同样要求消耗 $40\ \mathrm{W}$，
 低速时要发很大的指令，高速时只需要很小的指令。
@@ -637,6 +643,7 @@ $\Pmax$、电机真实功耗、时间都在内。用符号 $\partial$ 而不是 
     $\psi_f$      & 永磁体磁链（峰值约定） & Wb & 出现在转矩公式里 \\
     $U_{\mathrm{bus}}$ & 母线电压 & V & 第~\ref{sec:model} 节的模型未含它 \\
     $i$           & \textbf{电机序号} & — & 取 $1,2,3,4$；与减速比 $k_g$ 不是一回事 \\
+    $R_{\mathrm{shunt}}$ & 电流采样用的分流电阻 & $\Omega$ & 它决定采样量程，见第 9 节 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -671,13 +678,26 @@ $\Pmax$、电机真实功耗、时间都在内。用符号 $\partial$ 而不是 
     $k_2$             & $\omega^{2}$ 的系数（铁损与阻尼） & W/rpm$^{2}$ & \ref{sec:model} 节 \\
     $a$               & 常数项（控制器静态功耗） & W & \ref{sec:model} 节 \\
     $\CT$             & 力矩电流系数 & W/rpm & \ref{sec:model} 节 \\
+    $R_{\mathrm{eff}}$ & 等效相电阻，由 $k_1$ 反解得到 & $\Omega$ & \ref{sec:loss} 节 \\
+    $L$               & 绕组电感 & H & \ref{sec:model} 节（未建模的量） \\
+    $b$               & 轴承与齿轮箱的粘滞摩擦系数 & N$\cdot$m$\cdot$s/rad & \ref{sec:loss} 节 \\
+    $f$               & 电流与磁场的交变频率 & Hz & \ref{sec:loss} 节（铁损） \\
+    $B$               & 磁通密度；\textbf{与第 \ref{sec:inverse} 节的系数 $B$ 同名不同义} & T & \ref{sec:loss} 节（铁损） \\
+    $n$               & 磁滞损耗的经验指数 & — & \ref{sec:loss} 节（约 $1.6\sim2.2$） \\
+    \midrule
+    $P_r$             & 规则手册中的\emph{底盘瞬时功率}（官方记号） & W & \ref{sec:bufferloop} 节 \\
+    $P_l$             & 规则手册中的\emph{功率上限}（官方记号） & W & \ref{sec:bufferloop} 节 \\
+    $Z$               & 规则手册中\emph{缓冲能量}的记号，即本文的 $\Ebuf$ & J & \ref{sec:bufferloop} 节 \\
+    $K$               & 超功率比例 $(P_r-P_l)/P_l$（官方记号） & — & \ref{sec:bufferloop} 节 \\
+    $N_{\mathrm{d}}$  & 扣血系数；官方记作 $N$，本文改名以免与样本数混淆 & — & \ref{sec:bufferloop} 节 \\
+    $S^{+},\,S^{-}$   & 正向消耗、回馈制动的电机功率之和 & W & \ref{sec:redistribute} 节 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \begin{note}[$P_{\mathrm{loss}}(\tau,\omega)$ 到底是什么]
-它不是一个\emph{测出来的数}，而是一个\emph{记账用的名字}：
-把电机输入功率里\emph{除机械功率之外的全部部分}打包在一起。于是恒有
+它不是一个\emph{测出来的数}，而是一个\emph{统称}：
+把电机输入功率里\emph{除机械功率之外的全部部分}归在一起。于是恒有
 \begin{equation}\label{eq:plossdef}
   \Pin = \Pmech + P_{\mathrm{loss}}(\tau,\omega).
 \end{equation}
@@ -721,6 +741,10 @@ $\Pmax$、电机真实功耗、时间都在内。用符号 $\partial$ 而不是 
     $x,\,x_\pm$      & 反解方程中的未知量与两个根 & 未知量就是发送值 $\Icmd$ \\
     $q$              & 数值稳定求根用的中间量 & 见 \ref{sec:inverse} 节 \\
     $H$              & 最小二乘的投影矩阵（帽子矩阵） & 见附录~\ref{app:lsq} \\
+    $T_s$            & 控制周期（采样周期），典型 $1\ \mathrm{ms}$ & s；积分增益与它耦合 \\
+    $I_{\max}$       & 采样电路能测到的最大电流 & A；由分流电阻决定 \\
+    $\sigma_\omega^{2}$ & 转速测量的噪声方差 & 出现于误差变量分析 \\
+    $\sigma^{2}$     & 噪声方差（一般情形） & 出现于协方差公式 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -746,7 +770,19 @@ $\Pmax$、电机真实功耗、时间都在内。用符号 $\partial$ 而不是 
     $\mathbb{E}[\cdot]$ & 数学期望 \\
     $(\cdot)^{\ast}$ & 上标星号表示“目标值”或“最优值”，由上下文区分 \\
     $(\cdot)^{(i)}$ & 上标括号内的编号表示“第 $i$ 组样本”，与下标区分开（见下方说明） \\
-    $\overline{(\cdot)}$ & 平均值，如 $\overline{\omega^{2}}$ \\
+    $\overline{(\cdot)}$ & 平均值，如 $\overline{\omega^{2}}$（正文中亦简写为 $\bar y$） \\
+    $\hat{x}$        & \emph{估计值}：由数据算出来的量，如 $\hat\theta$、$\hat\Pin$、$\hat y_i$ \\
+    $\tilde{x}$      & \emph{无量纲化}之后的量，如 $\tilde\omega=\omega/\omega_{\mathrm{ref}}$ \\
+    $\lVert\cdot\rVert$ & 向量范数（长度），如 $\lVert y-X\theta\rVert^{2}$ 表示残差平方和 \\
+    $\triangleq$     & “定义为”，右边是左边的新记号 \\
+    $\propto$        & 正比于 \\
+    $\leftarrow$     & 赋值：把右边的值写给左边（伪代码中的用法） \\
+    $\dot{x},\ \ddot{x}$ & 对时间的\emph{一阶}、\emph{二阶}导数，即 $\dd x/\dd t$、$\dd^{2}x/\dd t^{2}$ \\
+    $\operatorname{Cov}(\cdot)$ & 协方差矩阵 \\
+    $\perp$          & 正交（内积为零） \\
+    $\le,\ \ge,\ \ne,\ \equiv,\ \gg,\ \pm$ & 小于等于、大于等于、不等于、恒等、远大于、正负 \\
+    $\pi$            & 圆周率 $3.14159\ldots$ \\
+    ${}^{\circ}\mathrm{C}$ & 摄氏度（温度） \\
     $\approx$ & 约等于；在本文中通常表示“忽略了某类小量”或“数值上接近” \\
     \bottomrule
   \end{tabular}
@@ -770,6 +806,41 @@ $\Pmax$、电机真实功耗、时间都在内。用符号 $\partial$ 而不是 
 把样本编号写成上标形式 $(\cdot)^{(i)}$，而下标留给电机序号；
 但为了让公式紧凑，第~\ref{sec:lsq} 节内部也使用了简写 $\sum_i$，
 此时一律指样本求和。
+\end{remark}
+
+\subsubsection{六、同名不同义的符号}
+
+本文用到的字母有限，而涉及的物理量又多，因此有几个字母不可避免地被\emph{复用过}。
+下表把它们逐一列出。凡是能够通过改名消除歧义的，都已经改掉了；
+剩下无法避免的，读的时候请以“上下文 + 下标”为准。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{同名但含义不同的符号}
+  \label{tab:sym-clash}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.09\textwidth}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}p{0.29\textwidth}@{}}
+    \toprule
+    符号 & 含义 A & 含义 B & 如何区分 \\
+    \midrule
+    $k$      & 功率缩放系数（第~\ref{sec:redistribute} 节） & 模型系数 $k_1,k_2$ 的词头（第~\ref{sec:model} 节） & 单独出现的 $k$ 是缩放系数；带数字下标的 $k_1,k_2$ 是模型系数 \\[3pt]
+    $B$      & 反解方程 $Ax^{2}+Bx+C=0$ 的一次项系数（第~\ref{sec:inverse} 节） & 磁通密度（第~\ref{sec:loss} 节，铁损公式里） & 与 $A,C$ 一起出现在二次方程里即为系数 \\[3pt]
+    $C$      & 反解方程的常数项（第~\ref{sec:inverse} 节） & 电容组的电容值（Part II） & 后者总带单位 F，且出现在 $E=\frac12CU^{2}$ 里 \\[3pt]
+    $\Delta$ & 一元二次方程的判别式（第~\ref{sec:inverse} 节） & 增量／变化量，如 $\Delta E$（Part II） & 单独一个 $\Delta$ 是判别式；$\Delta$ 后跟物理量是增量 \\[3pt]
+    $P$      & 单台电机的功率 & 四台电机的功率之和 & 带下标 $i$ 或写成 $P_{\mathrm{tot}}$ 即为求和 \\[3pt]
+    $S$      & 最小二乘的准则函数 $S(\theta)$（第~\ref{sec:lsq} 节） & 功率之和（第~\ref{sec:redistribute} 节） & 本节已把后者改记为 $S^{+},S^{-}$ \\[3pt]
+    $N$      & 参数辨识的样本组数（第~\ref{sec:lsq} 节） & 规则手册的扣血系数（第~\ref{sec:bufferloop} 节） & 本节已把后者改记为 $N_{\mathrm{d}}$ \\[3pt]
+    $i$      & 电机序号（全文） & 减速箱减速比（第~\ref{sec:cmd2torque} 节） & 本节已把减速比改记为 $k_g$ \\[3pt]
+    $a$      & 模型的常数项，即控制器静态功耗（第~\ref{sec:model} 节） & 矩阵求导公式中的\emph{任意常向量}（第~\ref{sec:lsq} 节与附录~\ref{app:lsq}） & 出现在 $\partial(a^{\mathsf T}\theta)/\partial\theta$ 里的是占位符 \\[3pt]
+    $A$      & 反解方程 $Ax^{2}+Bx+C=0$ 的二次项系数（第~\ref{sec:inverse} 节） & 矩阵求导公式中的\emph{任意常矩阵}（附录~\ref{app:lsq}） & 出现在 $\theta^{\mathsf T}A\theta$ 里的是占位符 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{remark}
+上表中标注“已改名”的三处（$k_g$、$N_{\mathrm{d}}$、$S^{+}/S^{-}$）
+是在整理本文符号体系时为了消除歧义而做的调整，
+如果你对照的原始资料里用的是旧记号，请注意对应关系。
 \end{remark}
 
 
@@ -1470,7 +1541,10 @@ C620 回传的转速 $\omega$ 以 rpm（转/分）为单位，而功率公式要
   \frac{\partial\,(\theta^{\mathsf T}A\theta)}{\partial\theta} = (A+A^{\mathsf T})\,\theta
   \;\overset{A=A^{\mathsf T}}{=}\; 2A\theta .
 \end{equation}
-把它用到 \fref{eq:expand} 的三项上：第一项 $y^{\mathsf T}y$ 与 $\theta$ 无关，导数为零；
+这里 $a$ 是一个\emph{任意常向量}、$A$ 是一个\emph{任意常矩阵}，
+$\theta$ 是自变量向量；它们只是公式中的占位符，
+\textbf{与第~\ref{sec:model} 节模型里的常数项 $a$ 没有关系}（见第 1.7 节的同名符号表）。
+把这两条用到 \fref{eq:expand} 的三项上：第一项 $y^{\mathsf T}y$ 与 $\theta$ 无关，导数为零；
 第二项给出 $-2X^{\mathsf T}y$；第三项给出 $2X^{\mathsf T}X\theta$。于是
 \begin{equation}\label{eq:gradS}
   \frac{\partial S}{\partial\theta}
@@ -1735,7 +1809,7 @@ $C$ 的符号则取决于目标功率与该转速下\emph{空载损耗}的比较
       xmin=-4000, xmax=12000, ymin=-60, ymax=190,
       grid=both, grid style={gray!18},
       legend style={at={(0.98,0.03)}, anchor=south east, draw=gray!40,
-                    fill=geyecolor, fill opacity=0.9, text opacity=1, font=\small},
+                    fill=papercolor, fill opacity=0.9, text opacity=1, font=\small},
       tick label style={font=\small},
       label style={font=\small},
       axis line style={gray!60}
@@ -1886,7 +1960,7 @@ $C$ 的符号则取决于目标功率与该转速下\emph{空载损耗}的比较
       ytick={0,4000,8000,12000,16000},
       grid=both, grid style={gray!18},
       legend style={at={(0.97,0.97)}, anchor=north east, draw=gray!40,
-                    fill=geyecolor, fill opacity=0.9, text opacity=1, font=\small},
+                    fill=papercolor, fill opacity=0.9, text opacity=1, font=\small},
       tick label style={font=\small},
       label style={font=\small},
       axis line style={gray!60}
@@ -2295,7 +2369,12 @@ RoboMaster 规则手册对缓冲能量的描述可以概括为一个离散积分
   Z \;\leftarrow\; Z - (P_r - P_l)\times 0.1,
   \qquad Z\in[0,\,60]\ \mathrm{J},
 \end{equation}
-其中 $P_r$ 为底盘的瞬时功率，$P_l$ 为该等级对应的上限功率。
+这里用的是规则手册的原始记号，三个符号分别是：
+$Z$ 表示\emph{缓冲能量}（也就是本文一直在用的 $\Ebuf$，规则手册里写作 $Z$）；
+$P_r$ 表示底盘的\emph{瞬时功率}（本文的 $\Pin$，注意是四台电机的总和）；
+$P_l$ 表示该等级对应的\emph{功率上限}（本文的 $\Pmax$）。
+$\leftarrow$ 是赋值号，表示“把右边算出来的新值写回 $Z$”；
+后面的 $Z\in[0,60]\ \mathrm{J}$ 说明它被限制在 $0$ 到 $60$ 焦耳之间。
 把它写成连续时间形式\cite{rm2024rules} 就是
 \begin{equation}
   \dot Z = (P_l - P_r)\times 10 \quad [\mathrm{J/s}],
@@ -2312,13 +2391,17 @@ $36\ \mathrm{J/s}$ 等具体数值并无可查证的官方依据，不应作为�
   \begin{equation}
     K = \frac{P_r - P_l}{P_l}\times100\%,
     \qquad
-    N = \begin{cases}
+    N_{\mathrm{d}} = \begin{cases}
       10\%, & K \le 10\%,\\
       20\%, & 10\% < K \le 20\%,\\
       40\%, & K > 20\%.
     \end{cases}
   \end{equation}
-  每检测周期扣血 $=$ 上限血量 $\times N\% \times 0.1$。
+  这里的 $K$ 是\emph{超限比例}（实际功率比上限高出的百分比），
+  $N_{\mathrm{d}}$ 是与之对应的\emph{扣血系数}。
+  规则手册把扣血系数记作 $N$，本文改记为 $N_{\mathrm{d}}$，
+  以免与第~\ref{sec:lsq} 节表示样本数的 $N$ 混淆（见第 1.7 节的同名符号表）。
+  每检测周期扣血 $=$ 上限血量 $\times N_{\mathrm{d}}\% \times 0.1$。
   也就是说，超限一倍（$K=100\%$）时每秒扣掉 $40\%$ 的血量——
   这解释了为什么“宁可保守也不要超功率”。
 \end{itemize}
@@ -2538,7 +2621,7 @@ if (cap_measure.cap_percent > 5) {
       block/.style={draw=eblue, thick, fill=eblue!4, rounded corners=1.5pt,
                     minimum height=8mm, minimum width=14mm, align=center, inner sep=2pt},
       bigblock/.style={block, minimum width=26mm},
-      sum/.style={draw=eblue, thick, circle, inner sep=0pt, minimum size=5mm, fill=geyecolor},
+      sum/.style={draw=eblue, thick, circle, inner sep=0pt, minimum size=5mm, fill=papercolor},
       line/.style={draw, thick, -{Stealth[length=1.8mm]}},
       pline/.style={draw, thick}
     ]
@@ -2967,19 +3050,31 @@ $K_{\mathrm{coe}}$ 在误差总和小于下阈值时取 $0$、大于上阈值时
 \begin{equation}\label{eq:capenergy}
   E = \tfrac{1}{2}CU^{2}.
 \end{equation}
+其中 $E$ 为电容组储存的能量（J），$C$ 为电容组的电容值（F），
+$U$ 为电容两端的电压（V）。注意这里的 $C$ 是\emph{电容值}，
+与 Part I 第~\ref{sec:inverse} 节反解方程里的系数 $C$ 只是字母相同、含义无关
+（见第 1.7 节的同名符号表）。
+
 由于能量与电压的\emph{平方}成正比，可利用的能量窗口是
 \begin{equation}\label{eq:usable}
   \frac{E_{\mathrm{usable}}}{E_{\max}}
   = \frac{U_{\max}^{2} - U_{\min}^{2}}{U_{\max}^{2}} .
 \end{equation}
+式中 $E_{\mathrm{usable}}$ 为\emph{可放出的}能量，
+$E_{\max}$ 为充满时的总储能，
+$U_{\max}$ 为允许的最高电压，$U_{\min}$ 为允许放到的最低电压。
+这个式子的含义是：电压窗口越宽，可利用的能量比例越高。
+
 举例：某开源设计~\cite{adernal} 采用 $11$ 串 $50\ \mathrm{F}/3\ \mathrm{V}$ 单体
-（单体 ESR 约 $22\ \mathrm{m}\Omega$），则
+（单体 ESR 约 $22\ \mathrm{m}\Omega$），则电容值、耐压与等效串联电阻分别为
 \begin{equation}
   C = \frac{50}{11} \approx 4.55\ \mathrm{F},\qquad
   U_{\max} = 33\ \mathrm{V},\qquad
   R_{\mathrm{ESR}} = 11\times 22\ \mathrm{m}\Omega \approx 242\ \mathrm{m}\Omega .
 \end{equation}
-充到 $30\ \mathrm{V}$ 时储能
+其中 $R_{\mathrm{ESR}}$ 是电容组的\emph{等效串联电阻}
+（equivalent series resistance），它会在大电流充放电时产生额外的压降与发热。
+用上面算出的 $C$，充到 $30\ \mathrm{V}$ 时储能
 \begin{equation}
   E = \tfrac{1}{2}\times 4.55\times 30^{2} \approx 2045\ \mathrm{J}.
 \end{equation}
@@ -2991,6 +3086,8 @@ $1-(15/30)^2 = 75\%$，即约 $1534\ \mathrm{J}$——
 \begin{equation}\label{eq:capdischarge}
   U(t) = \sqrt{U_0^{2} - \frac{2Pt}{C}} ,
 \end{equation}
+其中 $U_0$ 为开始放电时的初始电压（V），$P$ 为恒定的放电功率（W），
+$t$ 为已经放电的时间（s），$C$ 仍为电容值（F）。
 它清楚地说明了两件事：
 \begin{itemize}
   \item 电压随时间\emph{非线性}下降，越到后段下降越快；

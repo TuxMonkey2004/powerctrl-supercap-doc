@@ -12,7 +12,7 @@
 | 主文档 | `elegantnote-cn.tex` |
 | 参考文献 | `reference.bib`（Biber） |
 | 模板 | ElegantNote（`elegantnote.cls`） |
-| 纸张 / 背景 | `device=normal`（A4，1 in 页边距）＋ `mode=geye`（护眼模式，绿豆沙底色 RGB 199,237,204） |
+| 纸张 / 背景 | `device=normal`（A4，1 in 页边距）＋ 显式 `\pagecolor{papercolor}` 纯白底 |
 | 主题色 | `blue`（标题、链接、图表标题、公式框线均为蓝色） |
 | 编译方式 | **XeLaTeX + Biber**（Overleaf 中主文档设为 `elegantnote-cn.tex`） |
 | 结构 | Part I 功率控制（第 1–10 节）＋ Part II 超级电容（第 11 节）＋ 附录 A–E（E 为系统架构与子系统框图专辑） |
@@ -21,15 +21,15 @@
 
 | 想要的效果 | 改法 |
 |---|---|
-| 绿豆沙护眼底 | 类选项中加 `mode=geye`（当前已启用）。**注意不要再写 `\pagecolor`**，否则会覆盖底色 |
-| 米白 / 暖褐底 | 把 `mode` 改成 `hazy`（251,250,248）或 `sepia`（250,237,225） |
-| 纯白底 | 去掉 `mode=geye`，并在导言区加回 `\pagecolor{paperwhite}` |
+| 护眼绿底 | 把导言区的 `papercolor` 改成 `{RGB}{199,237,204}`（模板 geye 的底色），其余不用动 |
+| 米白 / 暖褐底 | 把 `papercolor` 改成 `{RGB}{251,250,248}`（hazy）或 `{RGB}{250,237,225}`（sepia） |
+| 纯白底 | 当前状态：`\definecolor{papercolor}{RGB}{255,255,255}` |
 | 绿色主题色 | 类选项里把 `blue` 改成 `green`（仅改标题/链接等的颜色，不动底色） |
 
 **改动底色时必须同步检查图里的“遮底”填充。**
 全文所有需要遮住底纹的节点（框图求和点、pgfplots 图例、曲线上的白底标签）
-统一使用 `fill=geyecolor`，它会跟随 `mode` 自动变色；
-**不要写死 `fill=white`**，否则换底色后会出现明显的白色补丁。
+统一使用 `fill=papercolor`（与纸张底色同源）；
+**不要写死 `fill=white`**，否则一旦改了 `papercolor` 就会出现色差补丁。
 
 ### 主体内容一览
 
@@ -83,6 +83,25 @@ Part I 正文：
 | 22 | 子系统：超电能量层接口（接口 + 三种工作模式） |
 
 附录 A–D 另有 2 张图（正交投影示意、矩阵求导等）。
+
+**符号体系（第 1.7 节，共 6 张表）**
+
+整理原则：**凡是公式里出现过的符号，都要能查到它的含义、单位和出处**。为此做了四件事：
+
+1. 把符号分成五类列表：正方向约定 / 电机与电调 / 功率能量与模型参数 / 控制与算法 / 数学记号。
+   每张表都给出「单位」与「出现位置」，便于反向查找。
+2. 补上此前“用了却没定义”的量：$P_{\mathrm{loss}}(\tau,\omega)$、$\Pin^{\mathrm{req}}$、
+   $U_{\mathrm{bus}}$、$R_{\mathrm{eff}}$、$L$、$b$、$f$、$B$、$n$、$T_s$、$\sigma_\omega^{2}$、
+   $R_{\mathrm{shunt}}$，以及规则手册的原始记号 $Z$、$P_r$、$P_l$、$K$、$N_{\mathrm{d}}$。
+3. 数学记号单列一表，含偏导的读法、$\hat{x}$（估计值）、$\tilde{x}$（无量纲化）、
+   $\lVert\cdot\rVert$（范数）、$\triangleq$、$\propto$、$\leftarrow$（赋值）、
+   $\dot{x}/\ddot{x}$（对时间求导）、$\operatorname{Cov}$、$\perp$ 等。
+4. **新增表 6「同名但含义不同的符号」**，逐条列出复用过字母的两种含义与区分方法，
+   并标注哪几处已通过改名消除歧义（$k_g$、$N_{\mathrm{d}}$、$S^{+}/S^{-}$）。
+
+> 自查方法（可复用）：用正则把所有行间公式抽出来，统计公式中出现的
+> LaTeX 宏与希腊字母，再与符号表比对，找出“出现过但没解释”的符号。
+
 
 
 **Part II 超级电容**
@@ -177,7 +196,7 @@ Part I 正文：
    `build.ps1` 现已改为全英文输出。
 
 10. **当前排版质量基线**（可作为后续修改的回归基准）
-    本地构建 **64 页、22 张图**，`Overfull \hbox = 0`、`Underfull \hbox = 0`、
+本地构建 **67 页、22 张图**，`Overfull \hbox = 0`、`Underfull \hbox = 0`、
     `Overfull \vbox = 0`、错误 `0`、未定义引用 `0`。
     仅有 3 条 KaiTi/FangSong 斜体缺字形的警告——这是模板把 `\citshape` 定义为楷体所致，
     中文排版里用楷体代替斜体本身是可接受的，所以未做处理。
@@ -186,7 +205,7 @@ Part I 正文：
     全文框图共用导言区 `\tikzset` 中定义的一套样式（`fblock`/`fsys`/`fsoft`/`fwarn`/
     `fio`/`fsum`/`fgroup`/`farr`/`fdarr`/`flab`/`ftitle`）。
     新增框图请复用这些样式，以保证风格一致。
-    注意两点：`\flab` 标签若压在曲线上，加 `fill=geyecolor` 做遮底；
+注意两点：`\flab` 标签若压在曲线上，加 `fill=papercolor` 做遮底；
     避免把数学公式写进 `\section`/`\subsection` 标题（会触发 hyperref 书签无限展开）。
 
 
@@ -219,7 +238,7 @@ Part I 正文：
 | 次序 | 被覆盖的内容 | 覆盖提交 |
 |---|---|---|
 | 第 1 次 | `elegantnote-cn.tex` 从 2515 行退回 256 行的模板样例 | `43c1386` |
-| 第 2 次 | 护眼模式那一次改动（`mode=geye` 与配套的 `fill` 调整）被整体撤销 | `6991191` |
+| 第 2 次 | 护眼模式那一次改动（底色与配套的 `fill` 调整）被整体撤销 | `6991191` |
 
 **结论：只要平台侧的副本落后于 GitHub，从平台保存时就会覆盖掉已有的改动。**
 
@@ -250,11 +269,11 @@ git push origin main
 **快速自检**（打开主文件看一眼）：
 
 ```
-\documentclass[cn,blue,11pt,device=normal,mode=geye]{elegantnote}
+\documentclass[cn,blue,11pt,device=normal]{elegantnote}
 ```
 
 再搜一下能不能找到“最小二乘”。若看到 `hazy` / `screen` / `14pt`，
-或者 `mode=geye` 不见了，说明平台侧又是旧副本。
+或者 `papercolor` 那两行不见了，说明平台侧又是旧副本。
 
 ---
 
