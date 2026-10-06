@@ -124,6 +124,18 @@ Part I 正文：
 > 日志显示 Underfull = 0，但实际排版已经很难看。
 > 现在用 `\hbadness=1000`，宁可看见问题也不要假的好指标。
 
+### 浮动体排布（决定“图文并茂”还是“正文被割裂”）
+
+- 导言区设置：`\topfraction=0.92`、`\bottomfraction=0.85`、`\textfraction=0.06`、
+  `\floatpagefraction=0.80`，并收紧 `\floatsep` / `\textfloatsep` / `\intextsep`
+- 引入 `placeins`，在附录 E 的每个 `\subsection*` 前插 `\FloatBarrier`
+- 效果：页数 69 → 64；「低正文页」从十几页降到 1 页；
+  附录 E 里「六个标题堆在一起、图漂到后面」的问题消失
+
+> **教训三：大图会独占一整页，把正文割裂。**
+> 图高超过约 0.7 倍正文高度时，LaTeX 往往只能给它单独开一页，
+> 于是前一页半空、后一页才开始正文。凡超过 0.7 的图都应压缩或重排。
+
 > **教训二：只查 error 和 bad box 不够，必须查“浮动体过大”。**
 > `x=0.92cm, y=0.0016cm` 让一个 TikZ 图高达 30 cm，
 > LaTeX 报了 `Float too large for page by 216pt` 之后**把整张图丢掉了**——
@@ -226,7 +238,7 @@ Part I 正文：
    `build.ps1` 现已改为全英文输出。
 
 10. **当前排版质量基线**（可作为后续修改的回归基准）
-本地构建 **69 页、22 张图**，`Overfull \hbox = 0`、`Underfull \hbox = 0`、
+本地构建 **64 页、22 张图**，`Overfull \hbox = 0`、`Underfull \hbox = 0`、
     `Overfull \vbox = 0`、错误 `0`、未定义引用 `0`。
     仅有 3 条 KaiTi/FangSong 斜体缺字形的警告——这是模板把 `\citshape` 定义为楷体所致，
     中文排版里用楷体代替斜体本身是可接受的，所以未做处理。

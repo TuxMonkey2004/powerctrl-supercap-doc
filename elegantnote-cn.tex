@@ -32,6 +32,28 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{listings}
+\usepackage{placeins}
+
+%------------------------------------------------------------------ 浮动体
+% 目标：图与表尽量与正文同页，不要出现“整页只有一张图”或
+%       “连着几页全是表、正文被挤到后面”的情况。
+% 做法：
+%   1) 放宽单页允许的浮动体占比，让大图能和正文共享一页；
+%   2) 降低 \textfraction，允许一页里正文少一些（但不能没有）；
+%   3) 提高 \floatpagefraction，减少“纯浮动页”；
+%   4) 在每一节之前插入 \FloatBarrier（见各节），
+%      让浮动体不越过节边界，避免标题与它的图被拆散。
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.80}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+% 图与标题之间的距离略收紧
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\intextsep}{9pt plus 2pt minus 2pt}
 
 %------------------------------------------------------------------ 版式
 % 目标：中文正文每段首行统一缩进、段距偏紧、行距适中，
@@ -2514,31 +2536,45 @@ if (cap_measure.cap_percent > 5) {
       pline/.style={draw, thick}
     ]
     \node[sum] (s1) {};
-    \node[block, right=8mm of s1] (pid) {PID$(t)$};
-    \node[sum, right=9mm of pid] (s2) {};
-    \node[bigblock, right=9mm of s2] (gc) {功率再分配\\$G_c(t)$};
-    \node[block, right=11mm of gc] (gm) {电机\\$G_{\mathrm{motor}}$};
-    \node[bigblock, below=9mm of pid] (int) {缓冲能量结算\\$\int(P_{\max}-\Pin)\dd t$};
+    \node[block, right=10mm of s1] (pid) {PID$(t)$};
+    \node[sum, right=11mm of pid] (s2) {};
+    \node[bigblock, right=11mm of s2] (gc) {功率再分配\\$G_c(t)$};
+    \node[block, right=13mm of gc] (gm) {电机\\$G_{\mathrm{motor}}$};
+    \node[bigblock, below=12mm of pid] (int) {缓冲能量结算\\$\int(\Pmax-\Pin)\dd t$};
 
-    \draw[line] (-1.9,0) -- node[above, pos=0.62]{$30$ J} node[below, pos=0.62, font=\scriptsize]{$+$} (s1);
+    % 设定值输入：文字在箭头上方，“+”在箭头下方
+    \draw[line] (-2.2,0) -- (s1);
+    \node[font=\scriptsize, anchor=south] at (-1.42,0.06) {$\Ebuf^{\ast}=30$ J（设定）};
+    \node[font=\scriptsize, text=eblue, anchor=north] at (-1.42,-0.06) {$+$};
+
     \draw[line] (s1) -- (pid);
-    \draw[line] (pid) -- node[above, font=\scriptsize]{$-$} (s2);
-    \draw[line] (s2) -- node[above]{$\Plim$} (gc);
-    \draw[line] (gc) -- node[above]{$\Icmd$} (gm);
-    \draw[line] (gm.east) -- ++(1.0,0) coordinate (pout);
+    \draw[line] (pid) -- node[above, font=\scriptsize, text=eblue]{$-$} (s2);
+
+    % 功率上限：纵向箭头，文字放在线的右侧并抬高，避免与 \Plim 相撞
+    \draw[line] (s2.north) -- ++(0,1.1);
+    \node[font=\small, anchor=west] at ([yshift=7mm]s2.north) {$\Pmax$};
+    \node[font=\scriptsize, text=eblue, anchor=east] at ([yshift=7mm]s2.north) {$+$};
+
+    % 预算：标注改放到箭头下方，与上面的 \Pmax 彻底分开
+    \draw[line] (s2) -- (gc);
+    \node[font=\small, anchor=north] at ([yshift=-2.5mm]$(s2)!0.5!(gc)$) {$\Plim$};
+
+    \draw[line] (gc) -- node[above, font=\small]{$\Icmd$} (gm);
+    \draw[line] (gm.east) -- ++(0.9,0) coordinate (pout);
     \node[right=1mm of pout] {$\Pin$};
 
-    \node[above=6mm of s2] (pmax) {$\Pmax$};
-    \draw[line] (pmax) -- node[right, font=\scriptsize]{$+$} (s2);
-
+    % 反馈回路：反馈量标注放到竖线左侧、再往下移，避开设定值
     \draw[line] (pout) |- (int.east);
-    \draw[line] (int.west) -- ++(-1.0,0) coordinate (fb);
+    \draw[line] (int.west) -- ++(-1.2,0) coordinate (fb);
     \draw[line] (fb) |- (s1.south);
-    \node[font=\scriptsize, anchor=south east] at ([xshift=-1mm, yshift=1mm]s1.south)
+    \node[font=\scriptsize, text=eblue, anchor=east] at ([xshift=-1.2mm, yshift=-5mm]s1.south)
       {$\Ebuf$（$-$）};
 
-    \node[draw=gray, dashed, rounded corners=3pt, inner sep=7pt,
-          fit=(s1)(pid)(s2)(gc)(int), label={[gray, font=\scriptsize]above:软件部分}] {};
+    % 虚线框与其标签：标签放在框的左上角，远离上方的标注
+    \node[draw=gray, dashed, rounded corners=3pt, inner sep=8pt,
+          fit=(s1)(pid)(s2)(gc)(int)] (sw) {};
+    \node[gray, font=\scriptsize, anchor=south west] at ([xshift=3mm, yshift=1mm]sw.north west)
+      {软件部分};
   \end{tikzpicture}
   \caption{底盘功率控制的完整框图。虚线内为软件部分，包含一个缓冲能量外环
   与一个功率再分配环节；$G_{\mathrm{motor}}$ 为电机真实的物理模型。
@@ -3624,6 +3660,8 @@ print("cond(X) =", np.linalg.cond(X))
 正文中出现的框图着眼于\emph{原理}，这里的两张总图与六张子系统图着眼于\emph{实现}：
 每一张都标出输入、输出与内部步骤，可以直接对着代码逐块核对。
 
+\FloatBarrier
+
 \subsection*{E.1 硬件总体架构}
 
 \begin{figure}[htbp]
@@ -3670,6 +3708,8 @@ print("cond(X) =", np.linalg.cond(X))
   \label{fig:arch-hardware}
 \end{figure}
 
+\FloatBarrier
+
 \subsection*{E.2 两个时间尺度：控制环与裁判系统}
 
 整个系统里有两个差别很大的时间尺度，很多“莫名其妙”的现象都源于此，
@@ -3679,14 +3719,18 @@ print("cond(X) =", np.linalg.cond(X))
   \centering
   \begin{tikzpicture}[x=1.0cm, y=1cm, >=Stealth]
     % ---- 控制环 ----
-    \draw[gray!55, line width=0.6pt] (0,0.40) -- (12,0.40);
-    \foreach \x in {0,0.6,...,11.9} { \draw[eblue, thick] (\x,0.40) -- (\x,0.66); }
-    \node[flab, text=eblue, anchor=west] at (0,0.95)
+    \node[flab, text=eblue, anchor=west] at (0,1.05)
       {控制环 $1\ \mathrm{kHz}$：每 $1\ \mathrm{ms}$ 跑一次「功率预测 $\to$ 分配 $\to$ 反解 $\to$ 发送 CAN」};
-    \node[flab, anchor=west] at (0,0.05) {相邻两条刻度之间就是一个控制周期（$1\ \mathrm{ms}$）};
+    \draw[gray!55, line width=0.6pt] (0,0.45) -- (12,0.45);
+    \foreach \x in {0,0.6,...,11.9} { \draw[eblue, thick] (\x,0.45) -- (\x,0.72); }
+
+    % ---- 换算：单独占一行，与控制环的刻度拉开距离 ----
+    \draw[<->, gray!70] (0,0.12) -- (6,0.12);
+    \node[flab, anchor=north] at (3.0,0.04)
+      {一个结算周期（$100\ \mathrm{ms}$）$=$ 一百个控制周期};
 
     % ---- 裁判系统 ----
-    \node[flab, text=codegreen, anchor=west] at (0,-1.35)
+    \node[flab, text=codegreen, anchor=west] at (0,-1.45)
       {裁判系统 $10\ \mathrm{Hz}$：$\Pmax$ 与 $\Ebuf$ 每 $100\ \mathrm{ms}$ 才更新一次};
     \draw[gray!55, line width=0.6pt] (0,-3.05) -- (12,-3.05);
     \draw[codegreen, very thick] (0,-3.05) -- (6,-3.05) -- (6,-2.62) -- (12,-2.62);
@@ -3698,11 +3742,6 @@ print("cond(X) =", np.linalg.cond(X))
     \fill[red!8] (0,-3.05) rectangle (6,-2.62);
     \node[flab, text=red!65!black, anchor=north] at (3.0,-3.75)
       {这 $100\ \mathrm{ms}$ 内程序用的都是上面那一格的旧值};
-
-    % ---- 换算 ----
-    \draw[<->, gray!70] (0,0.10) -- (6,0.10);
-    \node[flab, anchor=south] at (3.0,0.12)
-      {一个结算周期 $=$ 一百个控制周期};
   \end{tikzpicture}
   \caption{两个时间尺度。内环每 $1\ \mathrm{ms}$ 做一次完整决策，
   而外环依赖的 $\Pmax$、$\Ebuf$ 每 $100\ \mathrm{ms}$ 才刷新一次——
@@ -3719,6 +3758,8 @@ print("cond(X) =", np.linalg.cond(X))
   \item 内环的功率预测与反解\emph{不依赖裁判数据}，只用到本周期自己下发的指令与
   电机回传的转速，因此可以放心地按 $1\ \mathrm{kHz}$ 跑。
 \end{itemize}
+
+\FloatBarrier
 
 \subsection*{E.3 子系统之一：缓冲能量外环}
 
@@ -3758,6 +3799,8 @@ print("cond(X) =", np.linalg.cond(X))
   以及限幅期间的\emph{停止积分}（否则解除限幅后会有大幅超调）。}
   \label{fig:arch-bufferloop}
 \end{figure}
+
+\FloatBarrier
 
 \subsection*{E.4 子系统之二：功率预测}
 
@@ -3799,6 +3842,8 @@ print("cond(X) =", np.linalg.cond(X))
   三个系数需要标定，而 $\CT$ 是算出来的，不需要也不可能拟合。}
   \label{fig:arch-predict}
 \end{figure}
+
+\FloatBarrier
 
 \subsection*{E.5 子系统之三：功率再分配}
 
@@ -3843,6 +3888,8 @@ print("cond(X) =", np.linalg.cond(X))
   以及第二遍遍历中\emph{回馈的电机不再缩放}。}
   \label{fig:arch-redistribute}
 \end{figure}
+
+\FloatBarrier
 
 \subsection*{E.6 子系统之四：由目标功率反解指令}
 
@@ -3912,6 +3959,8 @@ print("cond(X) =", np.linalg.cond(X))
   \label{fig:arch-inverse}
 \end{figure}
 
+\FloatBarrier
+
 \subsection*{E.7 子系统之五：执行与通信}
 
 \begin{figure}[htbp]
@@ -3939,6 +3988,8 @@ print("cond(X) =", np.linalg.cond(X))
   某一台丢帧时它的 $\omega$ 只能用上一周期的值。}
   \label{fig:arch-comms}
 \end{figure}
+
+\FloatBarrier
 
 \subsection*{E.8 子系统之六：超电能量层接口}
 
@@ -3971,6 +4022,8 @@ print("cond(X) =", np.linalg.cond(X))
   其中“低电量保护”是防止电容电压过低时仍被要求大功率放电。}
   \label{fig:arch-supercap}
 \end{figure}
+
+\FloatBarrier
 
 \subsection*{E.9 图册索引}
 
