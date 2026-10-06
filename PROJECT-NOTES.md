@@ -97,6 +97,30 @@
    本仓库文件在本地用 MiKTeX 25.12 + XeLaTeX + Biber 验证过；
    Overleaf 上请确认编译器为 **XeLaTeX**、文献工具为 **Biber**。
 
+6. **`\code{}` 必须用 `\_` 而不是裸下划线（易错）**
+   `\code` 现在是基于 `\texttt` 的可断行实现（早期版本用 `\lstinline` 包在 `\mbox` 里，
+   长标识符不可断行，会造成最宽达 179 pt 的 overfull）。
+   副作用：**参数里的下划线必须转义**，写成 `\code{input\_power}`；
+   写成裸 `_` 会触发 `Missing $ inserted`。全文已修正，新增内容时请留意。
+
+7. **带下标的记号宏需要加大括号（易错）**
+   `\Icmd`、`\Pin`、`\Pmech`、`\Plim`、`\Ebuf`、`\KT`、`\CT` 这些宏本身已经以
+   `_{...}` 结尾，直接写 `\Icmd_i` 会得到 `I_{\mathrm{cmd}}_i`，触发
+   **Double subscript** 错误，下标 `i` 被静默丢弃。
+   正确写法是 `{\Icmd}_i`（全文 26 处已修正）。
+
+8. **构建脚本的错误检测必须覆盖 `-file-line-error` 格式**
+   在 `-file-line-error` 下，错误形如 `elegantnote-cn.tex:123: ...`，**不以 `!` 开头**。
+   若只匹配 `^!`，会整批漏报（本项目就曾因此把 41 个错误误判为 0）。
+   完整匹配式为：
+   `^!|^elegantnote-cn\.tex:\d+:|Undefined control sequence|Runaway`。
+
+9. **当前排版质量基线**（可作为后续修改的回归基准）
+   本地构建 46 页，`Overfull \hbox = 0`、`Underfull \hbox = 0`、`Overfull \vbox = 0`、
+   错误 `0`、未定义引用 `0`。仅有 3 条 KaiTi/FangSong 斜体缺字形的警告——
+   这是模板把 `\citshape` 定义为楷体所致，中文排版里用楷体代替斜体本身是可接受的，
+   所以未做处理。
+
 ---
 
 ## 4. 参考素材
