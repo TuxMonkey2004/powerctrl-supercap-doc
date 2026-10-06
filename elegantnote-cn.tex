@@ -950,6 +950,110 @@ $k_1,k_2,a,\CT$ 是电机的模型参数——它们的物理含义、单位与�
 
 
 % ============================================================================
+\subsection{力控底盘：做功率控制之前必须先完成的一步}
+
+本文后面所有推导都建立在一个前提上：\textbf{你对电机下发的是\emph{力矩}指令，
+而不是速度或位置指令}。这个前提不成立，功率控制便无从谈起。
+所以这一节先把“为什么”讲清楚，再讲“电控端怎么做”。
+
+\subsubsection{为什么速度环底盘做不了功率控制}
+
+如果底盘用的是常见的\emph{速度环}结构（遥控 $\to$ 目标速度 $\to$ PID $\to$ 电流），
+那么真正决定电机电流的是速度环内部的那个 PID，\emph{而不是你下发的数}。
+由此带来三个绕不开的困难：
+
+\begin{enumerate}
+  \item \textbf{功率不可预测。}
+  功率模型的输入是 $I_{\mathrm{cmd}}$（见第~\ref{sec:model} 节）。
+  在速度环里，你下发的“目标速度”与实际电流之间隔着一层闭环；
+  同一句“跑 $2\ \mathrm{m/s}$”，在平地与在爬坡时消耗的功率可以差好几倍，
+  而你从指令上完全看不出这个差别。模型失效，预测就无从谈起。
+  \item \textbf{预算不可缩放。}
+  功率再分配的核心动作，是把四路指令\emph{同乘一个系数} $k$（见第~\ref{sec:redistribute} 节）。
+  这个动作作用在力矩上，物理含义是“四个轮子各少出一点力”，干净利落；
+  作用在速度上却是“四个轮子都跑慢一点”——而速度与功率之间没有线性关系，
+  指令缩了 $k$ 倍，功率并不会缩 $k$ 倍。
+  \item \textbf{反解结果送不下去。}
+  第~\ref{sec:inverse} 节反解出来的 $I_{\mathrm{cmd}}'$ 本身就是一个力矩指令。
+  如果下游接的是速度环，这个力矩指令根本无处安放。
+\end{enumerate}
+
+一句话概括：\textbf{功率控制要求“我下发的那个量”与“电机实际消耗的功率”
+之间存在\emph{确定}的对应关系；在常见的几种控制量里，只有力矩满足这一点。}
+
+\subsubsection{力控底盘是什么}
+
+所谓“力控底盘”，就是\textbf{把电机的力矩（电流）作为最终被控制的量}，
+速度只作为\emph{反馈}参与运算。
+它与速度环底盘的区别不在于用不用速度反馈，而在于\emph{控制量究竟是谁}。
+
+好消息是这个前提在硬件上几乎不需要额外工作：
+\textbf{C620 电调内部已经有一个电流环}，
+所以你只要通过 CAN 发电流指令，就等于在做力矩控制。
+第~\ref{sec:cmd2torque} 节会把这根链条拆开细讲。
+
+\subsubsection{电控端的实现步骤}
+
+\begin{enumerate}
+  \item \textbf{把遥控输入解算成期望速度。}
+  从遥控器读到的通常是前后、左右、旋转三个通道，
+  映射成机器人本体的 $v_x$、$v_y$、$\omega_z$
+  （前进、横移、自转角速度，单位分别为 $\mathrm{m/s}$、$\mathrm{m/s}$、$\mathrm{rad/s}$）。
+  \item \textbf{运动学反解成四个轮的期望转速。}
+  麦轮或全向轮底盘都有标准的逆运动学关系，可以把
+  $(v_x,v_y,\omega_z)$ 变成四个轮子的目标线速度 $v_i^{\ast}$。
+  这一步只涉及几何，与功率无关。
+  \item \textbf{速度环算出力矩。}
+  对每个轮子做
+  \begin{equation}\label{eq:forcecontrol}
+    I_{\mathrm{cmd},i} = K_p\,(v_i^{\ast}-v_i)
+      + K_i\!\int (v_i^{\ast}-v_i)\,\mathrm{d}t + I_{\mathrm{ff},i},
+  \end{equation}
+  式中 $I_{\mathrm{cmd},i}$ 为第 $i$ 个轮子的力矩电流指令
+  （无量纲，取值 $-16384\sim16384$）；
+  $v_i^{\ast}$ 为目标线速度（$\mathrm{m/s}$）；
+  $v_i$ 为实测线速度（$\mathrm{m/s}$）；
+  $K_p$、$K_i$ 为比例与积分增益（单位分别为
+  “控制量每 $\mathrm{m/s}$”与“控制量每 $\mathrm{m/s}\cdot\mathrm{s}$”）；
+  $I_{\mathrm{ff},i}$ 为前馈力矩（无量纲）。
+  \\textbf{请注意式~\eqref{eq:forcecontrol} 里控制量是\emph{力矩}，
+  速度只出现在误差项中}——这正是“力控”的含义。
+  \item \textbf{补上前馈项。}
+  只有速度误差反馈的话，起步必然滞后。常用前馈有两类：
+  按目标加速度估一个惯性力矩；
+  或者干脆按摇杆量直接给一个基础力矩，做成“电流 $=$ 摇杆”的直接手感。
+  \item \textbf{限幅与死区。}
+  力矩指令要限到 $[-16384,\,16384]$；
+  同时必须处理 C620 与电机本身的\emph{死区与零漂}——
+  这与第~\ref{sec:cmd2torque} 节讲的 \texttt{give\_current} 与
+  \texttt{given\_current} 之间的偏差是同一件事，
+  也是标定环节必须解决的内容。
+  \item \textbf{把力矩指令发给 C620。}
+  标准做法是把四个电调的指令打包进一帧 CAN（标识符 \texttt{0x200}），
+  每个电调占两个字节。
+\end{enumerate}
+
+\subsubsection{力控底盘带来的额外好处}
+
+即使完全不考虑功率控制，力控底盘本身也是更值得做的选择：
+
+\begin{itemize}
+  \item \textbf{响应更快。} 力矩是电机最直接的输入，
+  省掉了外环带来的相位滞后。
+  \item \textbf{手感更“实”。} 摇杆到力矩是直接映射，
+  操作手能通过手感感知负载变化。
+  \item \textbf{便于补偿。} 摩擦、重力、导线损耗都可以折算成力矩叠加进去。
+  \item \textbf{便于限功率。} 这一点正是本文的主题：
+  \emph{力矩可控，功率才可控}。
+\end{itemize}
+
+\begin{note}[一句话记住这一节]
+\textbf{功率是力矩与转速的乘积，所以只有能直接控制力矩的底盘，
+才能反过来控制功率。}
+“力控底盘”不是功率控制的可选项，而是它的\emph{前置条件}——
+先有可控的力矩，才有可预测、可分配的功率。
+\end{note}
+
 \section{从控制量到力矩：C620 与 M3508 的物理链路}\label{sec:cmd2torque}
 
 这一节回答一个困扰初学者的具体问题：\emph{我发下去的那个数字，究竟代表什么？}
@@ -3997,15 +4101,7 @@ $1980\ \mathrm{J}$ 量级的方案~\cite{hkust1980j}。
 \subsection{四开关 Buck-Boost 的四种工作模式}\label{sec:fsbbmode}
 
 FSBB 之所以能同时覆盖升降压，靠的是\emph{改变哪一对管子在工作}。
-四种模式与判据列在表~\ref{tab:fsbbmodes}，工作区间如图~\ref{fig:fsbbmodes} 所示。
-
-记母线侧电压为 $U_1$、电容侧电压为 $U_2$，两者之比
-\begin{equation}\label{eq:alphadef}
-  \alpha \;\triangleq\; \frac{U_1}{U_2}
-\end{equation}
-称为\emph{电压比}，式中 $\alpha$ 为无量纲量，
-$U_1$、$U_2$ 的单位均为 V。$\alpha>1$ 表示母线电压高于电容电压，
-$\alpha<1$ 则相反。这个量在后面推导控制律时会反复出现。
+四种模式的工作区间如图~\ref{fig:fsbbmodes} 所示。
 
 \begin{table}[htbp]
   \centering
@@ -4035,6 +4131,18 @@ $\alpha<1$ 则相反。这个量在后面推导控制律时会反复出现。
     \bottomrule
   \end{tabular}
 \end{table}
+
+记母线侧电压为 $U_1$、电容侧电压为 $U_2$，两者之比
+\begin{equation}\label{eq:alphadef}
+  \alpha \;\triangleq\; \frac{U_1}{U_2}
+\end{equation}
+称为\emph{电压比}，式中 $\alpha$ 为无量纲量，
+$U_1$、$U_2$ 的单位均为 V。$\alpha>1$ 表示母线电压高于电容电压，
+$\alpha<1$ 则相反。这个量在后面推导控制律时会反复出现。
+
+四种模式各自的判据、开关管状态与适用场合汇总在表~\ref{tab:fsbbmodes} 中，
+下一节要用到它。
+
 
 \begin{figure}[htbp]
   \centering
@@ -4079,6 +4187,8 @@ $\alpha<1$ 则相反。这个量在后面推导控制律时会反复出现。
   工程上常见的做法是留出 $\pm5\%\sim\pm10\%$ 的过渡带。}
   \label{fig:fsbbmodes}
 \end{figure}
+
+
 
 \begin{figure}[htbp]
   \centering
@@ -4659,8 +4769,10 @@ $11$ 串、单体 ESR 约 $22\ \mathrm{m}\Omega$ 的组，其总 ESR 约 $240\ \
 接线部分先看一张图。超电模组并不是“控制板直接接电容组”那么简单：
 控制板与电容组之间要经过\emph{【裁判系统】的电容管理模块}，
 而控制板自己的供电又来自\emph{电源管理模块的 Chassis 端口}。
-图~\ref{fig:scwiring} 按使用手册的端口编号（$[1]\sim[19]$）把这些连线画全，
-并标出两条选装支路（NTC 测温与远端补偿）。
+图~\ref{fig:scwiring} 把这些连线画全，并标出两条\emph{选装}支路
+（NTC 测温与远端补偿）——它们都用虚线表示，不装也完全可以。
+读这张图时，重点是看清\emph{哪个端口该接什么}；
+至于这些端口在接插件上的具体位置，请对着使用手册逐一核对，不要凭印象接。
 这张图也是整机联调时的接线依据：\emph{接错一根，后面的调试全部白做}，
 所以建议先把端口对照一遍再上电。
 
@@ -4688,44 +4800,47 @@ $11$ 串、单体 ESR 约 $22\ \mathrm{m}\Omega$ 的组，其总 ESR 约 $240\ \
     % ---------------- 连接 ----------------
     % 控制板 ⇄ 电容管理模块 ⇄ 电容组
     \draw[fbio] (board.east) -- node[flab, above, align=center]
-      {\scriptsize [5]「电容」\\[-2pt]\scriptsize $\leftrightarrow$ [1] PwrCtrl} (capm.west);
-    \draw[fbio] (capm.east) -- node[flab, above]{\scriptsize [2] SuperCap} (cap.west);
+      {\scriptsize 「电容」\\[-2pt]\scriptsize $\leftrightarrow$ PwrCtrl} (capm.west);
+    \draw[fbio] (capm.east) -- node[flab, above]{\scriptsize SuperCap} (cap.west);
 
     % 电源管理模块 → 控制板「电池」端口
     \draw[fbio] (pwr.south) -- node[flab, anchor=east, align=right]
-      {\scriptsize [18] Chassis\\[-2pt]\scriptsize $\to$ [13]「电池」} (board.north);
+      {\scriptsize Chassis\\[-2pt]\scriptsize $\to$「电池」} (board.north);
 
     % 电源管理模块 ⇄ 电容管理模块（4 pin 通讯）
     \draw[fbio] (pwr.east) -- (4.4,3.4) -- (4.4,1.6) -- (5.6,1.6) -- (5.6,0.65);
-    \node[flab, anchor=west] at (4.5,2.5) {\scriptsize [9] GH1.25-4PIN};
+    \node[flab, anchor=west] at (4.5,2.5) {\scriptsize GH1.25-4PIN};
 
     % 控制板「底盘」端口 → 分电板
-    \draw[fbio] (board.west) -- node[flab, above]{\scriptsize [3]「底盘」} (pdb.east);
+    \draw[fbio] (board.west) -- node[flab, above]{\scriptsize「底盘」} (pdb.east);
 
     % 控制板「CAN」端口
-    \draw[fbio] (board.south) -- node[flab, anchor=west]{\scriptsize [15]「CAN」} (can.north);
+    \draw[fbio] (board.south) -- node[flab, anchor=west]{\scriptsize「CAN」} (can.north);
 
     % 选装一：电容组 NTC → 控制板「温控」
     \draw[fbio, dashed] (cap.south) -- (11.2,-2.2) -- (3.4,-2.2) -- (3.4,-0.78);
     \node[flab, anchor=west, fill=papercolor, inner sep=1.5pt] at (4.9,-2.22)
-      {\scriptsize [10] NTC $\to$ [16]「温控」（选装）};
+      {\scriptsize NTC $\to$「温控」（选装）};
 
     % 选装二：远端补偿（兜底走最下方）
     \draw[fbio, dashed] (-0.4,-0.78) -- (-0.4,-4.4) -- (10.4,-4.4) -- (10.4,-0.78);
     \node[flab, anchor=west, fill=papercolor, inner sep=1.5pt] at (0.6,-4.42)
-      {\scriptsize [4]/[14]「电容补偿」MMCX $\leftrightarrow$ [12] 远端补偿 SMA（选装）};
+      {\scriptsize「电容补偿」MMCX $\leftrightarrow$ 远端补偿 SMA（选装）};
   \end{tikzpicture}
-  \caption{超级电容模组的电气连接框图（端口编号沿用使用手册）。
+  \caption{超级电容模组的电气连接框图。
   有三处与直觉不同，值得注意：
   \textbf{其一}，控制板与电容组之间\emph{并不是直连}——
-  要经过\emph{【裁判系统】电容管理模块}（[5]$\leftrightarrow$[1]、再接[2]）；
-  \textbf{其二}，控制板上标着「电池」的那个端口（[13]），
-  实际接的是\emph{【裁判系统】电源管理模块的 Chassis 端口}（[18]）；
+  要经过\emph{【裁判系统】电容管理模块}——
+  控制板的「电容」端口接管理模块的 PwrCtrl，管理模块的 SuperCap 再接电容组；
+  \textbf{其二}，控制板上标着「电池」的那个端口，
+  实际接的是\emph{【裁判系统】电源管理模块的 Chassis 端口}；
   之所以叫「电池」，是因为备赛期多数队伍还没有电源管理模块，
   那时这个端口就直接接电池。
-  \textbf{其三}，控制板另有一个「底盘」端口（[3]）接到分电板再驱动底盘电机，
+  \textbf{其三}，控制板另有一个「底盘」端口接到分电板再驱动底盘电机，
   它才是{\rm 底盘}真正的供电通路。
-  两条虚线是选装项：NTC 测温（[10]$\to$[16]）与远端补偿（[4]/[14]$\leftrightarrow$[12]）。
+  两条虚线是选装项：\emph{NTC 测温}（电容组 NTC 接控制板「温控」）
+  与\emph{远端补偿}（控制板「电容补偿」接电容组远端补偿端口）。
+  各端口在接插件上的具体位置请对照使用手册。
   另外注意：本项目\textbf{不支持无线充电}。}
   \label{fig:scwiring}
 \end{figure}
