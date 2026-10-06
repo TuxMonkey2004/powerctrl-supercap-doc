@@ -304,13 +304,39 @@ $\Ebuf$ 偏高，说明还有余量，就放宽一点。
 
 一个“理想”的超电会\textbf{无条件}地把差额补齐。于是从裁判系统的视角看，
 底盘的输入功率被削平在 $\Pmax$ 附近，而这个“削平”与四个电机到底想要多少功率已经无关了。
-\fref{eq:buffer} 因此退化为 $\dd \Ebuf/\dd t \approx 0$：缓冲能量不再随电机需求变化，
-\begin{equation}
-  \frac{\partial \Ebuf}{\partial \Pin^{\mathrm{req}}} \approx 0 .
+
+为了把这件事说精确，先交代两个记号：
+
+\begin{itemize}
+  \item $\Pin^{\mathrm{req}}$：读作“\emph{底盘需求功率}”。
+  它指四个电机\emph{想要}消耗的功率之和，也就是在完全不设功率限制、
+  让电机自由发挥时它们会取用的功率。它是一个\emph{意图量}，
+  来自驾驶员的指令与电机的负载，不是任何一路传感器测出来的值。
+  \item $\dfrac{\partial \Ebuf}{\partial \Pin^{\mathrm{req}}}$：这是一个\emph{偏导数}，
+  读作“$\Ebuf$ 对 $\Pin^{\mathrm{req}}$ 的偏导”。含义是：
+  \emph{把 $\Pin^{\mathrm{req}}$ 当作自变量，其余所有量都固定不动}，
+  看 $\Ebuf$ 随它变化得有多快。
+\end{itemize}
+
+这里为什么要用偏导而不是普通导数？因为 $\Ebuf$ 其实同时受好几个量影响——
+$\Pmax$、电机真实功耗、时间都在内。用符号 $\partial$ 而不是 $\dd$，
+就是在强调“\emph{只让这一个量动，别的都按住不动}”，
+从而单独衡量出缓冲能量对电机需求功率的敏感程度。
+
+在超电接入\emph{以前}，这个偏导是一个正常的正数：电机要多用功率，缓冲能量就掉得快，
+外环能够“看见”这件事。超电接入\emph{以后}它变成了
+\begin{equation}\label{eq:bufdecouple}
+  \frac{\partial \Ebuf}{\partial \Pin^{\mathrm{req}}} \approx 0 ,
 \end{equation}
-控制理论的语言是：被控量与控制量之间的通道被超电“短路”了，外环失去了对电机的可观性。
-继续用缓冲能量闭环去限制电机功率，只会得到“无论怎么调 PID 都限不住”的结果，
-而且会持续掏空电容电量。
+意思是：\emph{不管四个电机想要多少功率，缓冲能量都几乎不变}——
+差额被电容吃掉了，$\Ebuf$ 这条信息通道断了。
+
+控制理论把这件事叫做“被控量对控制量失去了可观性”。
+要注意的是，外环读到的 $\Ebuf$ 仍然是一个合法、正常的数值，
+它并没有报错，也没有跳变，只是\textbf{不再反映电机的真实需求}了。
+这正是这一类失效最难被发现的地方：数据看起来一切正常，
+但如果继续用缓冲能量闭环去限制电机功率，就会得到
+“无论怎么调 PID 都限不住”的结果，而且会持续掏空电容电量。
 
 结论是明确的：一旦引入超电，就必须\textbf{直接获得电机的功率信息}，而不能再依赖缓冲能量。
 
@@ -338,11 +364,21 @@ $\Ebuf$ 偏高，说明还有余量，就放宽一点。
 
 在得到模型之前，工程上最朴素的做法是限制总力矩：把四个电机的目标力矩求和，
 若超过某个预设阈值，就等比缩小。这个做法有一个结构性缺陷。
-电机的输入功率近似为
-\begin{equation}
-  \Pin \approx \frac{\tau\,\omega}{9.55} + P_{\mathrm{loss}}(\tau,\omega),
+电机的输入功率可以写成
+\begin{equation}\label{eq:pin-approx}
+  \Pin \approx \underbrace{\frac{\tau\,\omega}{9.55}}_{\text{机械功率}\;\Pmech}
+  \;+\; \underbrace{P_{\mathrm{loss}}(\tau,\omega)}_{\text{其余全部损耗}} ,
 \end{equation}
-它\emph{同时}依赖力矩 $\tau$ 与转速 $\omega$。因此：
+其中第二项 $P_{\mathrm{loss}}(\tau,\omega)$ 表示\emph{除机械功率以外的全部损耗}，
+单位 W。把它写成 $\tau$ 与 $\omega$ 的函数，是要强调它\emph{同时}依赖这两个量：
+铜损主要随力矩（也就是电流）变化，铁损、轴承与齿轮箱的阻尼损耗主要随转速变化，
+控制器自身的静态功耗则与两者都无关。第~\ref{sec:loss} 节会把这三部分逐项拆开，
+并说明它们在最终模型里分别对应哪一项。
+
+还要注意，$\Pin$、$\Pmech$、$P_{\mathrm{loss}}$ 在这里都是\textbf{同一台电机}的量，
+不是四个电机的总和；本文凡是在单电机语境下讨论功率，都按此理解。
+
+回到问题本身：\fref{eq:pin-approx} 说明 $\Pin$ 同时依赖力矩 $\tau$ 与转速 $\omega$。因此：
 
 \begin{itemize}
   \item \textbf{低速时}，同一个力矩对应的功率很小。用固定的力矩阈值去限制，
@@ -539,58 +575,363 @@ $\Ebuf$ 偏高，说明还有余量，就放宽一点。
   任何一处改进（例如加入母线电压修正）都会同时改善预测与反解。
 \end{itemize}
 
-\subsection{符号与正方向约定}\label{sec:convention}
+\subsection{符号、单位与数学记号}\label{sec:convention}
 
-全文严格遵守下表约定，并且\textbf{在整个推导过程中不使用绝对值}。
-这一点看似琐碎，实际上是理解第~\ref{sec:inverse} 节“两个根”问题的前提。
+本文涉及的符号比较多，这里一次交代清楚，后面各节不再重复解释。
+建议先通读一遍本节，尤其是最后的\emph{求和范围}与\emph{下标 $i$ 的两重含义}，
+那是全文最容易读错的地方。
+
+\subsubsection{一、正方向约定}
+
+整篇推导\textbf{不使用绝对值}，所有量都带符号参与运算。
+这一点看似琐碎，却是理解第~\ref{sec:inverse} 节“两个根”问题的前提。
 
 \begin{table}[htbp]
   \centering
   \small
-  \caption{符号与正方向约定}
-  \label{tab:symbols}
-  \begin{tabular}{@{}lll@{}}
+  \caption{正方向约定}
+  \label{tab:sign}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.79\textwidth}@{}}
     \toprule
-    符号 & 含义 & 约定 \\
+    量 & 约定 \\
     \midrule
-    $\tau$          & 电机转子输出力矩（N$\cdot$m） & 顺时针为正，逆时针为负 \\
-    $\omega$        & 电机转子转速（rpm）           & 顺时针为正，逆时针为负 \\
-    $\Pin$          & 电机输入功率（W）             & 消耗功率为正，回馈功率为负 \\
-    $\Pmech$        & 机械功率（W）                 & $= \tau\omega/9.55$ \\
-    $\Icmd$         & 力矩电流控制值（发送值）      & 无量纲，范围 $[-16384,\,16384]$ \\
-    $\Itau$         & 力矩电流（A）                 & $= \tfrac{20}{16384}\Icmd$ \\
-    $\KT$           & 转子侧力矩常数（N$\cdot$m/A） & $= 0.01562$ \\
-    $\CT$           & 力矩电流系数                  & $= 1.9969\times 10^{-6}$ \\
-    $\Ebuf$         & 缓冲能量（J）                 & 裁判系统观测量 \\
-    $\Pmax$         & 底盘功率上限（W）             & 裁判系统给定 \\
+    力矩 $\tau$   & 顺时针方向为正，逆时针方向为负 \\
+    转速 $\omega$ & 顺时针方向为正，逆时针方向为负 \\
+    功率 $\Pin$   & \textbf{消耗功率为正，向母线回馈功率为负} \\
+    能量 $\Ebuf$  & 单调，无方向；只关心它变大还是变小 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\begin{remark}
-“正功率表示消耗、负功率表示输出”这一条约定，在第~\ref{sec:redistribute} 节讨论
-多电机功率再分配时起着决定性作用：当一个电机处于回馈制动状态时，
-它的功率是\emph{负}的，可以把其他电机的功率预算“腾”出来。
-任何在建模阶段取绝对值的做法，都会永久性地丢失这一部分信息。
+\begin{remark}[为什么强调“回馈为负”]
+当一个电机的力矩方向与转速方向\emph{相反}时（减速工况），它其实是在发电，
+把机械能送回母线，此时 $\Pin<0$。这一条在第~\ref{sec:redistribute} 节
+讨论多电机功率再分配时起决定性作用：负的功率项会把其他电机的预算“腾”出来。
+任何在建模阶段取绝对值的做法都会永久性地丢掉这部分信息。
 \end{remark}
+
+\subsubsection{二、电机与电调相关的量}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{电机与电调相关的符号}
+  \label{tab:sym-motor}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.11\textwidth}>{\raggedright\arraybackslash}p{0.40\textwidth}>{\raggedright\arraybackslash}p{0.15\textwidth}>{\raggedright\arraybackslash}p{0.26\textwidth}@{}}
+    \toprule
+    符号 & 含义 & 单位 / 取值 & 说明 \\
+    \midrule
+    $\tau$        & 电机\emph{转子}输出力矩 & N$\cdot$m & 不是减速箱输出轴的力矩 \\
+    $\omega$      & 电机\emph{转子}转速 & rpm & C620 回传值 \\
+    $\Omega$      & 机械角速度 & rad/s & $\Omega=2\pi\omega/60$ \\
+    $\Icmd$       & 力矩电流控制值，即\emph{发送值} & 无量纲 & 范围 $[-16384,\,16384]$ \\
+    $\Itau$       & \emph{力矩电流}，电调按指令输出的电流 & A & $\Itau=\frac{20}{16384}\Icmd$ \\
+    $i_q,\,i_d$   & 磁场定向控制下的 $q$ 轴、$d$ 轴电流 & A & $i_q$ 与转矩成正比；$i_d$ 控制为 $0$ \\
+    $T_e$         & 电磁转矩 & N$\cdot$m & $T_e=\KT i_q$ \\
+    $\KT$         & \emph{转子侧}力矩常数 & N$\cdot$m/A & $=0.015622$ \\
+    $K_T^{\mathrm{out}}$ & 手册给出的\emph{输出轴}转矩常数 & N$\cdot$m/A & $=0.3$（在减速箱另一侧） \\
+    $k_g$         & 减速箱减速比 & — & $=3591/187\approx19.203$ \\
+    $\eta$        & 齿轮传动效率 & — & 工程上并入拟合参数处理 \\
+    $R_s$         & 单相绕组电阻 & $\Omega$ & 出现在铜损里 \\
+    $p$           & 电机极对数 & — & 出现在转矩公式里 \\
+    $\psi_f$      & 永磁体磁链（峰值约定） & Wb & 出现在转矩公式里 \\
+    $U_{\mathrm{bus}}$ & 母线电压 & V & 第~\ref{sec:model} 节的模型未含它 \\
+    $i$           & \textbf{电机序号} & — & 取 $1,2,3,4$；与减速比 $k_g$ 不是一回事 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{三、功率、能量与模型参数}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{功率、能量与模型参数的符号}
+  \label{tab:sym-power}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.15\textwidth}>{\raggedright\arraybackslash}p{0.44\textwidth}>{\raggedright\arraybackslash}p{0.12\textwidth}>{\raggedright\arraybackslash}p{0.21\textwidth}@{}}
+    \toprule
+    符号 & 含义 & 单位 & 出现位置 \\
+    \midrule
+    $\Pin$            & \emph{单台}电机的输入功率 & W & 全文 \\
+    $\Pin^{\mathrm{req}}$ & \textbf{底盘需求功率}：四台电机\emph{想要}消耗的功率之和（意图量，非实测值） & W & \ref{sec:system} 节前 \\
+    $\Pmech$          & 机械功率 $\tau\omega/9.55$ & W & \ref{sec:model} 节 \\
+    $P_{\mathrm{loss}}(\tau,\omega)$ & \textbf{除机械功率以外的全部损耗}，见下方说明 & W & \ref{sec:model} 节 \\
+    $P_{\mathrm{cu}},P_{\mathrm{fe}},P_{\mathrm{ctrl}}$ & 铜损、铁损与阻尼损耗、控制器静态功耗 & W & \ref{sec:loss} 节 \\
+    $P_0(\omega)$     & 空载损耗：$\Icmd=0$ 时的输入功率 & W & \ref{sec:inverse} 节 \\
+    $P_{\min}(\omega)$& 该转速下能达到的\emph{最小}输入功率 & W & \ref{sec:inverse} 节 \\
+    $\Pmax$           & 裁判系统给出的底盘功率上限 & W & 全文 \\
+    $\Plim$           & \emph{本周期的功率预算}，由外环给出 & W & \ref{sec:bufferloop} 节 \\
+    $P_{\mathrm{tot}}$& 四台电机预测功率之和 & W & \ref{sec:redistribute} 节 \\
+    $P^{\ast}$        & \emph{目标}功率（希望电机消耗多少） & W & \ref{sec:inverse} 节 \\
+    $P_i,\ P_i^{\ast}$& 第 $i$ 台电机的预测功率、目标功率 & W & \ref{sec:redistribute} 节 \\
+    $\Ebuf$           & 缓冲能量 & J & 全文 \\
+    $E_{\max}$        & 缓冲能量上限（常见 $60$） & J & \ref{sec:bufferloop} 节 \\
+    $\Ebuf^{\ast}$    & 缓冲能量的设定值（常见 $30$） & J & \ref{sec:bufferloop} 节 \\
+    $k_1$             & $\Icmd^{2}$ 的系数（铜损） & W & \ref{sec:model} 节 \\
+    $k_2$             & $\omega^{2}$ 的系数（铁损与阻尼） & W/rpm$^{2}$ & \ref{sec:model} 节 \\
+    $a$               & 常数项（控制器静态功耗） & W & \ref{sec:model} 节 \\
+    $\CT$             & 力矩电流系数 & W/rpm & \ref{sec:model} 节 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{note}[$P_{\mathrm{loss}}(\tau,\omega)$ 到底是什么]
+它不是一个\emph{测出来的数}，而是一个\emph{记账用的名字}：
+把电机输入功率里\emph{除机械功率之外的全部部分}打包在一起。于是恒有
+\begin{equation}\label{eq:plossdef}
+  \Pin = \Pmech + P_{\mathrm{loss}}(\tau,\omega).
+\end{equation}
+之所以把它写成 $(\tau,\omega)$ 的函数，是想强调它\emph{同时}依赖力矩与转速，
+而且两个自变量的依赖方式完全不同：铜损主要随力矩（电流）平方变化，
+铁损与轴承齿轮阻尼主要随转速变化，控制器静态功耗则与两者都无关。
+第~\ref{sec:loss} 节会把这三部分逐项拆开，并说明它们在模型里分别对应哪一项。
+
+另外注意：$\Pin$、$\Pmech$、$P_{\mathrm{loss}}$ 都是\textbf{同一台电机}的量。
+全文凡是在单个电机的语境下讨论功率，都按此理解；
+需要表示四台电机之和时会明确写成 $\sum_i P_i$ 并说明。
+\end{note}
+
+\subsubsection{四、控制与算法中的量}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{控制与算法中的符号}
+  \label{tab:sym-control}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.50\textwidth}>{\raggedright\arraybackslash}p{0.29\textwidth}@{}}
+    \toprule
+    符号 & 含义 & 单位 / 备注 \\
+    \midrule
+    $e$              & 缓冲能量外环的误差 $\Ebuf^{\ast}-\Ebuf$ & J \\
+    $u$              & 外环控制器输出，作为功率预算的调整量 & W \\
+    $K_p,\,K_i$      & 外环的比例、积分增益 & W/J，W/(J$\cdot$s) \\
+    $\zeta,\,\omega_n$ & 外环闭环的阻尼比、自然频率 & 无量纲，rad/s \\
+    $k$              & 功率缩放系数 $\Plim/P_{\mathrm{tot}}$ & 无量纲，$0<k<1$ \\
+    $\delta$         & 模型误差：实际功率与指令功率之差 & W \\
+    $N$              & 用于参数辨识的\emph{样本组数} & 可达上万 \\
+    $X,\ \theta,\ y,\ \varepsilon$ & 设计矩阵、参数向量、观测量、残差 & 见 \ref{sec:lsq} 节 \\
+    $S(\theta),\,S_W(\theta)$ & 最小二乘的准则函数、加权准则函数 & W$^{2}$ \\
+    $R^{2}$、RMSE   & 拟合优度、均方根误差 & 无量纲，W \\
+    $w_i$            & 加权最小二乘中第 $i$ 组的权重 & 无量纲 \\
+    $\lambda$        & 递推最小二乘的遗忘因子 & 典型 $0.999\sim0.99999$ \\
+    $\varphi_k,\,K_k,\,P_k$ & 递推最小二乘的回归量、增益向量、协方差矩阵 & 见 \ref{sec:future} 节 \\
+    $\kappa(X)$      & 矩阵 $X$ 的条件数 & 无量纲 \\
+    $\Delta$         & 一元二次方程的判别式 $B^{2}-4AC$ & 见 \ref{sec:inverse} 节 \\
+    $A,\,B,\,C$      & 反解方程 $Ax^{2}+Bx+C=0$ 的三个系数 & $A=k_1$，$B=\CT\omega$ \\
+    $x,\,x_\pm$      & 反解方程中的未知量与两个根 & 未知量就是发送值 $\Icmd$ \\
+    $q$              & 数值稳定求根用的中间量 & 见 \ref{sec:inverse} 节 \\
+    $H$              & 最小二乘的投影矩阵（帽子矩阵） & 见附录~\ref{app:lsq} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{五、数学记号}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{本文使用的数学记号}
+  \label{tab:sym-math}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.19\textwidth}>{\raggedright\arraybackslash}p{0.73\textwidth}@{}}
+    \toprule
+    记号 & 含义 \\
+    \midrule
+    $\dfrac{\partial f}{\partial x}$ & $f$ 对 $x$ 的\emph{偏导数}：把 $x$ 当自变量，其余所有量都固定不变，看 $f$ 随 $x$ 变化的快慢 \\
+    $\dfrac{\dd f}{\dd t}$ & $f$ 对\emph{时间}的导数（这里 $f$ 只随时间变化，所以用直体 $\dd$ 而不是偏导符号） \\
+    $\sum_i$ & 求和，简写形式；\textbf{求和范围由所在章节决定}，见下方说明 \\
+    $\lvert\cdot\rvert$ & 绝对值 \\
+    $\operatorname{sgn}(x)$ & 符号函数：$x>0$ 取 $+1$，$x<0$ 取 $-1$ \\
+    $(\cdot)^{\mathsf T}$ & 矩阵或向量的转置 \\
+    $\succeq 0$ & 半正定（矩阵） \\
+    $\mathbb{E}[\cdot]$ & 数学期望 \\
+    $(\cdot)^{\ast}$ & 上标星号表示“目标值”或“最优值”，由上下文区分 \\
+    $(\cdot)^{(i)}$ & 上标括号内的编号表示“第 $i$ 组样本”，与下标区分开（见下方说明） \\
+    $\overline{(\cdot)}$ & 平均值，如 $\overline{\omega^{2}}$ \\
+    $\approx$ & 约等于；在本文中通常表示“忽略了某类小量”或“数值上接近” \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{remark}[最容易读错的一处：求和范围与下标 $i$ 的两重含义]
+全文的 $\sum_i$ 有\textbf{两种完全不同的范围}，读的时候必须看它在哪一节：
+
+\begin{itemize}
+  \item 在\textbf{第~\ref{sec:lsq} 节（参数辨识）}里，$i$ 是\emph{第 $i$ 组样本}，
+  范围是 $i=1,\dots,N$，而 $N$ 是采集到的数据组数，可达上万。
+  例如 $X^{\mathsf T}X$ 中的 $\sum_i \omega_i^{4}$，含义是
+  “把上万组数据的转速四次方全部加起来”。
+  \item 在\textbf{第~\ref{sec:redistribute} 节（功率再分配）}里，$i$ 是\emph{第 $i$ 台电机}，
+  范围是 $i=1,2,3,4$。
+  例如 $P_{\mathrm{tot}}=\sum_i P_i$，含义是“四台电机的功率相加”。
+\end{itemize}
+
+两种范围混起来会把“四台电机求和”误读成“上万组样本求和”，
+在数量级上会差好几个量级。为避免歧义，第~\ref{sec:lsq} 节在需要时
+把样本编号写成上标形式 $(\cdot)^{(i)}$，而下标留给电机序号；
+但为了让公式紧凑，第~\ref{sec:lsq} 节内部也使用了简写 $\sum_i$，
+此时一律指样本求和。
+\end{remark}
+
 
 % ============================================================================
 \section{从控制量到力矩：C620 与 M3508 的物理链路}\label{sec:cmd2torque}
 
 这一节回答一个困扰初学者的具体问题：\emph{我发下去的那个数字，究竟代表什么？}
 
-\subsection{三个容易混淆的“电流”}
+\subsection{give\_current 与 given\_current 到底差在哪}
 
-\begin{description}
-  \item[Give current（发送值）：] 主控通过 CAN 报文发给 C620 电调的\emph{控制量} $\Icmd$，
-  取值范围 $-16384 \sim 0 \sim 16384$。它是一个无量纲的整型数，物理含义是
-  “目标力矩电流”的归一化表示。
-  \item[Given current（回馈值）：] C620 在状态报文里回传的\emph{反馈量}，量纲与取值范围
-  和发送值相同。它反映了电调内部电流环的实际跟踪情况。两者在稳态下应当基本重合；
-  如果长期偏离，说明力矩电流环带宽不足，路线 B 的前提假设不成立。
-  \item[真实母线电流：] 电调从母线抽取的实际电流，需要用 INA226 之类的采样电路测量。
-  \textbf{它与前两者不是一回事}，不能用它乘母线电压去反推力矩。
-\end{description}
+初学者最容易在这里卡住：代码里同时出现 \code{give\_current} 与 \code{given\_current}，
+名字只差一个字母，数值也常常很接近，于是很容易以为它们是同一个东西的两种拼写。
+其实它们的\textbf{方向、来源和用途都不同}。
+
+\subsubsection{信号是怎么走的}
+
+先看信号在系统里的实际路径，如图~\ref{fig:givegivenpath}。
+主控把目标值写进 CAN 报文发出去，电调收到后驱动电机；
+同时电调把内部电流环的状态再通过另一帧 CAN 报文回传给主控。
+这两帧的方向正好相反，因此两个变量是“\emph{我说的}”和“\emph{它做的}”。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, transform shape, scale=0.97]
+    \node[fblock, minimum width=24mm] (mcu) at (0,0) {主控\\（STM32）};
+    \node[fsys, minimum width=32mm]  (esc) at (6.0,0) {C620 电调\\（内部电流环）};
+    \node[fblock, minimum width=24mm] (mot) at (12.0,0) {M3508\\电机};
+
+    % 下行
+    \draw[farr] (mcu.east) -- (esc.west);
+    \node[flab, text=eblue, anchor=south] at (3.0,0.10)
+      {CAN 报文 \texttt{0x200}（下行）};
+    \node[flab, text=eblue, anchor=north] at (3.0,-0.10)
+      {写入 give\_current};
+
+    % 电调到电机
+    \draw[farr] (esc.east) -- node[flab, above]{三相线} (mot.west);
+
+    % 上行
+    \draw[farr] (esc.south) -- (6.0,-2.3) -- (0,-2.3) -- (mcu.south);
+    \node[flab, text=codegreen, anchor=north] at (3.0,-2.42)
+      {CAN 报文 \texttt{0x201}（上行）：回传 given\_current 与转速 $\omega$};
+  \end{tikzpicture}
+  \caption{give\_current 与 given\_current 在系统中的位置。前者是主控\emph{发下去}的目标，
+  走下行报文；后者是电调\emph{回上来}的实际值，走上行报文。两者方向相反，
+  一个是“我想要多少”，一个是“它实际做到了多少”。}
+  \label{fig:givegivenpath}
+\end{figure}
+
+\subsubsection{用一个比喻说清楚}
+
+把电调想象成一个执行机构，两个量的关系就像：
+\begin{quote}
+\textbf{give\_current} 是你写在纸条上交给它的\emph{任务}；
+\textbf{given\_current} 是它在回执上写下的\emph{完成情况}。
+\end{quote}
+任务和完成情况在大多数时候是一致的，但它们的性质完全不同：
+任务是你决定的（你想写多少就写多少），完成情况是它报告的（你改不了）。
+正因为前者完全由你掌控、不含测量噪声，功率模型才选择\emph{以它作为输入}——
+这一点在第~\ref{sec:model} 节会看到。
+
+\subsubsection{两者为什么会不一样}
+
+在稳态下二者应当基本重合；如果长期偏离，说明电流环没有跟上。常见原因有：
+
+\begin{itemize}
+  \item \textbf{电流环带宽不足。} 力矩指令突变时，实际电流需要若干毫秒才爬上去。
+  指令变化越快（例如高频正弦激励），两者的差距越明显。
+  \item \textbf{达到物理上限。} 当指令超过电调或电机能提供的最大电流时，
+  实际值被“削平”，此时 given 会明显低于 give。
+  \item \textbf{零漂与死区。} 在指令接近 $0$ 的小信号区，采样与驱动的非线性会让两者有偏差。
+  \item \textbf{电机空载。} 空载时电机只需要很小的电流就能维持转速，
+  指令与实际电流的对应关系会失真——这正是标定时要求“电机不要空载”的原因。
+\end{itemize}
+
+因此\textbf{比较这两个量本身就是一次很好的硬件体检}：
+把两者同时记录下来画在一张图上（图~\ref{fig:givegivenwave}），
+若两条曲线基本贴合，说明电流环合格，模型可以放心地用 give\_current 当输入；
+若它们明显分离，那模型的前提就不成立，先去查硬件与参数，别急着调算法。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=0.92cm, y=0.0016cm, >=Stealth]
+    % 坐标轴
+    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,-9000) -- (10.3,-9000)
+      node[right, font=\small] {$t$};
+    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,-9500) -- (0,9500)
+      node[above, font=\small] {控制量};
+    \draw[gray!45, dashed] (0,0) -- (10.2,0);
+    \node[flab, anchor=west] at (0.05,600) {$0$};
+    \node[flab, anchor=east] at (-0.1,8000) {$16384$};
+    \node[flab, anchor=east] at (-0.1,-8000) {$-16384$};
+
+    % give_current：正弦，稍超前
+    \draw[eblue, very thick]
+      (0.2,0) (0.6,2400) (1.0,4600) (1.4,6500) (1.8,7900)
+      (2.2,8000) (2.6,7200) (3.0,5500) (3.4,3200) (3.8,600)
+      (4.2,-2200) (4.6,-4600) (5.0,-6400) (5.4,-7900)
+      (5.8,-8000) (6.2,-7100) (6.6,-5400) (7.0,-3100) (7.4,-500)
+      (7.8,2300) (8.2,4700) (8.6,6500) (9.0,7900) (9.4,8000) (9.8,7100);
+    % given_current：滞后一点、幅度略小
+    \draw[codegreen, thick, dashed]
+      (0.2,0) (0.6,1500) (1.0,3600) (1.4,5700) (1.8,7400)
+      (2.2,8000) (2.6,7800) (3.0,6300) (3.4,4100) (3.8,1500)
+      (4.2,-1400) (4.6,-3800) (5.0,-5700) (5.4,-7500)
+      (5.8,-8000) (6.2,-7600) (6.6,-6000) (7.0,-3900) (7.4,-1300)
+      (7.8,1500) (8.2,3800) (8.6,5800) (9.0,7400) (9.4,8000) (9.8,7800);
+
+    % 图例
+    \node[flab, text=eblue, anchor=west] at (5.1,6200) {give\_current（发送值）};
+    \node[flab, text=codegreen, anchor=west] at (5.1,4000) {given\_current（回馈值）};
+  \end{tikzpicture}
+  \caption{一组正弦力矩指令下的发送值与回馈值（示意）。
+  回馈值比发送值略微\emph{滞后}、幅度也略小，这正是电流环有限带宽的表现；
+  两条曲线总体贴合，说明模型“以发送值近似实际力矩电流”的假设成立。}
+  \label{fig:givegivenwave}
+\end{figure}
+
+\subsubsection{三路“电流”的区别}
+
+最后把这一节涉及的三个量放在一起对比。它们的名字里都有“电流”，
+但一个是指令、一个是电调内部的反馈、一个是母线实测，用途完全不同。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{三路“电流”的区别}
+  \label{tab:threecurrents}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.17\textwidth}>{\raggedright\arraybackslash}p{0.23\textwidth}>{\raggedright\arraybackslash}p{0.20\textwidth}>{\raggedright\arraybackslash}p{0.30\textwidth}@{}}
+    \toprule
+    量 & 是什么 & 来源与方向 & 在本文中的用途 \\
+    \midrule
+    give\_current & 主控下发的\emph{目标值}，无量纲，$[-16384,16384]$ &
+    主控 $\to$ 电调（下行 CAN） & \textbf{作为功率模型的输入}：
+    它完全已知、无测量噪声，且与力矩成线性关系 \\[4pt]
+    given\_current & 电调内部电流环的\emph{实际值}，量纲与范围同上 &
+    电调 $\to$ 主控（上行 CAN） & 用于\emph{校验}模型前提是否成立；
+    标定时与 give 对比，判断电流环是否够快 \\[4pt]
+    真实母线电流 & 电调从电池实际抽取的电流，单位 A &
+    需外加采样电路（如 INA226） & 仅用于\emph{参数辨识}与验证，
+    不是控制量；不能用它乘母线电压反推力矩 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{remark}[为什么模型选 give\_current 而不是 given\_current]
+两个都能拿到，为什么不选更“真实”的 given\_current？有两个原因：
+
+\begin{enumerate}
+  \item \textbf{它出现在指令链路上，是因果上更早的量。}
+  功率控制要回答的问题是“我\emph{准备}发这个值，会产生多少功率”，
+  所以输入必须是\emph{准备发的那个数}，而不是事后的反馈。
+  用反馈量去预测，等于先知道结果再预测结果，控制上说不通。
+  \item \textbf{它没有测量噪声。} given\_current 由电调采样电流得到，
+  带有采样噪声与量化误差；把它当回归量会引入误差变量问题
+  （见第~\ref{sec:lsq} 节），使拟合参数产生偏置。
+  give\_current 是主控自己写出去的数，精确已知。
+\end{enumerate}
+
+代价是模型多了一条前提假设：\emph{电流环足够快，$ \Itau \approx \Itau^{\mathrm{cmd}} $}。
+这条假设必须时不时刻核对——核对方法就是比较 give 与 given。
+\end{remark}
 
 \subsection{力矩电流不是相电流}
 
@@ -626,15 +967,16 @@ C620 的力矩电流控制值满量程 $\pm 16384$ 对应输出力矩电流 $\pm
 $K_T^{\mathrm{out}} = 0.3\ \mathrm{N\cdot m/A}$。而 C620 回传的转速是\emph{转子}转速，
 力矩也必须统一到转子侧，所以需要按减速比折算。
 
-M3508 搭配的 P19 行星减速箱减速比为
-\begin{equation}
-  i = \frac{3591}{187} \approx 19.203 .
+M3508 搭配的 P19 行星减速箱，减速比记作 $k_g$（这里特意不写作 $i$，
+因为在后面各节中 $i$ 一律表示\emph{电机序号}，两者必须区分开）：
+\begin{equation}\label{eq:gearratio}
+  k_g = \frac{3591}{187} \approx 19.203 .
 \end{equation}
 
 设输出轴力矩为 $\tau_{\mathrm{out}}$、转子力矩为 $\tau$，忽略齿轮传动损失（效率 $\eta \approx 1$），
-由功率守恒或杠杆关系有 $\tau_{\mathrm{out}} = i\,\tau$，即
+由功率守恒或杠杆关系有 $\tau_{\mathrm{out}} = k_g\,\tau$，即
 \begin{equation}\label{eq:kt}
-  \KT = \frac{K_T^{\mathrm{out}}}{i}
+  \KT = \frac{K_T^{\mathrm{out}}}{k_g}
       = 0.3 \times \frac{187}{3591}
       \approx 0.01562\ \mathrm{N\cdot m/A}.
 \end{equation}
@@ -679,7 +1021,7 @@ M3508 搭配的 P19 行星减速箱减速比为
     满量程力矩电流      & $I_{\tau,\max}$ & $20\ \mathrm{A}$           & C620 手册 \\
     控制量满量程        & $\Icmd^{\max}$  & $16384$                    & C620 手册 \\
     输出轴转矩常数      & $K_T^{\mathrm{out}}$ & $0.3\ \mathrm{N\cdot m/A}$ & M3508 手册 \\
-    减速比              & $i$             & $3591/187 \approx 19.203$  & M3508 P19 \\
+    减速比              & $k_g$           & $3591/187 \approx 19.203$  & M3508 P19 \\
     转子侧力矩常数      & $\KT$           & $0.015622\ \mathrm{N\cdot m/A}$ & 式~\eqref{eq:kt} 折算 \\
     力矩电流系数        & $\CT$           & $1.99688994\times 10^{-6}$ & 式~\eqref{eq:ct} 折算 \\
     \bottomrule
@@ -1765,29 +2107,33 @@ $\sqrt\Delta$ 与之同量级，属于\emph{恰好}容易抵消的区间，因�
 
 \subsection{负功率电机的处理：一个容易写错的细节}
 
-设正向消耗的电机功率之和为 $S>0$，回馈电机的功率之和为 $-N$（$N>0$），
-因此 $P_{\mathrm{tot}} = S - N$。我们只在 $S-N>\Plim$ 时才缩放。
+为便于讨论，把四台电机的预测功率分成两组：设\emph{正向消耗}的电机功率之和为
+$S^{+}>0$，\emph{回馈制动}的电机功率之和为 $-S^{-}$（其中 $S^{-}>0$），
+于是 $P_{\mathrm{tot}} = S^{+} - S^{-}$。
+我们用 $S^{+},S^{-}$ 而不是别的字母，是为了避开第~\ref{sec:lsq} 节里表示样本数的 $N$——
+本节的下标与符号只与电机有关。我们只在 $S^{+}-S^{-}>\Plim$ 时才缩放。
 
 \paragraph{实现 A：负功率计入分母（等价于代码的实际行为）。}
-$k = \Plim/(S-N)$。缩放后正向电机总功率为 $kS$，回馈电机不变，于是实际总功率
+$k = \Plim/(S^{+}-S^{-})$。缩放后正向电机总功率为 $kS^{+}$，回馈电机不变，
+于是实际总功率
 \begin{equation}\label{eq:caseA}
-  P_{\mathrm{tot}}^{A} = \frac{\Plim\,S}{S-N} - N
-  = \Plim + \underbrace{\Bigl(\frac{\Plim\,N}{S-N} - N\Bigr)}_{\text{偏差}} .
+  P_{\mathrm{tot}}^{A} = \frac{\Plim\,S^{+}}{S^{+}-S^{-}} - S^{-}
+  = \Plim + \underbrace{\Bigl(\frac{\Plim\,S^{-}}{S^{+}-S^{-}} - S^{-}\Bigr)}_{\text{偏差}} .
 \end{equation}
-由于进入缩放分支意味着 $S-N>\Plim$，故 $\Plim/(S-N)<1$，偏差项为负，即
+由于进入缩放分支意味着 $S^{+}-S^{-}>\Plim$，故 $\Plim/(S^{+}-S^{-})<1$，偏差项为负，即
 $P_{\mathrm{tot}}^{A} \le \Plim$。
 所以这种做法是\emph{安全}的，只是会略微少用一点预算。
 
 \paragraph{实现 B：负功率排除在分母之外。}
-$k = \Plim/S$，缩放后正向电机总功率恰为 $\Plim$，实际总功率
+$k = \Plim/S^{+}$，缩放后正向电机总功率恰为 $\Plim$，实际总功率
 \begin{equation}\label{eq:caseB}
-  P_{\mathrm{tot}}^{B} = \Plim - N .
+  P_{\mathrm{tot}}^{B} = \Plim - S^{-} .
 \end{equation}
 两种做法的差为
 \begin{equation}
   P_{\mathrm{tot}}^{A} - P_{\mathrm{tot}}^{B}
-  = \Plim\Bigl(\frac{S}{S-N}-1\Bigr) - N + N
-  = \frac{\Plim\,N}{S-N} > 0 ,
+  = \Plim\Bigl(\frac{S^{+}}{S^{+}-S^{-}}-1\Bigr) - S^{-} + S^{-}
+  = \frac{\Plim\,S^{-}}{S^{+}-S^{-}} > 0 ,
 \end{equation}
 即实现 A 用掉的功率更多、更接近预算。
 这与开源报告中的说法一致——“该方法的好处是不光可以减少输出负功的电机功率带来的误差，
@@ -3019,6 +3365,386 @@ print("cond(X) =", np.linalg.cond(X))
     等效串联电阻       & equivalent series resistance (ESR) & 电容组的关键参数 \\
     填谷削峰           & peak shaving / valley filling & 超电的基本工作方式 \\
     电池管理系统       & battery management system (BMS) & — \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================================
+\appsection{系统架构与子系统框图专辑}\label{app:arch}
+
+本附录把全文涉及的架构与框图集中起来，作为一份“速查图册”。
+正文中出现的框图着眼于\emph{原理}，这里的两张总图与六张子系统图着眼于\emph{实现}：
+每一张都标出输入、输出与内部步骤，可以直接对着代码逐块核对。
+
+\subsection*{E.1 硬件总体架构}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, transform shape, scale=0.94]
+    % ---- 第一层：外部设备 ----
+    \node[fio] (rc)   at (0,0)    {操作手\\遥控器};
+    \node[fio] (ref)  at (5.8,0)  {裁判系统\\主控模块};
+    \node[fio] (capm) at (11.6,0) {超级电容\\管理模块};
+
+    % ---- 第二层：主控 ----
+    \node[fsoft, minimum width=50mm, minimum height=13mm] (mcu) at (5.8,-3.1)
+      {主控（STM32F4）\\[1pt]\scriptsize 底盘运动解算 · 功率控制 · CAN 收发};
+
+    \draw[farr] (rc.south) |- node[flab, above, pos=0.2]{SBUS / UART} (3.3,-3.1);
+    \draw[fbio] (ref.south) -- node[flab, right]{UART（裁判系统协议）} (mcu.north);
+    \draw[farr] (capm.south) |- node[flab, above, pos=0.2]{CAN2} (8.3,-3.1);
+
+    % ---- 第三层：执行机构 ----
+    \node[fblock] (esc) at (2.6,-6.4) {4$\times$ C620\\电调};
+    \node[fblock] (mot) at (9.4,-6.4) {4$\times$ M3508\\电机};
+
+    \draw[farr] (mcu.south) -- ++(0,-0.9) -|
+      node[flab, left, pos=0.75]{CAN1：力矩指令} (esc.north);
+    \draw[farr] (esc.east) -- node[flab, above]{三相线} (mot.west);
+
+    % ---- 反馈回路：沿右侧上行后折回主控下方 ----
+    \draw[fdarr] (mot.east) -- (11.9,-6.4) -- (11.9,-4.8) -- (7.2,-4.8) -- (7.2,-3.75);
+    \node[flab, text=codegreen, anchor=south] at (9.6,-4.72)
+      {CAN1 反馈：$\omega$、given\_current};
+
+    % ---- 第四层：电源与超电 ----
+    \node[fio]  (bat)  at (0,-9.6)    {电池};
+    \node[fsys] (dcdc) at (5.2,-9.6)  {双向 DC--DC};
+    \node[fio]  (caps) at (10.4,-9.6) {电容组};
+    \draw[fbio] (bat) -- (dcdc);
+    \draw[fbio] (dcdc) -- (caps);
+    \draw[farr] (bat.north) |- node[flab, above, pos=0.2]{母线} (esc.south);
+    \node[flab, anchor=west, text=codegreen] at (11.2,-8.8) {补足差额 / 收回余量};
+  \end{tikzpicture}
+  \caption{硬件总体架构。四条总线各司其职：SBUS/UART 收遥控、UART 读裁判系统、
+  CAN1 与电调交换指令与反馈、CAN2 与超电控制器交换功率意向与电量。
+  能量层独立于信号层：电池经双向 DC--DC 与电容组交换能量，母线供给四个电调。}
+  \label{fig:arch-hardware}
+\end{figure}
+
+\subsection*{E.2 两个时间尺度：控制环与裁判系统}
+
+整个系统里有两个差别很大的时间尺度，很多“莫名其妙”的现象都源于此，
+如图~\ref{fig:arch-timing}。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[x=1.0cm, y=1cm, >=Stealth]
+    % ---- 控制环 ----
+    \draw[gray!55, line width=0.6pt] (0,0.40) -- (12,0.40);
+    \foreach \x in {0,0.6,...,11.9} { \draw[eblue, thick] (\x,0.40) -- (\x,0.66); }
+    \node[flab, text=eblue, anchor=west] at (0,0.95)
+      {控制环 $1\ \mathrm{kHz}$：每 $1\ \mathrm{ms}$ 跑一次「功率预测 $\to$ 分配 $\to$ 反解 $\to$ 发送 CAN」};
+    \node[flab, anchor=west] at (0,0.05) {相邻两条刻度之间就是一个控制周期（$1\ \mathrm{ms}$）};
+
+    % ---- 裁判系统 ----
+    \node[flab, text=codegreen, anchor=west] at (0,-1.35)
+      {裁判系统 $10\ \mathrm{Hz}$：$\Pmax$ 与 $\Ebuf$ 每 $100\ \mathrm{ms}$ 才更新一次};
+    \draw[gray!55, line width=0.6pt] (0,-3.05) -- (12,-3.05);
+    \draw[codegreen, very thick] (0,-3.05) -- (6,-3.05) -- (6,-2.62) -- (12,-2.62);
+    \draw[codegreen, thick] (6,-3.05) -- (6,-2.35);
+    \node[flab, text=codegreen, anchor=west] at (6.2,-2.30) {新的 $\Pmax$、$\Ebuf$ 到达};
+    \node[flab, anchor=west] at (0.2,-3.45) {旧值，一直用到下一次更新};
+
+    % ---- 阴影：数据陈旧 ----
+    \fill[red!8] (0,-3.05) rectangle (6,-2.62);
+    \node[flab, text=red!65!black, anchor=north] at (3.0,-3.75)
+      {这 $100\ \mathrm{ms}$ 内程序用的都是上面那一格的旧值};
+
+    % ---- 换算 ----
+    \draw[<->, gray!70] (0,0.10) -- (6,0.10);
+    \node[flab, anchor=south] at (3.0,0.12)
+      {一个结算周期 $=$ 一百个控制周期};
+  \end{tikzpicture}
+  \caption{两个时间尺度。内环每 $1\ \mathrm{ms}$ 做一次完整决策，
+  而外环依赖的 $\Pmax$、$\Ebuf$ 每 $100\ \mathrm{ms}$ 才刷新一次——
+  也就是说内环连续一百次决策用的都是同一份外环数据。
+  这正是第~\ref{sec:whypredict} 节强调“必须靠预测而不是靠事后测量”的直接原因。}
+  \label{fig:arch-timing}
+\end{figure}
+
+由此得到两条实现上的注意事项：
+
+\begin{itemize}
+  \item 缓冲能量外环的\emph{带宽必须远低于 $10\ \mathrm{Hz}$}。
+  若把外环调得比数据更新还快，它会在新旧两格数据之间来回“追”，产生振荡。
+  \item 内环的功率预测与反解\emph{不依赖裁判数据}，只用到本周期自己下发的指令与
+  电机回传的转速，因此可以放心地按 $1\ \mathrm{kHz}$ 跑。
+\end{itemize}
+
+\subsection*{E.3 子系统之一：缓冲能量外环}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, node distance=3.2mm]
+    \node[fio] (in) at (0,0)
+      {$\Pmax$（功率上限）、$\Ebuf$（缓冲能量）\quad\scriptsize 均来自裁判系统，$10\ \mathrm{Hz}$ 更新};
+
+    \node[fblock] (err) at (0,-1.7)
+      {求误差 $e = \Ebuf^{\ast} - \Ebuf$\quad\scriptsize 设定值通常取 $30\ \mathrm{J}$};
+
+    \node[fblock] (pid) at (0,-3.5)
+      {PI 控制 $u = K_p e + K_i\!\int\! e\,\dd t$\quad\scriptsize 积分项按第 7.3 节换算采样周期};
+
+    \node[draw=eblue, thick, diamond, aspect=2.6, inner sep=1pt, fill=eblue!6,
+          align=center, font=\small] (sat) at (0,-5.4) {$|u|$ 是否越限？};
+
+    \node[fwarn] (anti) at (6.0,-5.4)
+      {越限时\emph{停止积分}\\[1pt]\scriptsize 抗积分饱和（anti-windup）};
+
+    \node[fblock] (out) at (0,-7.4)
+      {$\Plim = \Pmax - u$\quad\scriptsize \textbf{注意是减号}，见第 7.4 节的极性判据};
+
+    \node[fio] (res) at (0,-9.1) {输出：本周期功率预算 $\Plim$（同时下发超电控制器）};
+
+    \draw[farr] (in) -- (err);
+    \draw[farr] (err) -- (pid);
+    \draw[farr] (pid) -- (sat);
+    \draw[farr] (sat) -- node[flab, anchor=west]{否} (out);
+    \draw[farr] (sat) -- node[flab, anchor=south]{是} (anti);
+    \draw[fdarr] (anti.south) |- (pid.east);
+    \draw[farr] (out) -- (res);
+  \end{tikzpicture}
+  \caption{缓冲能量外环子系统的实现。两处最容易写错：
+  $\Plim=\Pmax-u$ 的\emph{减号}（写反会变成正反馈），
+  以及限幅期间的\emph{停止积分}（否则解除限幅后会有大幅超调）。}
+  \label{fig:arch-bufferloop}
+\end{figure}
+
+\subsection*{E.4 子系统之二：功率预测}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, transform shape, scale=0.96]
+    \node[fio] (in) at (0,-2.6)
+      {$\Icmd$（准备下发的指令）\\$\omega$（本周期转速）};
+
+    \draw[thick, eblue] (2.6,-0.2) -- (2.6,-5.2);
+    \draw[farr] (in.east) -- (2.6,-2.6);
+
+    \node[fblock] (t1) at (5.4,-0.2) {$\CT\,\Icmd\,\omega$};
+    \node[flab, anchor=west] at (7.3,-0.2) {机械功率，系数由物理常数给出};
+    \node[fblock] (t2) at (5.4,-1.85) {$k_2\,\omega^2$};
+    \node[flab, anchor=west] at (7.3,-1.85) {铁损与齿轮箱阻尼};
+    \node[fblock] (t3) at (5.4,-3.5) {$k_1\,\Icmd^2$};
+    \node[flab, anchor=west] at (7.3,-3.5) {铜损};
+    \node[fblock] (t4) at (5.4,-5.15) {$a$};
+    \node[flab, anchor=west] at (7.3,-5.15) {控制器静态功耗};
+
+    \draw[farr] (2.6,-0.2) -- (t1.west);
+    \draw[farr] (2.6,-1.85) -- (t2.west);
+    \draw[farr] (2.6,-3.5) -- (t3.west);
+    \draw[farr] (2.6,-5.15) -- (t4.west);
+
+    \node[fsum] (sum) at (10.4,-2.6) {$\Sigma$};
+    \node[fblock] (out) at (12.6,-2.6) {$\hat\Pin$};
+
+    \foreach \n in {t1,t2,t3,t4} { \draw[farr] (\n.east) -- (sum); }
+    \draw[farr] (sum) -- (out);
+
+    \node[fio] (par) at (5.4,-7.0)
+      {参数：$k_1,k_2,a$ 由实测标定得到（第 4 节）；$\CT$ 由物理常数算出（式~\eqref{eq:ct}）};
+    \draw[fdarr] (par.north) -- ++(0,0.6) -| (sum.south);
+  \end{tikzpicture}
+  \caption{功率预测子系统的实现。四项各自只依赖一个或两个输入，
+  因此整段代码就是几次乘加；参数来源也标在图里——
+  三个系数需要标定，而 $\CT$ 是算出来的，不需要也不可能拟合。}
+  \label{fig:arch-predict}
+\end{figure}
+
+\subsection*{E.5 子系统之三：功率再分配}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, node distance=3.0mm]
+    \node[fio] (in) at (0,0) {四台电机的 $\Icmd_i$、$\omega_i$；功率预算 $\Plim$};
+
+    \node[fblock] (p1) at (0,-1.8)
+      {\textbf{第一遍遍历}（$i=1..4$）：$\hat P_i = \CT\Icmd_i\omega_i + k_2\omega_i^2 + k_1\Icmd_i^2 + a$\\[1pt]
+       \scriptsize 逐台算完累加得 $P_{\mathrm{tot}}=\sum_i \hat P_i$，\textbf{保留符号}};
+
+    \node[draw=eblue, thick, diamond, aspect=2.6, inner sep=1pt, fill=eblue!6,
+          align=center, font=\small] (cmp) at (0,-3.9) {$P_{\mathrm{tot}} > \Plim$ ?};
+
+    \node[fio] (skip) at (7.0,-3.9)
+      {不干预\\[1pt]\scriptsize 四路指令原样输出};
+
+    \node[fblock] (k) at (0,-5.7)
+      {求功率缩放系数 $k = \Plim / P_{\mathrm{tot}}$};
+
+    \node[fblock] (neg) at (0,-7.5)
+      {\textbf{第二遍遍历}：若 $\hat P_i<0$（在回馈制动）\\[1pt]
+       \scriptsize 该台不缩放，$\Icmd_i' = \Icmd_i$};
+
+    \node[fblock] (pos) at (0,-9.4)
+      {否则：$P_i^{\ast} = \max\bigl(k\hat P_i,\; k_2\omega_i^2+a\bigr)$\\[1pt]
+       \scriptsize 抬到空载损耗之上，再交给图~\ref{fig:inverse} 反解出 $\Icmd_i'$};
+
+    \node[fio] (out) at (0,-11.1) {输出四路新指令 $\Icmd_i'$（送回 CAN 发送环节）};
+
+    \draw[farr] (in) -- (p1);
+    \draw[farr] (p1) -- (cmp);
+    \draw[farr] (cmp) -- node[flab, anchor=west]{是} (k);
+    \draw[farr] (cmp) -- node[flab, anchor=south]{否} (skip);
+    \draw[farr] (k) -- (neg);
+    \draw[farr] (neg) -- (pos);
+    \draw[farr] (pos) -- (out);
+  \end{tikzpicture}
+  \caption{功率再分配子系统的实现。两个关键设计点：
+  第一遍遍历时\emph{保留功率符号}（负值代表回馈制动，会把预算让给别的电机），
+  以及第二遍遍历中\emph{回馈的电机不再缩放}。}
+  \label{fig:arch-redistribute}
+\end{figure}
+
+\subsection*{E.6 子系统之四：由目标功率反解指令}
+
+反解本身只有一条二次方程，难点全在\emph{目标功率落在哪个区间}。
+四种情形与对应动作列在表~\ref{tab:arch-fourcases}，实现流程见图~\ref{fig:arch-inverse}。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{目标功率的四种情形与对应动作（$P_0$ 为空载损耗，$P_{\min}$ 为最小可达功率）}
+  \label{tab:arch-fourcases}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.20\textwidth}>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.49\textwidth}@{}}
+    \toprule
+    情形 & 方程根的情况 & 应当做什么 \\
+    \midrule
+    $P^{\ast} > P_0(\omega)$ & 一正一负 &
+    正常情形。按原始指令的符号取对应的那一根，方向不变 \\[4pt]
+    $P^{\ast} = P_0(\omega)$ & 一个根为 $0$ &
+    取零根，即“不发力、让电机自由转” \\[4pt]
+    $P_{\min} \le P^{\ast} < P_0(\omega)$ & 两根皆负 &
+    \textbf{没有正向解}。若照常取“正号根”会得到负数，力矩反向。
+    正确做法是先用 $P^{\ast}\gets\max(P^{\ast},P_0)$ 抬上去 \\[4pt]
+    $P^{\ast} < P_{\min}(\omega)$ & 无实根 &
+    目标不可达。抬高到 $P_0$ 之后必有解；直接跳过会放行超功率指令 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, transform shape, scale=0.96]
+    \node[fio] (in) at (0,0)
+      {目标功率 $P^{\ast}$、转速 $\omega$、\emph{缩放前}的原始指令 $\Icmd$};
+
+    \node[fblock] (c0) at (0,-1.8)
+      {算空载损耗 $P_0 = k_2\omega^2 + a$\\[1pt]
+       \scriptsize 钳位 $P^{\ast}\gets\max(P^{\ast},P_0)$};
+
+    \node[fblock] (c1) at (0,-3.8)
+      {$B = \CT\omega$，\; $C = P_0 - P^{\ast}$\\[1pt]
+       $\Delta = B^2 - 4k_1 C$};
+
+    \node[draw=eblue, thick, diamond, aspect=2.6, inner sep=1pt, fill=eblue!6,
+          align=center, font=\small] (d) at (0,-5.6) {$\Delta \ge 0$ ?};
+
+    \node[fblock] (sel) at (0,-7.6)
+      {按 $\Icmd$ 的符号选根：\\[1pt]
+       $\Icmd'>0$ 时取 $\dfrac{-B+\sqrt{\Delta}}{2k_1}$，否则取 $\dfrac{-B-\sqrt{\Delta}}{2k_1}$};
+
+    \node[fwarn] (no) at (7.2,-5.6) {置 $\Icmd'=0$\\[1pt]\scriptsize 兜底（钳位后正常不应走到）};
+
+    \node[fblock] (clamp) at (0,-9.6) {限幅到 $[-16384,\;16384]$};
+    \node[fio] (out) at (0,-11.1) {输出 $\Icmd'$};
+
+    \draw[farr] (in) -- (c0);
+    \draw[farr] (c0) -- (c1);
+    \draw[farr] (c1) -- (d);
+    \draw[farr] (d) -- node[flab, anchor=west]{是} (sel);
+    \draw[farr] (d) -- node[flab, anchor=south]{否} (no);
+    \draw[farr] (sel) -- (clamp);
+    \draw[farr] (no.south) |- (clamp.east);
+    \draw[farr] (clamp) -- (out);
+  \end{tikzpicture}
+  \caption{反解子系统的实现。整条链路里只有一次开方；
+  真正容易出错的是第一块的\emph{钳位}——少了它，
+  “目标功率低于空载损耗”时解出的指令会带负号，也就是力矩方向被翻转。}
+  \label{fig:arch-inverse}
+\end{figure}
+
+\subsection*{E.7 子系统之五：执行与通信}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, x=1cm, y=1cm]
+    \node[fblock, minimum width=24mm] (mcu) at (0,0) {主控};
+    \node[fblock, minimum width=26mm] (esc) at (8.2,0) {C620 电调 $\times4$};
+    \draw[gray!50, densely dashed] (0,-0.6) -- (0,-7.4);
+    \draw[gray!50, densely dashed] (8.2,-0.6) -- (8.2,-7.4);
+
+    \draw[farr] (0,-1.3) -- node[flab, above, text=eblue]
+      {报文 \texttt{0x200}：四路力矩指令（每 $1\ \mathrm{ms}$ 一帧）} (8.2,-1.3);
+    \draw[farr] (8.2,-2.6) -- node[flab, above, text=codegreen]
+      {报文 \texttt{0x201}：$\omega$、given\_current、温度} (0,-2.6);
+    \draw[farr] (8.2,-3.5) -- node[flab, above, text=codegreen]
+      {报文 \texttt{0x202}/\texttt{0x203}/\texttt{0x204}：其余三台} (0,-3.5);
+    \draw[fdarr] (0,-4.6) -- node[flab, above]{下一控制周期重复} (8.2,-4.6);
+
+    \node[fio] (note) at (4.1,-6.2)
+      {发送与接收都在 $1\ \mathrm{kHz}$ 中断里完成；\\[1pt]
+       \scriptsize 收到反馈后立刻用于本周期的转速 $\omega$ 与方向判断};
+  \end{tikzpicture}
+  \caption{执行与通信子系统。下行只有一帧，把四台电机的指令打包发出；
+  上行四帧分别来自四台电调。注意反馈是\emph{异步}到达的，
+  某一台丢帧时它的 $\omega$ 只能用上一周期的值。}
+  \label{fig:arch-comms}
+\end{figure}
+
+\subsection*{E.8 子系统之六：超电能量层接口}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[>=Stealth, transform shape, scale=0.96]
+    % 接口
+    \node[fsoft, minimum width=30mm] (mcu) at (0,0) {主控\\ \scriptsize 决定功率预算 $\Plim$};
+    \node[fsys,  minimum width=34mm] (cap) at (8.0,0) {超电控制器\\ \scriptsize 决定充/放电功率};
+
+    \draw[farr] (mcu.east) -- node[flab, above]{下行：电池侧目标功率 $\Plim$} (cap.west);
+    \draw[farr] (cap.south) -- ++(0,-0.9) -| node[flab, below, text=codegreen, pos=0.28]
+      {上行：电容电量百分比、当前功率、状态字} (mcu.south);
+
+    % 工作模式
+    \node[fblock] (charge) at (0,-3.9)  {充电模式\\ \scriptsize $\Plim$ 略低于 $\Pmax$};
+    \node[fblock] (boost)  at (5.4,-3.9){补电模式\\ \scriptsize $\Plim \gg \Pmax$，电容补差额};
+    \node[fwarn]  (prot)   at (10.4,-3.9){低电量保护\\ \scriptsize $\Plim = \Pmax$};
+
+    \draw[farr] (charge) -- node[flab, above]{操作手按键} (boost);
+    \draw[farr] (boost) -- node[flab, above]{电量 $<5\%$} (prot);
+    \draw[farr] (prot.south) -- ++(0,-0.7) -| node[flab, below, pos=0.35]{电量恢复后自动退回} (charge.south);
+
+    \node[fio] (capbox) at (8.0,-7.0)
+      {能量层：电池母线 $\;\leftrightarrow\;$ 双向 DC--DC $\;\leftrightarrow\;$ 电容组};
+    \draw[fdarr] (cap.south) -- (cap.south |- capbox.north);
+  \end{tikzpicture}
+  \caption{超电能量层接口子系统。主控只负责一件事——把本周期的功率预算告诉超电；
+  具体怎么充、怎么放由超电控制器决定。三种工作模式之间可以切换，
+  其中“低电量保护”是防止电容电压过低时仍被要求大功率放电。}
+  \label{fig:arch-supercap}
+\end{figure}
+
+\subsection*{E.9 图册索引}
+
+表~\ref{tab:arch-index} 汇总本附录的全部框图，便于按需查阅。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{系统架构与子系统框图索引}
+  \label{tab:arch-index}
+  \begin{tabular}{@{}cl>{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
+    \toprule
+    图号 & 名称 & 看它主要解决什么问题 \\
+    \midrule
+    \ref{fig:arch-hardware}     & 硬件总体架构 & 有哪些板子、用什么总线连、能量怎么流 \\
+    \ref{fig:arch-timing}       & 两个时间尺度 & 为什么不能用“测量后再修正” \\
+    \ref{fig:arch-bufferloop}   & 缓冲能量外环 & 预算 $\Plim$ 是怎么算出来的 \\
+    \ref{fig:arch-predict}      & 功率预测 & 预测怎么算、参数从哪来 \\
+    \ref{fig:arch-redistribute} & 功率再分配 & 四台电机的预算怎么分 \\
+    \ref{fig:arch-inverse}      & 反解 & 目标功率怎么变成指令、边界怎么处理 \\
+    \ref{fig:arch-comms}        & 执行与通信 & CAN 报文怎么走、丢帧怎么办 \\
+    \ref{fig:arch-supercap}     & 超电能量层接口 & 主控与超电各自负责什么、模式怎么切 \\
     \bottomrule
   \end{tabular}
 \end{table}
