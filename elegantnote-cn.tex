@@ -33,19 +33,40 @@
 \usepackage{algpseudocode}
 \usepackage{listings}
 
-%------------------------------------------------------------------ 版式微调
-% A4 正文较宽，适当收紧行距与段距，避免过于松散。
-\linespread{1.28}
-\setlength{\parskip}{2.2mm}
-\setlength{\abovedisplayskip}{5pt}
-\setlength{\belowdisplayskip}{5pt}
+%------------------------------------------------------------------ 版式
+% 目标：中文正文每段首行统一缩进、段距偏紧、行距适中，
+%       并让中英混排时的断行尽量均匀（既不过分拉伸，也不冲出页边）。
+\linespread{1.32}
+\setlength{\parskip}{1.0mm}
+\setlength{\parindent}{2em}
+\setlength{\abovedisplayskip}{6pt}
+\setlength{\belowdisplayskip}{6pt}
 \setlength{\abovedisplayshortskip}{3pt}
 \setlength{\belowdisplayshortskip}{3pt}
+% 列表、引文与公式前后的间距收紧，避免“松松垮垮”
+\setlength{\topsep}{3pt}
+\setlength{\partopsep}{1pt}
+\setlength{\itemsep}{1pt}
+\setlength{\parsep}{0pt}
 
-% 中英混排时给 TeX 一点额外伸缩余量，显著减少 overfull \hbox
-\setlength{\emergencystretch}{2em}
-\tolerance=2000
-\hbadness=2500
+% 断行策略：容差收紧到常规水平，靠 CJK 字符间的伸缩去凑满行宽；
+% 只给很小的应急伸缩量（1em）作为最后手段。
+% 注意：不要为了让日志“好看”而调大 \hbadness——那样会把真正
+% 松垮的行藏起来，反而看不见问题。
+\setlength{\emergencystretch}{1em}
+\tolerance=1200
+\hbadness=1000
+\vbadness=1000
+% 允许在 CJK 字符之间伸缩，这是中文断行均匀的关键
+\XeTeXlinebreakskip = 0pt plus 0.08em minus 0.02em
+\XeTeXlinebreakpenalty = 0
+
+% 让列表、引文等环境之后的段落照常首行缩进。
+% LaTeX 默认会抑制这个缩进，中文排版里就会显得“有的缩进有的不缩进”。
+% 注意：这里不能引用 \@endpenalty（本模板中它并未定义），只保留段距。
+\makeatletter
+\def\@endparenv{\ifdim\prevdepth>\z@ \vskip\parskip \fi}
+\makeatother
 
 % 参考文献中的长 URL 允许在数字/大写/小写字符间断行
 \setcounter{biburlnumpenalty}{100}
@@ -630,267 +651,16 @@ $k_1,k_2,a,\CT$ 是电机的模型参数——它们的物理含义、单位与�
   任何一处改进（例如加入母线电压修正）都会同时改善预测与反解。
 \end{itemize}
 
-\subsection{符号、单位与数学记号}\label{sec:convention}
+\subsection{符号与约定}\label{sec:convention}
 
-本文涉及的符号比较多，这里一次交代清楚，后面各节不再重复解释。
-建议先通读一遍本节，尤其是最后的\emph{求和范围}与\emph{下标 $i$ 的两重含义}，
-那是全文最容易读错的地方。
+本文涉及的符号比较多，为了让正文读起来顺畅，
+\textbf{完整的符号表统一放在附录~\ref{app:units} 中}，正文里不再逐张罗列。
 
-\subsubsection{一、正方向约定}
+正文中每个符号\emph{第一次出现}时都会就地解释清楚；
+需要回头确认某个字母的确切含义、单位或出处时，再到附录~\ref{app:units} 里查表。
+里面还专门列了一张\emph{同名不同义}的表，指出哪些字母被复用过——
+那是全文最容易读错的地方，遇到不确定的符号时建议先看它。
 
-整篇推导\textbf{不使用绝对值}，所有量都带符号参与运算。
-这一点看似琐碎，却是理解第~\ref{sec:inverse} 节“两个根”问题的前提。
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \caption{正方向约定}
-  \label{tab:sign}
-  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.79\textwidth}@{}}
-    \toprule
-    量 & 约定 \\
-    \midrule
-    力矩 $\tau$   & 顺时针方向为正，逆时针方向为负 \\
-    转速 $\omega$ & 顺时针方向为正，逆时针方向为负 \\
-    功率 $\Pin$   & \textbf{消耗功率为正，向母线回馈功率为负} \\
-    能量 $\Ebuf$  & 单调，无方向；只关心它变大还是变小 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{remark}[为什么强调“回馈为负”]
-当一个电机的力矩方向与转速方向\emph{相反}时（减速工况），它其实是在发电，
-把机械能送回母线，此时 $\Pin<0$。这一条在第~\ref{sec:redistribute} 节
-讨论多电机功率再分配时起决定性作用：负的功率项会把其他电机的预算“腾”出来。
-任何在建模阶段取绝对值的做法都会永久性地丢掉这部分信息。
-\end{remark}
-
-\subsubsection{二、电机与电调相关的量}
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \caption{电机与电调相关的符号}
-  \label{tab:sym-motor}
-  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.11\textwidth}>{\raggedright\arraybackslash}p{0.40\textwidth}>{\raggedright\arraybackslash}p{0.15\textwidth}>{\raggedright\arraybackslash}p{0.26\textwidth}@{}}
-    \toprule
-    符号 & 含义 & 单位 / 取值 & 说明 \\
-    \midrule
-    $\tau$        & 电机\emph{转子}输出力矩 & N$\cdot$m & 不是减速箱输出轴的力矩 \\
-    $\omega$      & 电机\emph{转子}转速 & rpm & C620 回传值 \\
-    $\Omega$      & 机械角速度 & rad/s & $\Omega=2\pi\omega/60$ \\
-    $\Icmd$       & 力矩电流控制值，即\emph{发送值} & 无量纲 & 范围 $[-16384,\,16384]$ \\
-    $\Itau$       & \emph{力矩电流}，电调按指令输出的电流 & A & $\Itau=\frac{20}{16384}\Icmd$ \\
-    $i_q,\,i_d$   & 磁场定向控制下的 $q$ 轴、$d$ 轴电流 & A & $i_q$ 与转矩成正比；$i_d$ 控制为 $0$ \\
-    $T_e$         & 电磁转矩 & N$\cdot$m & $T_e=\KT i_q$ \\
-    $\KT$         & \emph{转子侧}力矩常数 & N$\cdot$m/A & $=0.015622$ \\
-    $K_T^{\mathrm{out}}$ & 手册给出的\emph{输出轴}转矩常数 & N$\cdot$m/A & $=0.3$（在减速箱另一侧） \\
-    $k_g$         & 减速箱减速比 & — & $=3591/187\approx19.203$ \\
-    $\eta$        & 齿轮传动效率 & — & 工程上并入拟合参数处理 \\
-    $R_s$         & 单相绕组电阻 & $\Omega$ & 出现在铜损里 \\
-    $p$           & 电机极对数 & — & 出现在转矩公式里 \\
-    $\psi_f$      & 永磁体磁链（峰值约定） & Wb & 出现在转矩公式里 \\
-    $U_{\mathrm{bus}}$ & 母线电压 & V & 第~\ref{sec:model} 节的模型未含它 \\
-    $i$           & \textbf{电机序号} & — & 取 $1,2,3,4$；与减速比 $k_g$ 不是一回事 \\
-    $R_{\mathrm{shunt}}$ & 电流采样用的分流电阻 & $\Omega$ & 它决定采样量程，见第 9 节 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\subsubsection{三、功率、能量与模型参数}
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \caption{功率、能量与模型参数的符号}
-  \label{tab:sym-power}
-  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.15\textwidth}>{\raggedright\arraybackslash}p{0.44\textwidth}>{\raggedright\arraybackslash}p{0.12\textwidth}>{\raggedright\arraybackslash}p{0.21\textwidth}@{}}
-    \toprule
-    符号 & 含义 & 单位 & 出现位置 \\
-    \midrule
-    $\Pin$            & \emph{单台}电机的输入功率 & W & 全文 \\
-    $\Pin^{\mathrm{req}}$ & \textbf{底盘需求功率}：四台电机\emph{想要}消耗的功率之和（意图量，非实测值） & W & \ref{sec:system} 节前 \\
-    $\Pmech$          & 机械功率 $\tau\omega/9.55$ & W & \ref{sec:model} 节 \\
-    $P_{\mathrm{loss}}(\tau,\omega)$ & \textbf{除机械功率以外的全部损耗}，见下方说明 & W & \ref{sec:model} 节 \\
-    $P_{\mathrm{cu}},P_{\mathrm{fe}},P_{\mathrm{ctrl}}$ & 铜损、铁损与阻尼损耗、控制器静态功耗 & W & \ref{sec:loss} 节 \\
-    $P_0(\omega)$     & 空载损耗：$\Icmd=0$ 时的输入功率 & W & \ref{sec:inverse} 节 \\
-    $P_{\min}(\omega)$& 该转速下能达到的\emph{最小}输入功率 & W & \ref{sec:inverse} 节 \\
-    $\Pmax$           & 裁判系统给出的底盘功率上限 & W & 全文 \\
-    $\Plim$           & \emph{本周期的功率预算}，由外环给出 & W & \ref{sec:bufferloop} 节 \\
-    $P_{\mathrm{tot}}$& 四台电机预测功率之和 & W & \ref{sec:redistribute} 节 \\
-    $P^{\ast}$        & \emph{目标}功率（希望电机消耗多少） & W & \ref{sec:inverse} 节 \\
-    $P_i,\ P_i^{\ast}$& 第 $i$ 台电机的预测功率、目标功率 & W & \ref{sec:redistribute} 节 \\
-    $\Ebuf$           & 缓冲能量 & J & 全文 \\
-    $E_{\max}$        & 缓冲能量上限（常见 $60$） & J & \ref{sec:bufferloop} 节 \\
-    $\Ebuf^{\ast}$    & 缓冲能量的设定值（常见 $30$） & J & \ref{sec:bufferloop} 节 \\
-    $k_1$             & $\Icmd^{2}$ 的系数（铜损） & W & \ref{sec:model} 节 \\
-    $k_2$             & $\omega^{2}$ 的系数（铁损与阻尼） & W/rpm$^{2}$ & \ref{sec:model} 节 \\
-    $a$               & 常数项（控制器静态功耗） & W & \ref{sec:model} 节 \\
-    $\CT$             & 力矩电流系数 & W/rpm & \ref{sec:model} 节 \\
-    $R_{\mathrm{eff}}$ & 等效相电阻，由 $k_1$ 反解得到 & $\Omega$ & \ref{sec:loss} 节 \\
-    $L$               & 绕组电感 & H & \ref{sec:model} 节（未建模的量） \\
-    $b$               & 轴承与齿轮箱的粘滞摩擦系数 & N$\cdot$m$\cdot$s/rad & \ref{sec:loss} 节 \\
-    $f$               & 电流与磁场的交变频率 & Hz & \ref{sec:loss} 节（铁损） \\
-    $B$               & 磁通密度；\textbf{与第 \ref{sec:inverse} 节的系数 $B$ 同名不同义} & T & \ref{sec:loss} 节（铁损） \\
-    $n$               & 磁滞损耗的经验指数 & — & \ref{sec:loss} 节（约 $1.6\sim2.2$） \\
-    \midrule
-    $P_r$             & 规则手册中的\emph{底盘瞬时功率}（官方记号） & W & \ref{sec:bufferloop} 节 \\
-    $P_l$             & 规则手册中的\emph{功率上限}（官方记号） & W & \ref{sec:bufferloop} 节 \\
-    $Z$               & 规则手册中\emph{缓冲能量}的记号，即本文的 $\Ebuf$ & J & \ref{sec:bufferloop} 节 \\
-    $K$               & 超功率比例 $(P_r-P_l)/P_l$（官方记号） & — & \ref{sec:bufferloop} 节 \\
-    $N_{\mathrm{d}}$  & 扣血系数；官方记作 $N$，本文改名以免与样本数混淆 & — & \ref{sec:bufferloop} 节 \\
-    $S^{+},\,S^{-}$   & 正向消耗、回馈制动的电机功率之和 & W & \ref{sec:redistribute} 节 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{note}[$P_{\mathrm{loss}}(\tau,\omega)$ 到底是什么]
-它不是一个\emph{测出来的数}，而是一个\emph{统称}：
-把电机输入功率里\emph{除机械功率之外的全部部分}归在一起。于是恒有
-\begin{equation}\label{eq:plossdef}
-  \Pin = \Pmech + P_{\mathrm{loss}}(\tau,\omega).
-\end{equation}
-之所以把它写成 $(\tau,\omega)$ 的函数，是想强调它\emph{同时}依赖力矩与转速，
-而且两个自变量的依赖方式完全不同：铜损主要随力矩（电流）平方变化，
-铁损与轴承齿轮阻尼主要随转速变化，控制器静态功耗则与两者都无关。
-第~\ref{sec:loss} 节会把这三部分逐项拆开，并说明它们在模型里分别对应哪一项。
-
-另外注意：$\Pin$、$\Pmech$、$P_{\mathrm{loss}}$ 都是\textbf{同一台电机}的量。
-全文凡是在单个电机的语境下讨论功率，都按此理解；
-需要表示四台电机之和时会明确写成 $\sum_i P_i$ 并说明。
-\end{note}
-
-\subsubsection{四、控制与算法中的量}
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \caption{控制与算法中的符号}
-  \label{tab:sym-control}
-  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.50\textwidth}>{\raggedright\arraybackslash}p{0.29\textwidth}@{}}
-    \toprule
-    符号 & 含义 & 单位 / 备注 \\
-    \midrule
-    $e$              & 缓冲能量外环的误差 $\Ebuf^{\ast}-\Ebuf$ & J \\
-    $u$              & 外环控制器输出，作为功率预算的调整量 & W \\
-    $K_p,\,K_i$      & 外环的比例、积分增益 & W/J，W/(J$\cdot$s) \\
-    $\zeta,\,\omega_n$ & 外环闭环的阻尼比、自然频率 & 无量纲，rad/s \\
-    $k$              & 功率缩放系数 $\Plim/P_{\mathrm{tot}}$ & 无量纲，$0<k<1$ \\
-    $\delta$         & 模型误差：实际功率与指令功率之差 & W \\
-    $N$              & 用于参数辨识的\emph{样本组数} & 可达上万 \\
-    $X,\ \theta,\ y,\ \varepsilon$ & 设计矩阵、参数向量、观测量、残差 & 见 \ref{sec:lsq} 节 \\
-    $S(\theta),\,S_W(\theta)$ & 最小二乘的准则函数、加权准则函数 & W$^{2}$ \\
-    $R^{2}$、RMSE   & 拟合优度、均方根误差 & 无量纲，W \\
-    $w_i$            & 加权最小二乘中第 $i$ 组的权重 & 无量纲 \\
-    $\lambda$        & 递推最小二乘的遗忘因子 & 典型 $0.999\sim0.99999$ \\
-    $\varphi_k,\,K_k,\,P_k$ & 递推最小二乘的回归量、增益向量、协方差矩阵 & 见 \ref{sec:future} 节 \\
-    $\kappa(X)$      & 矩阵 $X$ 的条件数 & 无量纲 \\
-    $\Delta$         & 一元二次方程的判别式 $B^{2}-4AC$ & 见 \ref{sec:inverse} 节 \\
-    $A,\,B,\,C$      & 反解方程 $Ax^{2}+Bx+C=0$ 的三个系数 & $A=k_1$，$B=\CT\omega$ \\
-    $x,\,x_\pm$      & 反解方程中的未知量与两个根 & 未知量就是发送值 $\Icmd$ \\
-    $q$              & 数值稳定求根用的中间量 & 见 \ref{sec:inverse} 节 \\
-    $H$              & 最小二乘的投影矩阵（帽子矩阵） & 见附录~\ref{app:lsq} \\
-    $T_s$            & 控制周期（采样周期），典型 $1\ \mathrm{ms}$ & s；积分增益与它耦合 \\
-    $I_{\max}$       & 采样电路能测到的最大电流 & A；由分流电阻决定 \\
-    $\sigma_\omega^{2}$ & 转速测量的噪声方差 & 出现于误差变量分析 \\
-    $\sigma^{2}$     & 噪声方差（一般情形） & 出现于协方差公式 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\subsubsection{五、数学记号}
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \caption{本文使用的数学记号}
-  \label{tab:sym-math}
-  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.19\textwidth}>{\raggedright\arraybackslash}p{0.73\textwidth}@{}}
-    \toprule
-    记号 & 含义 \\
-    \midrule
-    $\dfrac{\partial f}{\partial x}$ & $f$ 对 $x$ 的\emph{偏导数}：把 $x$ 当自变量，其余所有量都固定不变，看 $f$ 随 $x$ 变化的快慢 \\
-    $\dfrac{\dd f}{\dd t}$ & $f$ 对\emph{时间}的导数（这里 $f$ 只随时间变化，所以用直体 $\dd$ 而不是偏导符号） \\
-    $\sum_i$ & 求和，简写形式；\textbf{求和范围由所在章节决定}，见下方说明 \\
-    $\lvert\cdot\rvert$ & 绝对值 \\
-    $\operatorname{sgn}(x)$ & 符号函数：$x>0$ 取 $+1$，$x<0$ 取 $-1$ \\
-    $(\cdot)^{\mathsf T}$ & 矩阵或向量的转置 \\
-    $\succeq 0$ & 半正定（矩阵） \\
-    $\mathbb{E}[\cdot]$ & 数学期望 \\
-    $(\cdot)^{\ast}$ & 上标星号表示“目标值”或“最优值”，由上下文区分 \\
-    $(\cdot)^{(i)}$ & 上标括号内的编号表示“第 $i$ 组样本”，与下标区分开（见下方说明） \\
-    $\overline{(\cdot)}$ & 平均值，如 $\overline{\omega^{2}}$（正文中亦简写为 $\bar y$） \\
-    $\hat{x}$        & \emph{估计值}：由数据算出来的量，如 $\hat\theta$、$\hat\Pin$、$\hat y_i$ \\
-    $\tilde{x}$      & \emph{无量纲化}之后的量，如 $\tilde\omega=\omega/\omega_{\mathrm{ref}}$ \\
-    $\lVert\cdot\rVert$ & 向量范数（长度），如 $\lVert y-X\theta\rVert^{2}$ 表示残差平方和 \\
-    $\triangleq$     & “定义为”，右边是左边的新记号 \\
-    $\propto$        & 正比于 \\
-    $\leftarrow$     & 赋值：把右边的值写给左边（伪代码中的用法） \\
-    $\dot{x},\ \ddot{x}$ & 对时间的\emph{一阶}、\emph{二阶}导数，即 $\dd x/\dd t$、$\dd^{2}x/\dd t^{2}$ \\
-    $\operatorname{Cov}(\cdot)$ & 协方差矩阵 \\
-    $\perp$          & 正交（内积为零） \\
-    $\le,\ \ge,\ \ne,\ \equiv,\ \gg,\ \pm$ & 小于等于、大于等于、不等于、恒等、远大于、正负 \\
-    $\pi$            & 圆周率 $3.14159\ldots$ \\
-    ${}^{\circ}\mathrm{C}$ & 摄氏度（温度） \\
-    $\approx$ & 约等于；在本文中通常表示“忽略了某类小量”或“数值上接近” \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{remark}[最容易读错的一处：求和范围与下标 $i$ 的两重含义]
-全文的 $\sum_i$ 有\textbf{两种完全不同的范围}，读的时候必须看它在哪一节：
-
-\begin{itemize}
-  \item 在\textbf{第~\ref{sec:lsq} 节（参数辨识）}里，$i$ 是\emph{第 $i$ 组样本}，
-  范围是 $i=1,\dots,N$，而 $N$ 是采集到的数据组数，可达上万。
-  例如 $X^{\mathsf T}X$ 中的 $\sum_i \omega_i^{4}$，含义是
-  “把上万组数据的转速四次方全部加起来”。
-  \item 在\textbf{第~\ref{sec:redistribute} 节（功率再分配）}里，$i$ 是\emph{第 $i$ 台电机}，
-  范围是 $i=1,2,3,4$。
-  例如 $P_{\mathrm{tot}}=\sum_i P_i$，含义是“四台电机的功率相加”。
-\end{itemize}
-
-两种范围混起来会把“四台电机求和”误读成“上万组样本求和”，
-在数量级上会差好几个量级。为避免歧义，第~\ref{sec:lsq} 节在需要时
-把样本编号写成上标形式 $(\cdot)^{(i)}$，而下标留给电机序号；
-但为了让公式紧凑，第~\ref{sec:lsq} 节内部也使用了简写 $\sum_i$，
-此时一律指样本求和。
-\end{remark}
-
-\subsubsection{六、同名不同义的符号}
-
-本文用到的字母有限，而涉及的物理量又多，因此有几个字母不可避免地被\emph{复用过}。
-下表把它们逐一列出。凡是能够通过改名消除歧义的，都已经改掉了；
-剩下无法避免的，读的时候请以“上下文 + 下标”为准。
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \caption{同名但含义不同的符号}
-  \label{tab:sym-clash}
-  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.09\textwidth}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}p{0.29\textwidth}@{}}
-    \toprule
-    符号 & 含义 A & 含义 B & 如何区分 \\
-    \midrule
-    $k$      & 功率缩放系数（第~\ref{sec:redistribute} 节） & 模型系数 $k_1,k_2$ 的词头（第~\ref{sec:model} 节） & 单独出现的 $k$ 是缩放系数；带数字下标的 $k_1,k_2$ 是模型系数 \\[3pt]
-    $B$      & 反解方程 $Ax^{2}+Bx+C=0$ 的一次项系数（第~\ref{sec:inverse} 节） & 磁通密度（第~\ref{sec:loss} 节，铁损公式里） & 与 $A,C$ 一起出现在二次方程里即为系数 \\[3pt]
-    $C$      & 反解方程的常数项（第~\ref{sec:inverse} 节） & 电容组的电容值（Part II） & 后者总带单位 F，且出现在 $E=\frac12CU^{2}$ 里 \\[3pt]
-    $\Delta$ & 一元二次方程的判别式（第~\ref{sec:inverse} 节） & 增量／变化量，如 $\Delta E$（Part II） & 单独一个 $\Delta$ 是判别式；$\Delta$ 后跟物理量是增量 \\[3pt]
-    $P$      & 单台电机的功率 & 四台电机的功率之和 & 带下标 $i$ 或写成 $P_{\mathrm{tot}}$ 即为求和 \\[3pt]
-    $S$      & 最小二乘的准则函数 $S(\theta)$（第~\ref{sec:lsq} 节） & 功率之和（第~\ref{sec:redistribute} 节） & 本节已把后者改记为 $S^{+},S^{-}$ \\[3pt]
-    $N$      & 参数辨识的样本组数（第~\ref{sec:lsq} 节） & 规则手册的扣血系数（第~\ref{sec:bufferloop} 节） & 本节已把后者改记为 $N_{\mathrm{d}}$ \\[3pt]
-    $i$      & 电机序号（全文） & 减速箱减速比（第~\ref{sec:cmd2torque} 节） & 本节已把减速比改记为 $k_g$ \\[3pt]
-    $a$      & 模型的常数项，即控制器静态功耗（第~\ref{sec:model} 节） & 矩阵求导公式中的\emph{任意常向量}（第~\ref{sec:lsq} 节与附录~\ref{app:lsq}） & 出现在 $\partial(a^{\mathsf T}\theta)/\partial\theta$ 里的是占位符 \\[3pt]
-    $A$      & 反解方程 $Ax^{2}+Bx+C=0$ 的二次项系数（第~\ref{sec:inverse} 节） & 矩阵求导公式中的\emph{任意常矩阵}（附录~\ref{app:lsq}） & 出现在 $\theta^{\mathsf T}A\theta$ 里的是占位符 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{remark}
-上表中标注“已改名”的三处（$k_g$、$N_{\mathrm{d}}$、$S^{+}/S^{-}$）
-是在整理本文符号体系时为了消除歧义而做的调整，
-如果你对照的原始资料里用的是旧记号，请注意对应关系。
-\end{remark}
 
 
 % ============================================================================
@@ -915,27 +685,27 @@ $k_1,k_2,a,\CT$ 是电机的模型参数——它们的物理含义、单位与�
   \centering
   \begin{tikzpicture}[>=Stealth, transform shape, scale=0.97]
     \node[fblock, minimum width=24mm] (mcu) at (0,0) {主控\\（STM32）};
-    \node[fsys, minimum width=32mm]  (esc) at (6.0,0) {C620 电调\\（内部电流环）};
-    \node[fblock, minimum width=24mm] (mot) at (12.0,0) {M3508\\电机};
+    \node[fsys, minimum width=32mm]  (esc) at (6.4,0) {C620 电调\\（内部电流环）};
+    \node[fblock, minimum width=24mm] (mot) at (12.6,0) {M3508\\电机};
 
     % 下行
     \draw[farr] (mcu.east) -- (esc.west);
-    \node[flab, text=eblue, anchor=south] at (3.0,0.10)
-      {CAN 报文 \texttt{0x200}（下行）};
-    \node[flab, text=eblue, anchor=north] at (3.0,-0.10)
-      {写入 give\_current};
+    \node[flab, text=eblue, anchor=south] at (3.2,0.10)
+      {\texttt{0x200}（下行）};
+    \node[flab, text=eblue, anchor=north] at (3.2,-0.10)
+      {give\_current};
 
     % 电调到电机
     \draw[farr] (esc.east) -- node[flab, above]{三相线} (mot.west);
 
     % 上行
-    \draw[farr] (esc.south) -- (6.0,-2.3) -- (0,-2.3) -- (mcu.south);
-    \node[flab, text=codegreen, anchor=north] at (3.0,-2.42)
-      {CAN 报文 \texttt{0x201}（上行）：回传 given\_current 与转速 $\omega$};
+    \draw[farr] (esc.south) -- (6.4,-2.3) -- (0,-2.3) -- (mcu.south);
+    \node[flab, text=codegreen, anchor=north] at (3.2,-2.42)
+      {\texttt{0x201}（上行）：回传 given\_current 与转速 $\omega$};
   \end{tikzpicture}
-  \caption{give\_current 与 given\_current 在系统中的位置。前者是主控\emph{发下去}的目标，
-  走下行报文；后者是电调\emph{回上来}的实际值，走上行报文。两者方向相反，
-  一个是“我想要多少”，一个是“它实际做到了多少”。}
+  \caption{give\_current 与 given\_current 在系统中的位置。主控把目标写进 CAN 报文
+  \texttt{0x200} 发下去，电调把内部电流环的实际值通过 \texttt{0x201} 回上来。
+  前者是“我想要多少”，后者是“它实际做到了多少”。}
   \label{fig:givegivenpath}
 \end{figure}
 
@@ -972,37 +742,44 @@ $k_1,k_2,a,\CT$ 是电机的模型参数——它们的物理含义、单位与�
 
 \begin{figure}[htbp]
   \centering
-  \begin{tikzpicture}[x=0.92cm, y=0.0016cm, >=Stealth]
+  \begin{tikzpicture}[x=0.92cm, y=0.14cm, >=Stealth]
+    % 纵轴数值以“千”为单位显示（0.14cm 对应 1 千），避免极小单位造成的数值问题
     % 坐标轴
-    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,-9000) -- (10.3,-9000)
+    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,-19.5) -- (10.4,-19.5)
       node[right, font=\small] {$t$};
-    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,-9500) -- (0,9500)
+    \draw[gray!70, thick, -{Stealth[length=1.8mm]}] (0,-19.5) -- (0,19.5)
       node[above, font=\small] {控制量};
-    \draw[gray!45, dashed] (0,0) -- (10.2,0);
-    \node[flab, anchor=west] at (0.05,600) {$0$};
-    \node[flab, anchor=east] at (-0.1,8000) {$16384$};
-    \node[flab, anchor=east] at (-0.1,-8000) {$-16384$};
+    \draw[gray!45, dashed] (0,0) -- (10.3,0);
+    \node[flab, anchor=west] at (0.05,0.9) {$0$};
+    % 满量程参考线
+    \draw[gray!45, densely dotted] (0,16.384) -- (10.3,16.384);
+    \draw[gray!45, densely dotted] (0,-16.384) -- (10.3,-16.384);
+    \node[flab, anchor=east] at (-0.12,16.384) {$+16384$};
+    \node[flab, anchor=east] at (-0.12,-16.384) {$-16384$};
 
     % give_current：正弦，稍超前
     \draw[eblue, very thick]
-      (0.2,0) (0.6,2400) (1.0,4600) (1.4,6500) (1.8,7900)
-      (2.2,8000) (2.6,7200) (3.0,5500) (3.4,3200) (3.8,600)
-      (4.2,-2200) (4.6,-4600) (5.0,-6400) (5.4,-7900)
-      (5.8,-8000) (6.2,-7100) (6.6,-5400) (7.0,-3100) (7.4,-500)
-      (7.8,2300) (8.2,4700) (8.6,6500) (9.0,7900) (9.4,8000) (9.8,7100);
+      (0.2,0) -- (0.6,4.8) -- (1.0,9.2) -- (1.4,13.0) -- (1.8,15.8)
+      -- (2.2,16.0) -- (2.6,14.4) -- (3.0,11.0) -- (3.4,6.4) -- (3.8,1.2)
+      -- (4.2,-4.4) -- (4.6,-9.2) -- (5.0,-12.8) -- (5.4,-15.8)
+      -- (5.8,-16.0) -- (6.2,-14.2) -- (6.6,-10.8) -- (7.0,-6.2) -- (7.4,-1.0)
+      -- (7.8,4.6) -- (8.2,9.4) -- (8.6,13.0) -- (9.0,15.8) -- (9.4,16.0) -- (9.8,14.2);
     % given_current：滞后一点、幅度略小
     \draw[codegreen, thick, dashed]
-      (0.2,0) (0.6,1500) (1.0,3600) (1.4,5700) (1.8,7400)
-      (2.2,8000) (2.6,7800) (3.0,6300) (3.4,4100) (3.8,1500)
-      (4.2,-1400) (4.6,-3800) (5.0,-5700) (5.4,-7500)
-      (5.8,-8000) (6.2,-7600) (6.6,-6000) (7.0,-3900) (7.4,-1300)
-      (7.8,1500) (8.2,3800) (8.6,5800) (9.0,7400) (9.4,8000) (9.8,7800);
+      (0.2,0) -- (0.6,3.0) -- (1.0,7.2) -- (1.4,11.4) -- (1.8,14.8)
+      -- (2.2,16.0) -- (2.6,15.6) -- (3.0,12.6) -- (3.4,8.2) -- (3.8,3.0)
+      -- (4.2,-2.8) -- (4.6,-7.6) -- (5.0,-11.4) -- (5.4,-15.0)
+      -- (5.8,-16.0) -- (6.2,-15.2) -- (6.6,-12.0) -- (7.0,-7.8) -- (7.4,-2.6)
+      -- (7.8,3.0) -- (8.2,7.6) -- (8.6,11.6) -- (9.0,14.8) -- (9.4,16.0) -- (9.8,15.6);
 
     % 图例
-    \node[flab, text=eblue, anchor=west] at (5.1,6200) {give\_current（发送值）};
-    \node[flab, text=codegreen, anchor=west] at (5.1,4000) {given\_current（回馈值）};
+    \node[flab, text=eblue, anchor=west] at (0.35,-11.0) {give\_current（发送值）};
+    \node[flab, text=codegreen, anchor=west] at (0.35,-14.2) {given\_current（回馈值）};
+    % 滞后标注
+    \draw[gray!60, -{Stealth[length=1.4mm]}] (2.30,16.8) -- (2.65,16.8);
+    \node[flab, anchor=south] at (2.5,17.0) {回馈滞后};
   \end{tikzpicture}
-  \caption{一组正弦力矩指令下的发送值与回馈值（示意）。
+  \caption{一组正弦力矩指令下的发送值与回馈值（示意，两条曲线都画到满量程附近）。
   回馈值比发送值略微\emph{滞后}、幅度也略小，这正是电流环有限带宽的表现；
   两条曲线总体贴合，说明模型“以发送值近似实际力矩电流”的假设成立。}
   \label{fig:givegivenwave}
@@ -3418,9 +3195,272 @@ cap_measure.cap_percent;      /* 上行：电容剩余电量百分比 */
 投影的版本给出了“为什么残差正交”（几何直观）。
 
 % ============================================================================
-\appsection{单位与换算系数}
+\appsection{符号、单位与换算}\label{app:units}
 
-模型推导中涉及多次单位换算是出错的常见来源。下表把它们集中列出。
+本附录是全文的\emph{查阅用}索引：正文里每个符号在第一次出现时都已就地解释，
+这里把它们按类别汇总成表，并给出单位与出处，方便回头核对。
+最后一节集中列出容易出错的单位换算关系。
+
+\subsection{正方向约定}
+
+
+
+整篇推导\textbf{不使用绝对值}，所有量都带符号参与运算。
+这一点看似琐碎，却是理解第~\ref{sec:inverse} 节“两个根”问题的前提。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{正方向约定}
+  \label{tab:sign}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.79\textwidth}@{}}
+    \toprule
+    量 & 约定 \\
+    \midrule
+    力矩 $\tau$   & 顺时针方向为正，逆时针方向为负 \\
+    转速 $\omega$ & 顺时针方向为正，逆时针方向为负 \\
+    功率 $\Pin$   & \textbf{消耗功率为正，向母线回馈功率为负} \\
+    能量 $\Ebuf$  & 单调，无方向；只关心它变大还是变小 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{remark}[为什么强调“回馈为负”]
+当一个电机的力矩方向与转速方向\emph{相反}时（减速工况），它其实是在发电，
+把机械能送回母线，此时 $\Pin<0$。这一条在第~\ref{sec:redistribute} 节
+讨论多电机功率再分配时起决定性作用：负的功率项会把其他电机的预算“腾”出来。
+任何在建模阶段取绝对值的做法都会永久性地丢掉这部分信息。
+\end{remark}
+
+\subsection{电机与电调相关的量}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{电机与电调相关的符号}
+  \label{tab:sym-motor}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.11\textwidth}>{\raggedright\arraybackslash}p{0.40\textwidth}>{\raggedright\arraybackslash}p{0.15\textwidth}>{\raggedright\arraybackslash}p{0.26\textwidth}@{}}
+    \toprule
+    符号 & 含义 & 单位 / 取值 & 说明 \\
+    \midrule
+    $\tau$        & 电机\emph{转子}输出力矩 & N$\cdot$m & 不是减速箱输出轴的力矩 \\
+    $\omega$      & 电机\emph{转子}转速 & rpm & C620 回传值 \\
+    $\Omega$      & 机械角速度 & rad/s & $\Omega=2\pi\omega/60$ \\
+    $\Icmd$       & 力矩电流控制值，即\emph{发送值} & 无量纲 & 范围 $[-16384,\,16384]$ \\
+    $\Itau$       & \emph{力矩电流}，电调按指令输出的电流 & A & $\Itau=\frac{20}{16384}\Icmd$ \\
+    $i_q,\,i_d$   & 磁场定向控制下的 $q$ 轴、$d$ 轴电流 & A & $i_q$ 与转矩成正比；$i_d$ 控制为 $0$ \\
+    $T_e$         & 电磁转矩 & N$\cdot$m & $T_e=\KT i_q$ \\
+    $\KT$         & \emph{转子侧}力矩常数 & N$\cdot$m/A & $=0.015622$ \\
+    $K_T^{\mathrm{out}}$ & 手册给出的\emph{输出轴}转矩常数 & N$\cdot$m/A & $=0.3$（在减速箱另一侧） \\
+    $k_g$         & 减速箱减速比 & — & $=3591/187\approx19.203$ \\
+    $\eta$        & 齿轮传动效率 & — & 工程上并入拟合参数处理 \\
+    $R_s$         & 单相绕组电阻 & $\Omega$ & 出现在铜损里 \\
+    $p$           & 电机极对数 & — & 出现在转矩公式里 \\
+    $\psi_f$      & 永磁体磁链（峰值约定） & Wb & 出现在转矩公式里 \\
+    $U_{\mathrm{bus}}$ & 母线电压 & V & 第~\ref{sec:model} 节的模型未含它 \\
+    $i$           & \textbf{电机序号} & — & 取 $1,2,3,4$；与减速比 $k_g$ 不是一回事 \\
+    $R_{\mathrm{shunt}}$ & 电流采样用的分流电阻 & $\Omega$ & 它决定采样量程，见第 9 节 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{功率、能量与模型参数}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{功率、能量与模型参数的符号}
+  \label{tab:sym-power}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.15\textwidth}>{\raggedright\arraybackslash}p{0.44\textwidth}>{\raggedright\arraybackslash}p{0.12\textwidth}>{\raggedright\arraybackslash}p{0.21\textwidth}@{}}
+    \toprule
+    符号 & 含义 & 单位 & 出现位置 \\
+    \midrule
+    $\Pin$            & \emph{单台}电机的输入功率 & W & 全文 \\
+    $\Pin^{\mathrm{req}}$ & \textbf{底盘需求功率}：四台电机\emph{想要}消耗的功率之和（意图量，非实测值） & W & \ref{sec:system} 节前 \\
+    $\Pmech$          & 机械功率 $\tau\omega/9.55$ & W & \ref{sec:model} 节 \\
+    $P_{\mathrm{loss}}(\tau,\omega)$ & \textbf{除机械功率以外的全部损耗}，见下方说明 & W & \ref{sec:model} 节 \\
+    $P_{\mathrm{cu}},P_{\mathrm{fe}},P_{\mathrm{ctrl}}$ & 铜损、铁损与阻尼损耗、控制器静态功耗 & W & \ref{sec:loss} 节 \\
+    $P_0(\omega)$     & 空载损耗：$\Icmd=0$ 时的输入功率 & W & \ref{sec:inverse} 节 \\
+    $P_{\min}(\omega)$& 该转速下能达到的\emph{最小}输入功率 & W & \ref{sec:inverse} 节 \\
+    $\Pmax$           & 裁判系统给出的底盘功率上限 & W & 全文 \\
+    $\Plim$           & \emph{本周期的功率预算}，由外环给出 & W & \ref{sec:bufferloop} 节 \\
+    $P_{\mathrm{tot}}$& 四台电机预测功率之和 & W & \ref{sec:redistribute} 节 \\
+    $P^{\ast}$        & \emph{目标}功率（希望电机消耗多少） & W & \ref{sec:inverse} 节 \\
+    $P_i,\ P_i^{\ast}$& 第 $i$ 台电机的预测功率、目标功率 & W & \ref{sec:redistribute} 节 \\
+    $\Ebuf$           & 缓冲能量 & J & 全文 \\
+    $E_{\max}$        & 缓冲能量上限（常见 $60$） & J & \ref{sec:bufferloop} 节 \\
+    $\Ebuf^{\ast}$    & 缓冲能量的设定值（常见 $30$） & J & \ref{sec:bufferloop} 节 \\
+    $k_1$             & $\Icmd^{2}$ 的系数（铜损） & W & \ref{sec:model} 节 \\
+    $k_2$             & $\omega^{2}$ 的系数（铁损与阻尼） & W/rpm$^{2}$ & \ref{sec:model} 节 \\
+    $a$               & 常数项（控制器静态功耗） & W & \ref{sec:model} 节 \\
+    $\CT$             & 力矩电流系数 & W/rpm & \ref{sec:model} 节 \\
+    $R_{\mathrm{eff}}$ & 等效相电阻，由 $k_1$ 反解得到 & $\Omega$ & \ref{sec:loss} 节 \\
+    $L$               & 绕组电感 & H & \ref{sec:model} 节（未建模的量） \\
+    $b$               & 轴承与齿轮箱的粘滞摩擦系数 & N$\cdot$m$\cdot$s/rad & \ref{sec:loss} 节 \\
+    $f$               & 电流与磁场的交变频率 & Hz & \ref{sec:loss} 节（铁损） \\
+    $B$               & 磁通密度；\textbf{与第 \ref{sec:inverse} 节的系数 $B$ 同名不同义} & T & \ref{sec:loss} 节（铁损） \\
+    $n$               & 磁滞损耗的经验指数 & — & \ref{sec:loss} 节（约 $1.6\sim2.2$） \\
+    \midrule
+    $P_r$             & 规则手册中的\emph{底盘瞬时功率}（官方记号） & W & \ref{sec:bufferloop} 节 \\
+    $P_l$             & 规则手册中的\emph{功率上限}（官方记号） & W & \ref{sec:bufferloop} 节 \\
+    $Z$               & 规则手册中\emph{缓冲能量}的记号，即本文的 $\Ebuf$ & J & \ref{sec:bufferloop} 节 \\
+    $K$               & 超功率比例 $(P_r-P_l)/P_l$（官方记号） & — & \ref{sec:bufferloop} 节 \\
+    $N_{\mathrm{d}}$  & 扣血系数；官方记作 $N$，本文改名以免与样本数混淆 & — & \ref{sec:bufferloop} 节 \\
+    $S^{+},\,S^{-}$   & 正向消耗、回馈制动的电机功率之和 & W & \ref{sec:redistribute} 节 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{note}[$P_{\mathrm{loss}}(\tau,\omega)$ 到底是什么]
+它不是一个\emph{测出来的数}，而是一个\emph{统称}：
+把电机输入功率里\emph{除机械功率之外的全部部分}归在一起。于是恒有
+\begin{equation}\label{eq:plossdef}
+  \Pin = \Pmech + P_{\mathrm{loss}}(\tau,\omega).
+\end{equation}
+之所以把它写成 $(\tau,\omega)$ 的函数，是想强调它\emph{同时}依赖力矩与转速，
+而且两个自变量的依赖方式完全不同：铜损主要随力矩（电流）平方变化，
+铁损与轴承齿轮阻尼主要随转速变化，控制器静态功耗则与两者都无关。
+第~\ref{sec:loss} 节会把这三部分逐项拆开，并说明它们在模型里分别对应哪一项。
+
+另外注意：$\Pin$、$\Pmech$、$P_{\mathrm{loss}}$ 都是\textbf{同一台电机}的量。
+全文凡是在单个电机的语境下讨论功率，都按此理解；
+需要表示四台电机之和时会明确写成 $\sum_i P_i$ 并说明。
+\end{note}
+
+\subsection{控制与算法中的量}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{控制与算法中的符号}
+  \label{tab:sym-control}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.50\textwidth}>{\raggedright\arraybackslash}p{0.29\textwidth}@{}}
+    \toprule
+    符号 & 含义 & 单位 / 备注 \\
+    \midrule
+    $e$              & 缓冲能量外环的误差 $\Ebuf^{\ast}-\Ebuf$ & J \\
+    $u$              & 外环控制器输出，作为功率预算的调整量 & W \\
+    $K_p,\,K_i$      & 外环的比例、积分增益 & W/J，W/(J$\cdot$s) \\
+    $\zeta,\,\omega_n$ & 外环闭环的阻尼比、自然频率 & 无量纲，rad/s \\
+    $k$              & 功率缩放系数 $\Plim/P_{\mathrm{tot}}$ & 无量纲，$0<k<1$ \\
+    $\delta$         & 模型误差：实际功率与指令功率之差 & W \\
+    $N$              & 用于参数辨识的\emph{样本组数} & 可达上万 \\
+    $X,\ \theta,\ y,\ \varepsilon$ & 设计矩阵、参数向量、观测量、残差 & 见 \ref{sec:lsq} 节 \\
+    $S(\theta),\,S_W(\theta)$ & 最小二乘的准则函数、加权准则函数 & W$^{2}$ \\
+    $R^{2}$、RMSE   & 拟合优度、均方根误差 & 无量纲，W \\
+    $w_i$            & 加权最小二乘中第 $i$ 组的权重 & 无量纲 \\
+    $\lambda$        & 递推最小二乘的遗忘因子 & 典型 $0.999\sim0.99999$ \\
+    $\varphi_k,\,K_k,\,P_k$ & 递推最小二乘的回归量、增益向量、协方差矩阵 & 见 \ref{sec:future} 节 \\
+    $\kappa(X)$      & 矩阵 $X$ 的条件数 & 无量纲 \\
+    $\Delta$         & 一元二次方程的判别式 $B^{2}-4AC$ & 见 \ref{sec:inverse} 节 \\
+    $A,\,B,\,C$      & 反解方程 $Ax^{2}+Bx+C=0$ 的三个系数 & $A=k_1$，$B=\CT\omega$ \\
+    $x,\,x_\pm$      & 反解方程中的未知量与两个根 & 未知量就是发送值 $\Icmd$ \\
+    $q$              & 数值稳定求根用的中间量 & 见 \ref{sec:inverse} 节 \\
+    $H$              & 最小二乘的投影矩阵（帽子矩阵） & 见附录~\ref{app:lsq} \\
+    $T_s$            & 控制周期（采样周期），典型 $1\ \mathrm{ms}$ & s；积分增益与它耦合 \\
+    $I_{\max}$       & 采样电路能测到的最大电流 & A；由分流电阻决定 \\
+    $\sigma_\omega^{2}$ & 转速测量的噪声方差 & 出现于误差变量分析 \\
+    $\sigma^{2}$     & 噪声方差（一般情形） & 出现于协方差公式 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{数学记号}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{本文使用的数学记号}
+  \label{tab:sym-math}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.19\textwidth}>{\raggedright\arraybackslash}p{0.73\textwidth}@{}}
+    \toprule
+    记号 & 含义 \\
+    \midrule
+    $\dfrac{\partial f}{\partial x}$ & $f$ 对 $x$ 的\emph{偏导数}：把 $x$ 当自变量，其余所有量都固定不变，看 $f$ 随 $x$ 变化的快慢 \\
+    $\dfrac{\dd f}{\dd t}$ & $f$ 对\emph{时间}的导数（这里 $f$ 只随时间变化，所以用直体 $\dd$ 而不是偏导符号） \\
+    $\sum_i$ & 求和，简写形式；\textbf{求和范围由所在章节决定}，见下方说明 \\
+    $\lvert\cdot\rvert$ & 绝对值 \\
+    $\operatorname{sgn}(x)$ & 符号函数：$x>0$ 取 $+1$，$x<0$ 取 $-1$ \\
+    $(\cdot)^{\mathsf T}$ & 矩阵或向量的转置 \\
+    $\succeq 0$ & 半正定（矩阵） \\
+    $\mathbb{E}[\cdot]$ & 数学期望 \\
+    $(\cdot)^{\ast}$ & 上标星号表示“目标值”或“最优值”，由上下文区分 \\
+    $(\cdot)^{(i)}$ & 上标括号内的编号表示“第 $i$ 组样本”，与下标区分开（见下方说明） \\
+    $\overline{(\cdot)}$ & 平均值，如 $\overline{\omega^{2}}$（正文中亦简写为 $\bar y$） \\
+    $\hat{x}$        & \emph{估计值}：由数据算出来的量，如 $\hat\theta$、$\hat\Pin$、$\hat y_i$ \\
+    $\tilde{x}$      & \emph{无量纲化}之后的量，如 $\tilde\omega=\omega/\omega_{\mathrm{ref}}$ \\
+    $\lVert\cdot\rVert$ & 向量范数（长度），如 $\lVert y-X\theta\rVert^{2}$ 表示残差平方和 \\
+    $\triangleq$     & “定义为”，右边是左边的新记号 \\
+    $\propto$        & 正比于 \\
+    $\leftarrow$     & 赋值：把右边的值写给左边（伪代码中的用法） \\
+    $\dot{x},\ \ddot{x}$ & 对时间的\emph{一阶}、\emph{二阶}导数，即 $\dd x/\dd t$、$\dd^{2}x/\dd t^{2}$ \\
+    $\operatorname{Cov}(\cdot)$ & 协方差矩阵 \\
+    $\perp$          & 正交（内积为零） \\
+    $\le,\ \ge,\ \ne,\ \equiv,\ \gg,\ \pm$ & 小于等于、大于等于、不等于、恒等、远大于、正负 \\
+    $\pi$            & 圆周率 $3.14159\ldots$ \\
+    ${}^{\circ}\mathrm{C}$ & 摄氏度（温度） \\
+    $\approx$ & 约等于；在本文中通常表示“忽略了某类小量”或“数值上接近” \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{remark}[最容易读错的一处：求和范围与下标 $i$ 的两重含义]
+全文的 $\sum_i$ 有\textbf{两种完全不同的范围}，读的时候必须看它在哪一节：
+
+\begin{itemize}
+  \item 在\textbf{第~\ref{sec:lsq} 节（参数辨识）}里，$i$ 是\emph{第 $i$ 组样本}，
+  范围是 $i=1,\dots,N$，而 $N$ 是采集到的数据组数，可达上万。
+  例如 $X^{\mathsf T}X$ 中的 $\sum_i \omega_i^{4}$，含义是
+  “把上万组数据的转速四次方全部加起来”。
+  \item 在\textbf{第~\ref{sec:redistribute} 节（功率再分配）}里，$i$ 是\emph{第 $i$ 台电机}，
+  范围是 $i=1,2,3,4$。
+  例如 $P_{\mathrm{tot}}=\sum_i P_i$，含义是“四台电机的功率相加”。
+\end{itemize}
+
+两种范围混起来会把“四台电机求和”误读成“上万组样本求和”，
+在数量级上会差好几个量级。为避免歧义，第~\ref{sec:lsq} 节在需要时
+把样本编号写成上标形式 $(\cdot)^{(i)}$，而下标留给电机序号；
+但为了让公式紧凑，第~\ref{sec:lsq} 节内部也使用了简写 $\sum_i$，
+此时一律指样本求和。
+\end{remark}
+
+\subsection{同名不同义的符号}
+
+本文用到的字母有限，而涉及的物理量又多，因此有几个字母不可避免地被\emph{复用过}。
+下表把它们逐一列出。凡是能够通过改名消除歧义的，都已经改掉了；
+剩下无法避免的，读的时候请以“上下文 + 下标”为准。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{同名但含义不同的符号}
+  \label{tab:sym-clash}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.09\textwidth}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}p{0.27\textwidth}>{\raggedright\arraybackslash}p{0.29\textwidth}@{}}
+    \toprule
+    符号 & 含义 A & 含义 B & 如何区分 \\
+    \midrule
+    $k$      & 功率缩放系数（第~\ref{sec:redistribute} 节） & 模型系数 $k_1,k_2$ 的词头（第~\ref{sec:model} 节） & 单独出现的 $k$ 是缩放系数；带数字下标的 $k_1,k_2$ 是模型系数 \\[3pt]
+    $B$      & 反解方程 $Ax^{2}+Bx+C=0$ 的一次项系数（第~\ref{sec:inverse} 节） & 磁通密度（第~\ref{sec:loss} 节，铁损公式里） & 与 $A,C$ 一起出现在二次方程里即为系数 \\[3pt]
+    $C$      & 反解方程的常数项（第~\ref{sec:inverse} 节） & 电容组的电容值（Part II） & 后者总带单位 F，且出现在 $E=\frac12CU^{2}$ 里 \\[3pt]
+    $\Delta$ & 一元二次方程的判别式（第~\ref{sec:inverse} 节） & 增量／变化量，如 $\Delta E$（Part II） & 单独一个 $\Delta$ 是判别式；$\Delta$ 后跟物理量是增量 \\[3pt]
+    $P$      & 单台电机的功率 & 四台电机的功率之和 & 带下标 $i$ 或写成 $P_{\mathrm{tot}}$ 即为求和 \\[3pt]
+    $S$      & 最小二乘的准则函数 $S(\theta)$（第~\ref{sec:lsq} 节） & 功率之和（第~\ref{sec:redistribute} 节） & 本节已把后者改记为 $S^{+},S^{-}$ \\[3pt]
+    $N$      & 参数辨识的样本组数（第~\ref{sec:lsq} 节） & 规则手册的扣血系数（第~\ref{sec:bufferloop} 节） & 本节已把后者改记为 $N_{\mathrm{d}}$ \\[3pt]
+    $i$      & 电机序号（全文） & 减速箱减速比（第~\ref{sec:cmd2torque} 节） & 本节已把减速比改记为 $k_g$ \\[3pt]
+    $a$      & 模型的常数项，即控制器静态功耗（第~\ref{sec:model} 节） & 矩阵求导公式中的\emph{任意常向量}（第~\ref{sec:lsq} 节与附录~\ref{app:lsq}） & 出现在 $\partial(a^{\mathsf T}\theta)/\partial\theta$ 里的是占位符 \\[3pt]
+    $A$      & 反解方程 $Ax^{2}+Bx+C=0$ 的二次项系数（第~\ref{sec:inverse} 节） & 矩阵求导公式中的\emph{任意常矩阵}（附录~\ref{app:lsq}） & 出现在 $\theta^{\mathsf T}A\theta$ 里的是占位符 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{remark}
+上表中标注“已改名”的三处（$k_g$、$N_{\mathrm{d}}$、$S^{+}/S^{-}$）
+是在整理本文符号体系时为了消除歧义而做的调整，
+如果你对照的原始资料里用的是旧记号，请注意对应关系。
+\end{remark}
+
+
+\subsection{关键单位换算}
 
 \begin{table}[htbp]
   \centering
