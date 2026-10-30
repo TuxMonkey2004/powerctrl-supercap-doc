@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>功率控制与超级电容 · 硬件组新人培训</title>
+<link rel="stylesheet" href="css/deck.css">
+</head>
+<body>
+
+<!-- ============ 全局 SVG 箭头标记 ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#47566a"/></marker><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#47566a"/></marker><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#47566a"/></marker><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#47566a"/></marker><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#47566a"/></marker><marker id="a8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#47566a"/></marker><marker id="a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#47566a"/></marker><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="a10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0d9488"/></marker></defs></svg>
+
+<!-- ============ 顶部进度条 ============ -->
+<div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+
+<!-- ============ 舞台 ============ -->
+<div class="stage" id="stage">
+  <div class="deck" id="deck"><!-- slides injected --></div>
+</div>
+
+<!-- ============ 底部控件 ============ -->
+<div class="hud" id="hud">
+  <button class="hud-btn" id="btnPrev" title="上一页 (←)" aria-label="上一页">
+    <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
+
+  <div class="hud-center">
+    <button class="hud-chip" id="btnOverview" title="快速导航 (G)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span id="pageLabel">1 / 1</span>
+    </button>
+    <div class="hud-part" id="partLabel">开场</div>
+  </div>
+
+  <button class="hud-btn" id="btnNext" title="下一页 (→)" aria-label="下一页">
+    <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+  </button>
+</div>
+
+<!-- ============ 快速导航浮层 ============ -->
+<div class="overlay" id="overlay" hidden>
+  <div class="overlay-head">
+    <h2>快速导航</h2>
+    <div class="overlay-filters" id="overlayFilters"></div>
+    <button class="hud-btn" id="btnCloseOverview" aria-label="关闭">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="overlay-grid" id="overlayGrid"></div>
+</div>
+
+<!-- ============ 键盘提示（首次出现，几秒后淡出） ============ -->
+<div class="hint" id="hint">
+  <kbd>←</kbd><kbd>→</kbd> 翻页 &nbsp;·&nbsp; <kbd>G</kbd> 快速导航 &nbsp;·&nbsp; <kbd>F</kbd> 全屏
+</div>
+
+<script src="js/slides.js"></script>
+<script src="js/deck.js"></script>
+</body>
+</html>
