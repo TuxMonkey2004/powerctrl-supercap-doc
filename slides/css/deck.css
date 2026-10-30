@@ -527,3 +527,23 @@ kbd {
 /* 让 .divider 的 h2 / p 居中而不受 slide-head 影响 */
 .slide.divider .slide-body { align-items: center; justify-content: center; }
 .slide.cover .slide-body { display: flex; align-items: center; justify-content: center; }
+
+/* ---------------- 版面收尾 ----------------
+   某些页某一列里只有一张卡，卡片会按内容高度收得很短，
+   整页下半截就空出来了。让"独子卡片"撑满列高即可。 */
+.slide-body > .row > .col > .card:only-child { flex: 1 1 auto; }
+.slide-body > .row > .card:only-child { flex: 1 1 auto; }
+
+/* 表格在窄列里允许换行更紧凑 */
+.card table.tb { word-break: break-word; }
+
+
+/* 内容不满一页时整体垂直居中，避免整页下半截空白 */
+.slide-body > .row:only-child { margin-top: auto; margin-bottom: auto; }
+.slide-body > .card:only-child { margin-top: auto; margin-bottom: auto; }
+
+
+/* 列里的卡片在竖直方向居中分布：
+   .row 通常带 grow 已撑满整页，但卡片不会自动变高，
+   结果全挤在顶部、下半页空白。让卡片组在列内居中即可。 */
+.slide-body .row > .col { justify-content: center; }
