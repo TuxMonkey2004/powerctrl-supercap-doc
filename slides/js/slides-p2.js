@@ -23,7 +23,7 @@ window.SLIDES = (window.SLIDES || []).concat([
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>规则的约束是<em>平均</em>，不是<em>瞬时</em></div>
         <p style="font-size:17px">功率上限约束的是<b>电池侧</b>取用功率。而底盘在起步、猛打方向时需要远超平均值的功率。</p>
-        <div class="formula p2" style="margin-top:10px">P_chassis = P_motor − P_discharge</div>
+        <div class="formula p2">$$ P_{\\mathrm{chassis}} = P_{\\mathrm{motor}} - P_{\\mathrm{discharge}} $$</div>
         <p class="explain" style="margin-top:8px">只要爆发时让 <span class="var">P_discharge</span> 顶上一部分，
           电池侧就永远不会超限——<b>这就是超电的全部价值</b>。</p>
       </div>
@@ -38,16 +38,16 @@ window.SLIDES = (window.SLIDES || []).concat([
         <path class="axis" d="M46,250 H500"/><path class="axis" d="M46,30 V250"/>
         <text class="lbl-sm" x="40" y="36" text-anchor="end">P</text>
         <path d="M60,240 C110,236 130,80 180,76 C230,72 250,230 300,234 C350,238 370,90 420,86 C470,82 480,236 500,240"
-              fill="none" stroke="#ea7317" stroke-width="3.2"/>
-        <line x1="46" y1="150" x2="500" y2="150" stroke="#dc2626" stroke-width="2.4" stroke-dasharray="8 5"/>
-        <text class="lbl-sm" x="496" y="142" text-anchor="end" fill="#dc2626">P_max</text>
+              fill="none" stroke="#f0b45e" stroke-width="3.2"/>
+        <line x1="46" y1="150" x2="500" y2="150" stroke="#e8888a" stroke-width="2.4" stroke-dasharray="8 5"/>
+        <text class="lbl-sm" x="496" y="142" text-anchor="end" fill="#e8888a">P_max</text>
         <path d="M60,200 H160 C200,160 220,150 260,150 H330 C350,150 370,170 400,150 H500"
-              fill="none" stroke="#0d9488" stroke-width="3.2"/>
+              fill="none" stroke="#69c8e0" stroke-width="3.2"/>
         <path d="M140,110 C170,84 200,86 215,150 L215,150 C200,90 170,100 140,150 Z" fill="rgba(13,148,136,.18)"/>
-        <text x="128" y="72" class="lbl-sm" fill="#ea7317">电机实际需求</text>
-        <text x="330" y="142" class="lbl-sm" fill="#dc2626">电池侧上限</text>
-        <text x="330" y="182" class="lbl-sm" fill="#0d9488">电池侧实际（被削平）</text>
-        <text x="150" y="212" class="lbl-sm" fill="#0d9488" font-size="12">超电补这里</text>
+        <text x="128" y="72" class="lbl-sm" fill="#f0b45e">电机实际需求</text>
+        <text x="330" y="142" class="lbl-sm" fill="#e8888a">电池侧上限</text>
+        <text x="330" y="182" class="lbl-sm" fill="#69c8e0">电池侧实际（被削平）</text>
+        <text x="150" y="212" class="lbl-sm" fill="#69c8e0" font-size="12">超电补这里</text>
       </svg>
       <div class="okbox" style="margin-top:10px">电容负责<b>削峰填谷</b>：爆发时放电顶住，平稳时充电补回。
         规则允许的能量上限约 <b>2000 J</b>。</div>
@@ -91,7 +91,7 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="col" style="flex:1">
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>电容储能</div>
-        <div class="formula p2" style="font-size:26px">E = ½ C U²</div>
+        <div class="formula p2">$$ E = \\tfrac{1}{2}\\,C\\,U^{2} $$</div>
         <p class="explain" style="margin-top:10px">式中 <span class="var">E</span> 为储能（J）；
           <span class="var">C</span> 为电容（F）；<span class="var">U</span> 为两端电压（V）。</p>
         <div class="note" style="margin-top:12px"><b>注意：</b>这里的 C 与 Part I 里"力矩电流系数"的 C
@@ -99,7 +99,7 @@ window.SLIDES = (window.SLIDES || []).concat([
       </div>
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>可用能量的比例</div>
-        <div class="formula p2" style="font-size:18px">E_usable / E_max = 1 − (U_min/U_max)²</div>
+        <div class="formula p2">$$ \\frac{E_{\\mathrm{usable}}}{E_{\\max}} = 1 - \\left(\\frac{U_{\\min}}{U_{\\max}}\\right)^{2} $$</div>
         <p class="explain">放电到<b>一半电压</b>时，放出的能量是 <b>3/4</b>——
           <b>一半的电压窗口里藏着四分之三的能量</b>。</p>
       </div>
@@ -110,12 +110,12 @@ window.SLIDES = (window.SLIDES || []).concat([
           <path class="axis" d="M56,220 H450"/><path class="axis" d="M56,30 V220"/>
           <text class="lbl-sm" x="50" y="36" text-anchor="end">E</text>
           <text class="lbl-sm" x="440" y="244" text-anchor="end">U</text>
-          <path d="M56,220 Q240,220 420,50" fill="none" stroke="#0d9488" stroke-width="3.6"/>
-          <line x1="238" y1="220" x2="238" y2="152" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 5"/>
-          <line x1="56" y1="152" x2="238" y2="152" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 5"/>
-          <circle cx="238" cy="152" r="6" fill="#dc2626"/>
-          <text x="248" y="148" class="lbl-sm" fill="#dc2626">U_max/2 → 还剩 3/4 能量</text>
-          <text x="96" y="78" class="lbl-sm" fill="#0d9488">E ∝ U²</text>
+          <path d="M56,220 Q240,220 420,50" fill="none" stroke="#69c8e0" stroke-width="3.6"/>
+          <line x1="238" y1="220" x2="238" y2="152" stroke="#55614f" stroke-width="2" stroke-dasharray="6 5"/>
+          <line x1="56" y1="152" x2="238" y2="152" stroke="#55614f" stroke-width="2" stroke-dasharray="6 5"/>
+          <circle cx="238" cy="152" r="6" fill="#e8888a"/>
+          <text x="248" y="148" class="lbl-sm" fill="#e8888a">U_max/2 → 还剩 3/4 能量</text>
+          <text x="96" y="78" class="lbl-sm" fill="#69c8e0">E ∝ U²</text>
         </svg>
       </div>
       <div class="warnbox">如果把放电下限设得太高（怕欠压），可用能量会大幅缩水。
@@ -132,17 +132,17 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="row">
       <div class="card p2 grow">
         <div class="card-title"><span class="dot"></span>Buck（降压）</div>
-        <div class="formula p2" style="font-size:18px">U_out = D · U_in</div>
+        <div class="formula p2">$$ U_{\\mathrm{out}} = D\\,U_{\\mathrm{in}} $$</div>
         <p class="explain" style="font-size:15px">输出永远 ≤ 输入。开关管导通时储能，关断时续流管释放。</p>
       </div>
       <div class="card p2 grow">
         <div class="card-title"><span class="dot"></span>Boost（升压）</div>
-        <div class="formula p2" style="font-size:18px">U_out = U_in / (1 − D)</div>
+        <div class="formula p2">$$ U_{\\mathrm{out}} = \\frac{U_{\\mathrm{in}}}{1 - D} $$</div>
         <p class="explain" style="font-size:15px">输出永远 ≥ 输入。开关管导通时把电感短路储能，关断时电感叠加上电源输出。</p>
       </div>
       <div class="card p2 grow">
         <div class="card-title"><span class="dot"></span>Buck-Boost（升降压）</div>
-        <div class="formula p2" style="font-size:18px">U_out = −D·U_in / (1−D)</div>
+        <div class="formula p2">$$ U_{\\mathrm{out}} = -\\frac{D\\,U_{\\mathrm{in}}}{1 - D} $$</div>
         <p class="explain" style="font-size:15px">输出可高可低，但<b>极性反相</b>——这是它不方便的地方。</p>
       </div>
     </div>
@@ -234,17 +234,15 @@ window.SLIDES = (window.SLIDES || []).concat([
       </div>
       <div class="card p2 grow">
         <div class="card-title"><span class="dot"></span><span data-mname>Buck 降压</span></div>
-        <div class="formula p2" style="font-size:16px;margin-bottom:10px">
-          判据：<span data-mcond>U₂ &lt; U₁</span>
-        </div>
+        <div class="formula p2">$$ \\text{判据：}\\;\\; U_2 < U_1 $$</div>
         <p data-mdesc style="font-size:17px">右半桥被 S₃ 短路成导线，S₁/S₂ 互补 PWM</p>
       </div>
       <div class="card flat tight">
         <div class="legend">
-          <span><i style="background:#dcfce7;border:1.6px solid #16a34a"></i>常通</span>
-          <span><i style="background:#f1f5f9;border:1.6px solid #94a3b8"></i>常断</span>
-          <span><i style="background:#dbeafe;border:1.6px solid #3b82f6"></i>PWM 开关</span>
-          <span><i style="background:#ea7317"></i>电流路径</span>
+          <span><i style="background:#1e3a1f;border:1.6px solid #7ee787"></i>常通</span>
+          <span><i style="background:#1c231c;border:1.6px solid #55614f"></i>常断</span>
+          <span><i style="background:#14293a;border:1.6px solid #69c8e0"></i>PWM 开关</span>
+          <span><i style="background:#f0b45e"></i>电流路径</span>
         </div>
       </div>
     </div>
@@ -263,9 +261,7 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="col" style="flex:1.05">
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>纹波公式</div>
-        <div class="formula p2" style="white-space:normal;font-size:18px">
-          ΔI_L = U₂ · D · (1−D) / ( L · f_sw )
-        </div>
+        <div class="formula p2">$$ \\Delta I_L = \\frac{U_2\\,D\\,(1-D)}{L\\,f_{\\mathrm{sw}}} $$</div>
         <p class="explain">式中 <span class="var">ΔI_L</span> 为峰峰值（A）；
           <span class="var">U₂</span> 为两侧电压较高者（V）；<span class="var">D</span> 为占空比；
           <span class="var">L</span> 为电感量（H）；<span class="var">f_sw</span> 为开关频率（Hz）。</p>
@@ -274,7 +270,7 @@ window.SLIDES = (window.SLIDES || []).concat([
       </div>
       <div class="card p2 grow">
         <div class="card-title"><span class="dot"></span>解出所需最小电感</div>
-        <div class="formula p2" style="font-size:18px">L_min = U₂ / ( 4 · ΔI_L · f_sw )</div>
+        <div class="formula p2">$$ L_{\\min} = \\frac{U_2}{4\\,\\Delta I_L\\,f_{\\mathrm{sw}}} $$</div>
         <p class="explain">（取 D = 0.5 的最坏情况）</p>
       </div>
     </div>
@@ -333,12 +329,12 @@ window.SLIDES = (window.SLIDES || []).concat([
           <rect x="212" y="20" width="30" height="210" fill="rgba(220,38,38,.12)"/>
           <rect x="392" y="20" width="30" height="210" fill="rgba(220,38,38,.12)"/>
           <text class="lbl-sm" x="10" y="70">V_gs,H</text>
-          <path d="M46,84 H212 V46 H242 V84 H362 V46 H392 V84 H500" fill="none" stroke="#3b82f6" stroke-width="3"/>
+          <path d="M46,84 H212 V46 H242 V84 H362 V46 H392 V84 H500" fill="none" stroke="#69c8e0" stroke-width="3"/>
           <text class="lbl-sm" x="10" y="180">V_gs,L</text>
-          <path d="M46,194 H242 V156 H362 V194 H392 V156 H500" fill="none" stroke="#16a34a" stroke-width="3"/>
-          <text x="227" y="40" font-size="12" fill="#dc2626" text-anchor="middle" font-weight="700">死区</text>
-          <text x="407" y="40" font-size="12" fill="#dc2626" text-anchor="middle" font-weight="700">死区</text>
-          <text x="260" y="252" font-size="12" fill="#7b8a9e" text-anchor="middle">
+          <path d="M46,194 H242 V156 H362 V194 H392 V156 H500" fill="none" stroke="#7ee787" stroke-width="3"/>
+          <text x="227" y="40" font-size="12" fill="#e8888a" text-anchor="middle" font-weight="700">死区</text>
+          <text x="407" y="40" font-size="12" fill="#e8888a" text-anchor="middle" font-weight="700">死区</text>
+          <text x="260" y="252" font-size="12" fill="#6f7a6c" text-anchor="middle">
             死区期间两管都关断，电流经下管体二极管续流</text>
         </svg>
       </div>
@@ -358,23 +354,23 @@ window.SLIDES = (window.SLIDES || []).concat([
   html: `<div class="row grow">
     <div class="card p2 grow" style="display:flex;align-items:center">
       <svg viewBox="0 0 900 420" style="width:100%">
-        <rect x="60" y="30" width="780" height="360" rx="16" fill="#f7fbfa" stroke="#0d9488" stroke-width="2" stroke-dasharray="9 6"/>
-        <text x="76" y="22" class="lbl-sm" fill="#0d9488">超电控制板</text>
+        <rect x="60" y="30" width="780" height="360" rx="16" fill="#101a18" stroke="#69c8e0" stroke-width="2" stroke-dasharray="9 6"/>
+        <text x="76" y="22" class="lbl-sm" fill="#69c8e0">超电控制板</text>
 
-        <g fill="#fff" stroke="#c7d2e0" stroke-width="2">
-          <rect x="90" y="60" width="176" height="66" rx="10" stroke="#2563eb"/>
+        <g fill="#1b241b" stroke="#4a5642" stroke-width="2">
+          <rect x="90" y="60" width="176" height="66" rx="10" stroke="#c5f76a"/>
           <rect x="300" y="60" width="150" height="66" rx="10"/>
-          <rect x="484" y="60" width="176" height="66" rx="10" stroke="#0d9488"/>
+          <rect x="484" y="60" width="176" height="66" rx="10" stroke="#69c8e0"/>
           <rect x="694" y="60" width="120" height="66" rx="10"/>
-          <rect x="90" y="176" width="176" height="66" rx="10" stroke="#b45309"/>
+          <rect x="90" y="176" width="176" height="66" rx="10" stroke="#f0b45e"/>
           <rect x="300" y="176" width="150" height="66" rx="10"/>
-          <rect x="484" y="176" width="176" height="66" rx="10" stroke="#dc2626"/>
+          <rect x="484" y="176" width="176" height="66" rx="10" stroke="#e8888a"/>
           <rect x="694" y="176" width="120" height="66" rx="10"/>
           <rect x="90" y="300" width="176" height="62" rx="10"/>
           <rect x="300" y="300" width="150" height="62" rx="10"/>
-          <rect x="484" y="300" width="330" height="62" rx="10" stroke="#94a3b8"/>
+          <rect x="484" y="300" width="330" height="62" rx="10" stroke="#55614f"/>
         </g>
-        <g class="lbl-sm" text-anchor="middle" fill="#16202b">
+        <g class="lbl-sm" text-anchor="middle" fill="#f5f5f3">
           <text x="178" y="86" font-weight="700">主控</text><text x="178" y="106" font-size="12">STM32G431CBT6</text>
           <text x="375" y="86" font-weight="700">栅极驱动</text><text x="375" y="106" font-size="12">LM5109 ×2</text>
           <text x="572" y="86" font-weight="700">功率级</text><text x="572" y="106" font-size="12">IRFH7440 ×4 + L</text>
@@ -388,7 +384,7 @@ window.SLIDES = (window.SLIDES || []).concat([
           <text x="649" y="326" font-weight="700">功率端子：电池侧 / 电容侧 / 底盘分电</text>
           <text x="649" y="346" font-size="12">全部 XT30，关键节点留测试点</text>
         </g>
-        <g stroke="#0d9488" stroke-width="2" fill="none" stroke-dasharray="6 4">
+        <g stroke="#69c8e0" stroke-width="2" fill="none" stroke-dasharray="6 4">
           <path d="M178,126 V172"/><path d="M375,126 V172"/><path d="M572,126 V172"/>
           <path d="M754,126 V172"/><path d="M178,242 V296"/><path d="M375,242 V296"/>
         </g>
@@ -509,9 +505,7 @@ window.SLIDES = (window.SLIDES || []).concat([
         <p style="font-size:16px">MCU 的 PWM 只有 3.3 V、几毫安，推不动 MOS 的栅极电容。
           驱动器负责把<b>电平抬上去、电流放大</b>，并且给高边管子提供
           <b>高于母线 10 V</b> 的栅压——这就是<b>自举</b>。</p>
-        <div class="formula p2" style="font-size:15px;white-space:normal;margin-top:10px">
-          V_gs(高边) = V_CC + V_boot − V_D
-        </div>
+        <div class="formula p2">$$ V_{gs}^{(\\mathrm{H})} = V_{CC} + V_{\\mathrm{boot}} - V_D $$</div>
         <p class="explain" style="font-size:14px;margin-top:8px">
           式中 <span class="var">V_CC</span> 为驱动供电（约 12 V）；
           <span class="var">V_boot</span> 为自举电容上的电压；
@@ -532,7 +526,7 @@ window.SLIDES = (window.SLIDES || []).concat([
         <div class="card-title"><span class="dot"></span>1 A 够不够？算一遍</div>
         <p style="font-size:15px">MOS 的栅极电荷 <span class="var">Q_g ≈ 22 nC</span>，
           希望在 <span class="var">t_r ≈ 50 ns</span> 内开通，则需要的峰值电流</p>
-        <div class="formula p2" style="font-size:16px">I_g = Q_g / t_r = 22 nC / 50 ns ≈ 0.44 A</div>
+        <div class="formula p2">$$ I_g = \\frac{Q_g}{t_r} = \\frac{22\\ \\mathrm{nC}}{50\\ \\mathrm{ns}} \\approx 0.44\\ \\mathrm{A} $$</div>
         <div class="okbox" style="margin-top:10px;font-size:15px">
           LM5109 的 <b>1 A</b> 有 2 倍余量，够。
           驱动功率本身很小：<span class="var">P_drv = Q_g·V_gs·f = 22 n×10×100 k ≈ 22 mW</span>。</div>
@@ -654,9 +648,7 @@ window.SLIDES = (window.SLIDES || []).concat([
         <p style="font-size:15px">取最坏情况 <span class="var">D = 0.5</span>、
           <span class="var">U = 30 V</span>、<span class="var">f = 100 kHz</span>（按核定开关频率），
           希望纹波不超过 <span class="var">6 A</span>：</p>
-        <div class="formula p2" style="font-size:15px;white-space:normal">
-          L_min = U / (4·ΔI·f) = 30 / (4×6×100k) = 12.5 µH
-        </div>
+        <div class="formula p2">$$ L_{\\min} = \\frac{U}{4\\,\\Delta I\\,f} = \\frac{30}{4\\times 6\\times 100\\,\\mathrm{k}} = 12.5\\ \\mu\\mathrm{H} $$</div>
         <p style="font-size:15px;margin-top:8px">实际取 <b>22 µH</b>——注意这里取的是核定频率，
           若实际跑 300 kHz，纹波只有约 <b>1.1 A</b>，远小于限值。
           <b>感量留大一点，换来的是轻载时不容易进 DCM。</b></p>
@@ -743,18 +735,18 @@ window.SLIDES = (window.SLIDES || []).concat([
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>两级结构</div>
         <div class="row" style="gap:10px;margin:8px 0">
-          <div class="card flat tight" style="flex:1;background:#f8fafc;text-align:center">
+          <div class="card flat tight" style="flex:1;background:#161d16;text-align:center">
             <p class="tiny" style="font-size:13px;color:var(--ink-3)">输入</p>
             <p style="font-family:var(--mono);font-size:19px;font-weight:700">24 V</p>
           </div>
           <div style="display:grid;place-items:center;font-size:20px;color:var(--ink-3)">→</div>
-          <div class="card flat tight" style="flex:1;background:#e8efff;text-align:center">
+          <div class="card flat tight" style="flex:1;background:#1a2410;text-align:center">
             <p class="tiny" style="font-size:13px;color:var(--p1)">DCDC 降压</p>
             <p style="font-family:var(--mono);font-size:17px;font-weight:700">MP2456</p>
             <p class="tiny" style="font-size:12px">→ 5 V，效率高</p>
           </div>
           <div style="display:grid;place-items:center;font-size:20px;color:var(--ink-3)">→</div>
-          <div class="card flat tight" style="flex:1;background:#e0f5f2;text-align:center">
+          <div class="card flat tight" style="flex:1;background:#12222a;text-align:center">
             <p class="tiny" style="font-size:13px;color:var(--p2)">LDO 稳压</p>
             <p style="font-family:var(--mono);font-size:17px;font-weight:700">RT9193</p>
             <p class="tiny" style="font-size:12px">→ 3.3 V，噪声低</p>
@@ -896,9 +888,7 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="col" style="flex:1.05">
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>设计公式</div>
-        <div class="formula p2" style="font-size:17px;white-space:normal">
-          E = ½ · (C/b) · (bU)² &lt; 2000 J
-        </div>
+        <div class="formula p2">$$ E = \\tfrac{1}{2}\\cdot\\frac{C}{b}\\cdot\\left(bU\\right)^{2} < 2000\\ \\mathrm{J} $$</div>
         <p class="explain" style="font-size:14px;margin-top:8px">
           式中 <span class="var">C</span> 为单只电容容量（F）；
           <span class="var">b</span> 为串联数；<span class="var">U</span> 为单体额定电压（V）。
@@ -991,7 +981,7 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="col" style="flex:1">
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>问题：导线压降让回读功率偏小</div>
-        <div class="formula p2">V_drop = I · R</div>
+        <div class="formula p2">$$ V_{\\mathrm{drop}} = I\\,R $$</div>
         <p class="explain" style="font-size:14px">控制板测的是<b>自己电池端口</b>的电压；
           裁判系统测的是<b>Chassis 端口</b>的电压。两点之间隔着导线，大电流流过时会有压降。
           于是控制板按偏低的电压算功率，<b>算出来的功率就偏小</b>。</p>
@@ -1016,8 +1006,8 @@ window.SLIDES = (window.SLIDES || []).concat([
         <div class="card-title"><span class="dot"></span>实测效果（50 cm / 18 AWG，24 V、0–10 A）</div>
         <table class="tb" style="font-size:15px">
           <tr><th>工况</th><th>功率检测误差</th></tr>
-          <tr><td><b>加</b>远端补偿</td><td style="color:#16a34a;font-weight:700">±1 W</td></tr>
-          <tr><td><b>不加</b>远端补偿</td><td style="color:#dc2626;font-weight:700">−5 W</td></tr>
+          <tr><td><b>加</b>远端补偿</td><td style="color:#7ee787;font-weight:700">±1 W</td></tr>
+          <tr><td><b>不加</b>远端补偿</td><td style="color:#e8888a;font-weight:700">−5 W</td></tr>
         </table>
       </div>
       <div class="note" style="font-size:14px">剩下的误差来源是"参考源不同"——
@@ -1084,37 +1074,37 @@ window.SLIDES = (window.SLIDES || []).concat([
   html: `<div class="row grow">
     <div class="card p2 grow" style="display:flex;align-items:center">
       <svg viewBox="0 0 900 420" style="width:100%">
-        <g fill="#fff" stroke="#c7d2e0" stroke-width="2">
+        <g fill="#1b241b" stroke="#4a5642" stroke-width="2">
           <rect x="322" y="8" width="164" height="60" rx="11"/>
           <rect x="640" y="8" width="150" height="60" rx="11"/>
-          <rect x="268" y="128" width="196" height="60" rx="11" fill="#e0f5f2" stroke="#0d9488"/>
+          <rect x="268" y="128" width="196" height="60" rx="11" fill="#12222a" stroke="#69c8e0"/>
           <rect x="600" y="128" width="150" height="60" rx="11"/>
           <rect x="790" y="128" width="110" height="60" rx="11"/>
           <rect x="60" y="128" width="120" height="60" rx="11"/>
           <rect x="268" y="272" width="196" height="60" rx="11"/>
           <rect x="600" y="272" width="150" height="60" rx="11"/>
         </g>
-        <g class="lbl-sm" text-anchor="middle" fill="#16202b">
+        <g class="lbl-sm" text-anchor="middle" fill="#f5f5f3">
           <text x="404" y="32">【裁判系统】</text><text x="404" y="52">电源管理模块</text>
           <text x="715" y="32">超级电容</text><text x="715" y="52">管理模块</text>
-          <text x="366" y="152">超电控制板</text><text x="366" y="172" fill="#7b8a9e">本例板卡</text>
+          <text x="366" y="152">超电控制板</text><text x="366" y="172" fill="#6f7a6c">本例板卡</text>
           <text x="675" y="152">【裁判系统】</text><text x="675" y="172">电容管理模块</text>
           <text x="845" y="152">超级</text><text x="845" y="172">电容组</text>
-          <text x="120" y="152">分电板</text><text x="120" y="172" fill="#7b8a9e">→ 底盘电机</text>
+          <text x="120" y="152">分电板</text><text x="120" y="172" fill="#6f7a6c">→ 底盘电机</text>
           <text x="366" y="296">C 板 CAN 总线</text>
           <text x="675" y="296">调试口 UART+SWD</text>
         </g>
-        <g stroke="#47566a" stroke-width="2.2" fill="none" marker-end="url(#a9)">
+        <g stroke="#a8aea5" stroke-width="2.2" fill="none" marker-end="url(#a9)">
           <path d="M180,158 H266"/><path d="M422,158 H598"/><path d="M750,158 H788"/>
           <path d="M404,68 V126"/><path d="M404,188 V270"/><path d="M715,68 V100 H560 V126"/>
         </g>
-        <path d="M366,188 V236 H36 V158" stroke="#94a3b8" stroke-width="2" fill="none" stroke-dasharray="7 5" marker-end="url(#a9)"/>
-        <path d="M366,188 V246 H580 V300" stroke="#94a3b8" stroke-width="2" fill="none" stroke-dasharray="7 5"/>
-        <text x="196" y="112" class="lbl-sm" fill="#7b8a9e">Chassis →「电池」</text>
-        <text x="500" y="148" class="lbl-sm" fill="#7b8a9e">「电容」</text>
-        <text x="756" y="148" class="lbl-sm" fill="#7b8a9e">SuperCap</text>
-        <text x="284" y="222" class="lbl-sm" fill="#7b8a9e">「CAN」</text>
-        <text x="440" y="256" class="lbl-sm" fill="#94a3b8" font-size="12">虚线＝选装</text>
+        <path d="M366,188 V236 H36 V158" stroke="#55614f" stroke-width="2" fill="none" stroke-dasharray="7 5" marker-end="url(#a9)"/>
+        <path d="M366,188 V246 H580 V300" stroke="#55614f" stroke-width="2" fill="none" stroke-dasharray="7 5"/>
+        <text x="196" y="112" class="lbl-sm" fill="#6f7a6c">Chassis →「电池」</text>
+        <text x="500" y="148" class="lbl-sm" fill="#6f7a6c">「电容」</text>
+        <text x="756" y="148" class="lbl-sm" fill="#6f7a6c">SuperCap</text>
+        <text x="284" y="222" class="lbl-sm" fill="#6f7a6c">「CAN」</text>
+        <text x="440" y="256" class="lbl-sm" fill="#55614f" font-size="12">虚线＝选装</text>
       </svg>
     </div>
     <div class="col" style="flex:0 0 370px">
@@ -1139,30 +1129,30 @@ window.SLIDES = (window.SLIDES || []).concat([
   html: `<div class="row grow">
     <div class="card p2 grow" style="display:flex;align-items:center">
       <svg viewBox="0 0 900 340" style="width:100%">
-        <g fill="#fff" stroke="#c7d2e0" stroke-width="2">
+        <g fill="#1b241b" stroke="#4a5642" stroke-width="2">
           <rect x="20" y="20" width="180" height="56" rx="10"/>
           <rect x="20" y="122" width="180" height="56" rx="10"/>
           <rect x="20" y="224" width="180" height="56" rx="10"/>
           <circle cx="330" cy="150" r="26"/>
           <rect x="410" y="122" width="170" height="56" rx="10"/>
-          <rect x="650" y="122" width="180" height="56" rx="10" fill="#e0f5f2" stroke="#0d9488"/>
+          <rect x="650" y="122" width="180" height="56" rx="10" fill="#12222a" stroke="#69c8e0"/>
         </g>
-        <g class="lbl-sm" text-anchor="middle" fill="#16202b">
-          <text x="110" y="44">功率环</text><text x="110" y="64" font-size="11" fill="#7b8a9e">目标功率 → 电流参考</text>
-          <text x="110" y="146">低压保护环</text><text x="110" y="166" font-size="11" fill="#7b8a9e">U₂ &lt; U_min 时收缩</text>
-          <text x="110" y="248">高压保护环</text><text x="110" y="268" font-size="11" fill="#7b8a9e">U₂ &gt; U_max 时停充</text>
-          <text x="330" y="157" font-size="19" font-weight="800" fill="#0d9488">min</text>
-          <text x="495" y="146">电感电流环</text><text x="495" y="166" font-size="11" fill="#7b8a9e">PI → 占空比</text>
-          <text x="740" y="146">FSBB + 电容组</text><text x="740" y="166" font-size="11" fill="#7b8a9e">被控对象</text>
+        <g class="lbl-sm" text-anchor="middle" fill="#f5f5f3">
+          <text x="110" y="44">功率环</text><text x="110" y="64" font-size="11" fill="#6f7a6c">目标功率 → 电流参考</text>
+          <text x="110" y="146">低压保护环</text><text x="110" y="166" font-size="11" fill="#6f7a6c">U₂ &lt; U_min 时收缩</text>
+          <text x="110" y="248">高压保护环</text><text x="110" y="268" font-size="11" fill="#6f7a6c">U₂ &gt; U_max 时停充</text>
+          <text x="330" y="157" font-size="19" font-weight="800" fill="#69c8e0">min</text>
+          <text x="495" y="146">电感电流环</text><text x="495" y="166" font-size="11" fill="#6f7a6c">PI → 占空比</text>
+          <text x="740" y="146">FSBB + 电容组</text><text x="740" y="166" font-size="11" fill="#6f7a6c">被控对象</text>
         </g>
-        <g stroke="#0d9488" stroke-width="2.2" fill="none" marker-end="url(#a10)">
+        <g stroke="#69c8e0" stroke-width="2.2" fill="none" marker-end="url(#a10)">
           <path d="M200,48 H265 V150 H302"/><path d="M200,150 H302"/><path d="M200,252 H265 V150"/>
           <path d="M356,150 H408"/><path d="M580,150 H648"/>
           <path d="M740,178 V300 H495 V178"/>
         </g>
-        <path d="M740,122 V60 H10 V150 H18" stroke="#0d9488" stroke-width="2" fill="none" stroke-dasharray="7 5" marker-end="url(#a10)"/>
-        <text x="380" y="52" class="lbl-sm" fill="#0d9488">U₂、功率反馈（慢，ms 级）</text>
-        <text x="620" y="290" class="lbl-sm" fill="#0d9488">i_L 反馈（快，μs 级）</text>
+        <path d="M740,122 V60 H10 V150 H18" stroke="#69c8e0" stroke-width="2" fill="none" stroke-dasharray="7 5" marker-end="url(#a10)"/>
+        <text x="380" y="52" class="lbl-sm" fill="#69c8e0">U₂、功率反馈（慢，ms 级）</text>
+        <text x="620" y="290" class="lbl-sm" fill="#69c8e0">i_L 反馈（快，μs 级）</text>
       </svg>
     </div>
     <div class="col" style="flex:0 0 330px">
@@ -1185,7 +1175,7 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="col" style="flex:1">
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>定义</div>
-        <div class="formula p2" style="font-size:19px">α ≜ U₁ / U₂</div>
+        <div class="formula p2">$$ \\alpha \\;\\triangleq\\; \\frac{U_1}{U_2} $$</div>
         <p class="explain" style="font-size:14px">式中 <span class="var">α</span> 为<b>电压比</b>（无量纲）；
           <span class="var">U₁</span> 为母线电压（V）；<span class="var">U₂</span> 为电容电压（V）。</p>
       </div>
@@ -1195,9 +1185,7 @@ window.SLIDES = (window.SLIDES || []).concat([
           <span class="var">D₁ = U₂/U₁ = 1/α</span></p>
         <p style="font-size:15px;margin-top:6px"><b>Boost：</b><span class="var">U₂ = U₁/D₃</span> ⟹
           <span class="var">D₃ = U₁/U₂ = α</span></p>
-        <div class="formula p2" style="font-size:16px;margin-top:10px">
-          α = U₁/U₂ = D₂/D₁ = 1 − D₁
-        </div>
+        <div class="formula p2">$$ \\alpha = \\frac{U_1}{U_2} = \\frac{D_2}{D_1} = 1 - D_1 $$</div>
         <p class="explain" style="font-size:13px;margin-top:6px">
           （其中 <span class="var">D₂ = 1 − D₁</span> 为同一半桥下管的占空比）</p>
       </div>
@@ -1232,9 +1220,7 @@ window.SLIDES = (window.SLIDES || []).concat([
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>时序</div>
         <p style="font-size:15px">ADC 以 <b>100 kHz</b> 触发 → DMA 搬完 → 进中断 → 在中断里跑完整个环路。</p>
-        <div class="formula p2" style="font-size:15px;white-space:normal;margin-top:10px">
-          ADC(100 kHz) → DMA → <b>DMA1_Channel1_IRQHandler</b> → A_Timing_Ranking_Idea()
-        </div>
+        <div class="formula p2">$$ \\mathtt{ADC}\\;(100\\,\\mathrm{kHz}) \\;\\to\\; \\mathtt{DMA} \\;\\to\\; \\mathtt{IRQHandler} \\;\\to\\; \\text{环路} $$</div>
         <p style="font-size:15px;margin-top:10px"><b>每周期必执行三步：</b></p>
         <ol class="steps" style="font-size:14px">
           <li><code>ADC_Convert_To_Reality()</code>：原始值 → 真实物理量</li>
@@ -1281,9 +1267,7 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="col" style="flex:1.1">
       <div class="card p2">
         <div class="card-title"><span class="dot"></span>先算采样要多久</div>
-        <div class="formula p2" style="font-size:16px">
-          t_conv = (24.5 + 12.5) / 56.7 MHz = 652 ns
-        </div>
+        <div class="formula p2">$$ t_{\\mathrm{conv}} = \\frac{24.5 + 12.5}{56.7\\ \\mathrm{MHz}} = 652\\ \\mathrm{ns} $$</div>
         <p class="explain" style="font-size:14px">采样 24.5 个 ADC 时钟 + 转换固定 12.5 个；
           ADC 时钟 56.7 MHz。而开关周期是 10 µs。</p>
       </div>

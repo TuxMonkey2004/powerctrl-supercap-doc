@@ -7,8 +7,11 @@
   const SLIDES = window.SLIDES || [];
   const deck = document.getElementById('deck');
   const bar = document.getElementById('progressBar');
-  const pageLabel = document.getElementById('pageLabel');
-  const partLabel = document.getElementById('partLabel');
+  const stage = document.getElementById('stage');
+  const mhRight = document.getElementById('mhRight');
+  const sectionName = document.getElementById('sectionName');
+  const pageNow = document.getElementById('pageNow');
+  const pageTotal = document.getElementById('pageTotal');
   const btnPrev = document.getElementById('btnPrev');
   const btnNext = document.getElementById('btnNext');
   const overlay = document.getElementById('overlay');
@@ -23,8 +26,8 @@
 
   /* -------------------------------------------------- 缩放 */
   function fit() {
-    const s = Math.min(window.innerWidth / 1600, (window.innerHeight - 100) / 900);
-    deck.style.setProperty('--s', Math.max(0.26, s).toFixed(4));
+    const s = Math.min(window.innerWidth / 1600, (window.innerHeight - 76) / 900);
+    stage.style.setProperty('--s', Math.max(0.24, s).toFixed(4));
   }
   window.addEventListener('resize', fit);
 
@@ -36,14 +39,11 @@
       el.className = 'slide' + (s.cls ? ' ' + s.cls : '');
       el.dataset.id = s.id;
       el.dataset.index = i;
-      const pk = s.partKey || 'p0';
-      const head = el.classList.contains('cover') || el.classList.contains('divider') ? '' :
-        `<div class="slide-head">
-           <span class="pill ${pk}">${s.part}</span>
-           <h1 class="slide-title">${s.title}</h1>
-           ${s.sub ? `<span class="slide-sub">${s.sub}</span>` : ''}
-         </div>`;
-      el.innerHTML = head + `<div class="slide-body">${s.html || ''}</div>`;
+      const isPlain = el.classList.contains('cover') || el.classList.contains('divider');
+      const head = isPlain ? '' :
+        `<div class="kicker reveal"><span class="num">${String(i + 1).padStart(2, '0')}</span>${s.sub || s.part}</div>
+         <h2 class="slide-title reveal d1">${s.title}</h2>`;
+      el.innerHTML = head + `<div class="slide-body reveal d2">${s.html || ''}</div>`;
       frag.appendChild(el);
     });
     deck.appendChild(frag);
@@ -60,14 +60,12 @@
     Object.keys(anims).forEach(k => { const a = anims[k]; if (a && a.pause) a.pause(); });
 
     const prev = slides[cur];
-    if (prev && prev !== slides[i]) {
-      prev.classList.remove('is-active');
-      prev.classList.add('is-prev');
-      setTimeout(() => prev.classList.remove('is-prev'), 460);
-    }
+    if (prev && prev !== slides[i]) prev.classList.remove('active');
     cur = i;
     const el = slides[cur];
-    el.classList.add('is-active');
+    el.classList.add('active');
+
+    typesetSlide(el);
 
     requestAnimationFrame(() => {
       const a = anims[SLIDES[cur].id];
@@ -80,11 +78,26 @@
   }
 
   function updateHud() {
+    const s = SLIDES[cur];
     bar.style.width = ((cur + 1) / SLIDES.length * 100).toFixed(2) + '%';
-    pageLabel.textContent = (cur + 1) + ' / ' + SLIDES.length;
-    partLabel.textContent = SLIDES[cur].part || '';
+    pageNow.textContent = cur + 1;
+    pageTotal.textContent = SLIDES.length;
+    mhRight.textContent = s.part || '';
+    sectionName.textContent = s.sub ? s.sub.split('·')[0].trim() : (s.part || '');
     btnPrev.disabled = cur === 0;
     btnNext.disabled = cur === SLIDES.length - 1;
+  }
+
+  /* -------------------------------------------------- MathJax 按页排版 */
+  const typesetDone = new Set();
+  function typesetSlide(el) {
+    if (!window.MathJax || !MathJax.typesetPromise) return;
+    const key = el.dataset.index;
+    if (typesetDone.has(key)) return;
+    typesetDone.add(key);
+    const ready = (MathJax.startup && MathJax.startup.promise)
+      ? MathJax.startup.promise : Promise.resolve();
+    ready.then(() => MathJax.typesetPromise([el])).catch(() => {});
   }
 
   function hideHint() { if (hint) hint.classList.add('gone'); }
@@ -233,6 +246,9 @@
       <path class="wire" d="M${xC1},${yM + 4} V${yB}"/>
       <text class="lbl-sm" x="${xC1 + 26}" y="${yM - 4}">C₁</text>
 
+      <!-- 电流路径画在导线之上、开关管之下，否则会盖住 S1~S4 的文字 -->
+      <path class="flow" id="flowA" d=""/>
+
       <path class="wire" d="M${xBL},${yT} V129"/>
       ${mosSVG('sw-S1', xBL, 153, 'S₁')}
       <path class="wire" d="M${xBL},177 V${yM}"/>
@@ -269,8 +285,6 @@
 
       <path class="wire-lite" d="M${xU2},${yT} V${yB}" marker-start="url(#arw)" marker-end="url(#arw)"/>
       <text class="lbl" x="${xU2 + 16}" y="${yM + 6}">U₂</text>
-
-      <path class="flow" id="flowA" d=""/>
     </svg>`;
   }
 

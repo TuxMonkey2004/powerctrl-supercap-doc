@@ -85,7 +85,7 @@ window.SLIDES = (window.SLIDES || []).concat([
         <p>裁判系统给的是<b>功率上限 <span class="var">P_max</span></b> 与
            <b>缓冲能量 <span class="var">E_buf</span></b>。规则把"还能用多少"和"已经超了多少"
            合并到同一个池子里管。</p>
-        <div class="formula p1" style="margin-top:12px">dE_buf/dt = P_max − P_in</div>
+        <div class="formula p1">$$ \\frac{dE_{\\mathrm{buf}}}{dt} = P_{\\max} - P_{\\mathrm{in}} $$</div>
         <p class="explain" style="margin-top:10px">式中 <span class="var">E_buf</span> 为缓冲能量（J）；
           <span class="var">P_max</span> 为本赛季底盘功率上限（W）；
           <span class="var">P_in</span> 为底盘实际取用功率（W）。</p>
@@ -105,22 +105,22 @@ window.SLIDES = (window.SLIDES || []).concat([
         <text class="lbl" x="8" y="20">P (W)</text>
         <path class="axis" d="M46,210 H500"/>
         <path d="M46,210 H160 L200,96 L300,120 L420,190 L500,205 L500,210 Z"
-              fill="rgba(37,99,235,.13)" stroke="#2563eb" stroke-width="3"/>
-        <line x1="46" y1="150" x2="500" y2="150" stroke="#dc2626" stroke-width="2" stroke-dasharray="7 5"/>
-        <text class="lbl-sm" x="492" y="142" text-anchor="end" fill="#dc2626">P_max = 45 W</text>
-        <circle cx="200" cy="96" r="5" fill="#dc2626"/>
-        <text class="lbl-sm" x="212" y="88" fill="#dc2626">此处多用了 65 W</text>
-        <text class="lbl-sm" x="300" y="132" fill="#2563eb">实际功率 P_in</text>
+              fill="rgba(37,99,235,.13)" stroke="#c5f76a" stroke-width="3"/>
+        <line x1="46" y1="150" x2="500" y2="150" stroke="#e8888a" stroke-width="2" stroke-dasharray="7 5"/>
+        <text class="lbl-sm" x="492" y="142" text-anchor="end" fill="#e8888a">P_max = 45 W</text>
+        <circle cx="200" cy="96" r="5" fill="#e8888a"/>
+        <text class="lbl-sm" x="212" y="88" fill="#e8888a">此处多用了 65 W</text>
+        <text class="lbl-sm" x="300" y="132" fill="#c5f76a">实际功率 P_in</text>
 
         <text class="lbl" x="8" y="238">E_buf (J)</text>
         <path class="axis" d="M46,400 H500"/>
         <path d="M46,400 L120,400 L160,300 L210,300 L260,300 L320,300 L360,392 L500,400"
-              fill="none" stroke="#0d9488" stroke-width="3"/>
-        <line x1="46" y1="300" x2="500" y2="300" stroke="#dc2626" stroke-width="2" stroke-dasharray="7 5"/>
-        <text class="lbl-sm" x="492" y="292" text-anchor="end" fill="#dc2626">E_max = 60 J</text>
+              fill="none" stroke="#69c8e0" stroke-width="3"/>
+        <line x1="46" y1="300" x2="500" y2="300" stroke="#e8888a" stroke-width="2" stroke-dasharray="7 5"/>
+        <text class="lbl-sm" x="492" y="292" text-anchor="end" fill="#e8888a">E_max = 60 J</text>
         <text class="lbl-sm" x="64" y="392">0</text>
-        <text class="lbl-sm" x="170" y="286" fill="#0d9488">到 60 J 后不再增加</text>
-        <text class="lbl-sm" x="372" y="384" fill="#dc2626">扣到 0 → 扣血</text>
+        <text class="lbl-sm" x="170" y="286" fill="#69c8e0">到 60 J 后不再增加</text>
+        <text class="lbl-sm" x="372" y="384" fill="#e8888a">扣到 0 → 扣血</text>
       </svg>
     </div>
   </div>`
@@ -139,7 +139,7 @@ window.SLIDES = (window.SLIDES || []).concat([
       </div>
       <div class="card p1">
         <div class="card-title"><span class="dot"></span>原因：功率多了一条支路</div>
-        <div class="formula p1">P_chassis = P_motor − P_discharge</div>
+        <div class="formula p1">$$ P_{\\mathrm{chassis}} = P_{\\mathrm{motor}} - P_{\\mathrm{discharge}} $$</div>
         <p class="explain" style="margin-top:8px">式中 <span class="var">P_chassis</span> 为电池侧实际取用功率（W）；
           <span class="var">P_motor</span> 为电机实际消耗（W）；
           <span class="var">P_discharge</span> 为超电补出的功率（W）。</p>
@@ -175,14 +175,14 @@ window.SLIDES = (window.SLIDES || []).concat([
       <div class="card p1">
         <div class="card-title"><span class="dot"></span>约束变了</div>
         <div class="row" style="gap:12px;margin-top:4px">
-          <div class="card flat tight" style="flex:1;background:#f8fafc">
+          <div class="card flat tight" style="flex:1;background:#161d16">
             <p class="tiny" style="font-size:14px;color:var(--ink-3)">过去：力矩约束</p>
-            <div class="formula" style="font-size:15px;border-left-color:#94a3b8;margin-top:6px">| I_cmd | ≤ I_max</div>
+            <div class="formula">$$ |\\,I_{\\mathrm{cmd}}\\,| \\le I_{\\max} $$</div>
             <p class="tiny" style="font-size:13px;margin-top:6px">与转速无关，限幅就行</p>
           </div>
-          <div class="card flat tight" style="flex:1;background:#f0f6ff">
+          <div class="card flat tight" style="flex:1;background:#1a2410">
             <p class="tiny" style="font-size:14px;color:var(--p1)">现在：功率约束</p>
-            <div class="formula p1" style="font-size:15px;margin-top:6px">P_in = f( I_cmd , ω )</div>
+            <div class="formula p1">$$ P_{\\mathrm{in}} = f\\left(I_{\\mathrm{cmd}},\\;\\omega\\right) $$</div>
             <p class="tiny" style="font-size:13px;margin-top:6px">同一指令，不同转速耗功差几倍</p>
           </div>
         </div>
@@ -202,9 +202,7 @@ window.SLIDES = (window.SLIDES || []).concat([
       <div class="card p1">
         <div class="card-title"><span class="dot"></span>预测式换了个问法</div>
         <p style="font-size:16px">不问"我超了多少"，而问<b>"我打算用多少"</b>：</p>
-        <div class="formula p1" style="margin-top:10px;white-space:normal;font-size:16px">
-          P̂ᵢ = k₁ Iᵢ² + C_T Iᵢ ωᵢ + k₂ ωᵢ² + a
-        </div>
+        <div class="formula p1">$$ \\hat{P}_i = k_1 I_i^2 + C_T I_i \\omega_i + k_2 \\omega_i^2 + a $$</div>
         <p class="explain" style="margin-top:8px;font-size:14px">
           式中 <span class="var">P̂ᵢ</span> 为第 i 台电机输入功率估计（W）；
           <span class="var">Iᵢ</span> 为其力矩电流指令（无量纲）；<span class="var">ωᵢ</span> 为其转速（rpm）；
@@ -226,48 +224,48 @@ window.SLIDES = (window.SLIDES || []).concat([
   sub: '1.6 · 四层，两个节奏',
   html: `<div class="card p1 grow" style="display:flex;align-items:center">
     <svg viewBox="0 0 1180 400" style="width:100%">
-      <g fill="#fff" stroke="#c7d2e0" stroke-width="2">
+      <g fill="#1b241b" stroke="#4a5642" stroke-width="2">
         <rect x="24" y="18" width="150" height="58" rx="11"/>
         <rect x="288" y="18" width="150" height="58" rx="11"/>
         <rect x="864" y="18" width="150" height="58" rx="11"/>
         <rect x="560" y="112" width="122" height="58" rx="11"/>
         <rect x="842" y="112" width="150" height="58" rx="11"/>
-        <rect x="24" y="206" width="176" height="58" rx="11" stroke="#2563eb"/>
+        <rect x="24" y="206" width="176" height="58" rx="11" stroke="#c5f76a"/>
         <rect x="380" y="206" width="176" height="58" rx="11"/>
         <rect x="656" y="206" width="176" height="58" rx="11"/>
         <rect x="24" y="308" width="128" height="54" rx="11"/>
         <rect x="278" y="308" width="128" height="54" rx="11"/>
         <rect x="532" y="308" width="150" height="54" rx="11"/>
-        <rect x="470" y="382" width="180" height="54" rx="11" fill="#e0f5f2" stroke="#0d9488"/>
+        <rect x="470" y="382" width="180" height="54" rx="11" fill="#12222a" stroke="#69c8e0"/>
       </g>
-      <g class="lbl-sm" text-anchor="middle" fill="#16202b">
+      <g class="lbl-sm" text-anchor="middle" fill="#f5f5f3">
         <text x="99" y="42">操作手</text><text x="99" y="62">遥控指令</text>
         <text x="363" y="42">裁判系统</text><text x="363" y="62">P_max 、E_buf</text>
         <text x="939" y="42">电机反馈</text><text x="939" y="62">ω 、given_current</text>
         <text x="621" y="136">缓冲能量</text><text x="621" y="156">外环 PID</text>
         <text x="917" y="136">功率预算</text><text x="917" y="156">P_lim</text>
-        <text x="112" y="230" fill="#2563eb">功率预测</text><text x="112" y="250" fill="#2563eb">P̂ᵢ = f(I_cmd,i, ωᵢ)</text>
+        <text x="112" y="230" fill="#c5f76a">功率预测</text><text x="112" y="250" fill="#c5f76a">P̂ᵢ = f(I_cmd,i, ωᵢ)</text>
         <text x="468" y="230">功率再分配</text><text x="468" y="250">k = P_lim / Σ P̂ᵢ</text>
         <text x="744" y="230">反解</text><text x="744" y="250">I_cmd,i′ = f⁻¹(Pᵢ*, ωᵢ)</text>
         <text x="88" y="340">CAN 发送</text>
         <text x="342" y="340">C620 电调</text>
         <text x="607" y="340">M3508 电机 ×4</text>
-        <text x="560" y="416" fill="#0d9488">超级电容 + 双向 DC–DC</text>
+        <text x="560" y="416" fill="#69c8e0">超级电容 + 双向 DC–DC</text>
       </g>
-      <g stroke="#47566a" stroke-width="2" fill="none" marker-end="url(#a3)">
+      <g stroke="#a8aea5" stroke-width="2" fill="none" marker-end="url(#a3)">
         <path d="M174,47 H286"/><path d="M363,76 V110"/>
         <path d="M363,141 H556"/><path d="M682,141 H840"/>
         <path d="M200,235 H378"/><path d="M556,235 H654"/>
         <path d="M744,264 V306 H88 V306"/>
         <path d="M152,335 H276"/><path d="M406,335 H530"/>
       </g>
-      <path d="M112,206 V170 H60 V136 H200 V160" stroke="#47566a" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#a3)"/>
-      <path d="M939,76 V100" stroke="#16a34a" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#a3)"/>
-      <path d="M1014,76 H1116 V300 H660" stroke="#16a34a" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#a3)"/>
-      <text x="1070" y="196" class="lbl-sm" text-anchor="middle" fill="#16a34a" transform="rotate(90 1070 196)">反馈</text>
-      <rect x="14" y="104" width="1000" height="170" rx="14" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="8 6"/>
-      <text x="28" y="98" class="lbl-sm" fill="#7b8a9e">主控软件（决策层）</text>
-      <text x="862" y="262" class="lbl-sm" fill="#7b8a9e">外环 10 Hz · 内环 1 kHz</text>
+      <path d="M112,206 V170 H60 V136 H200 V160" stroke="#a8aea5" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#a3)"/>
+      <path d="M939,76 V100" stroke="#7ee787" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#a3)"/>
+      <path d="M1014,76 H1116 V300 H660" stroke="#7ee787" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#a3)"/>
+      <text x="1070" y="196" class="lbl-sm" text-anchor="middle" fill="#7ee787" transform="rotate(90 1070 196)">反馈</text>
+      <rect x="14" y="104" width="1000" height="170" rx="14" fill="none" stroke="#55614f" stroke-width="2" stroke-dasharray="8 6"/>
+      <text x="28" y="98" class="lbl-sm" fill="#6f7a6c">主控软件（决策层）</text>
+      <text x="862" y="262" class="lbl-sm" fill="#6f7a6c">外环 10 Hz · 内环 1 kHz</text>
     </svg>
   </div>
   <div class="note" style="flex:0 0 auto"><b>两个节奏是关键：</b>
@@ -305,9 +303,7 @@ window.SLIDES = (window.SLIDES || []).concat([
           <li>限幅 ±16384，处理死区与零漂</li>
           <li>四路打包进一帧 <code>0x200</code> 发给 C620</li>
         </ol>
-        <div class="formula p1" style="font-size:14px;white-space:normal;margin-top:10px">
-          I_cmd,i = K_p(vᵢ*−vᵢ) + K_i∫(vᵢ*−vᵢ)dt + I_ff,i
-        </div>
+        <div class="formula p1">$$ I_{\\mathrm{cmd},i} = K_p\\left(v_i^{*} - v_i\\right) + K_i\\!\\int\\!\\left(v_i^{*} - v_i\\right)dt + I_{\\mathrm{ff},i} $$</div>
       </div>
       <div class="warnbox" style="font-size:16px">
         <b>一句话：</b>功率是力矩乘转速，<b>只有能直接控力矩的底盘，才能反过来控功率</b>。
@@ -323,35 +319,35 @@ window.SLIDES = (window.SLIDES || []).concat([
   sub: '2.1 · 一根完整的量纲链路',
   html: `<div class="card p1" style="flex:0 0 auto;padding:12px">
     <svg viewBox="0 0 1180 200" style="width:100%">
-      <g fill="#fff" stroke="#c7d2e0" stroke-width="2">
+      <g fill="#1b241b" stroke="#4a5642" stroke-width="2">
         <rect x="20" y="30" width="150" height="66" rx="12"/>
         <rect x="236" y="30" width="150" height="66" rx="12"/>
         <rect x="452" y="30" width="150" height="66" rx="12"/>
         <rect x="668" y="30" width="150" height="66" rx="12"/>
         <rect x="884" y="30" width="150" height="66" rx="12"/>
-        <rect x="1090" y="30" width="80" height="66" rx="12" fill="#e0f5f2" stroke="#0d9488"/>
+        <rect x="1090" y="30" width="80" height="66" rx="12" fill="#12222a" stroke="#69c8e0"/>
       </g>
-      <g class="lbl-sm" text-anchor="middle" fill="#16202b">
-        <text x="95" y="58">CAN 报文</text><text x="95" y="80" fill="#7b8a9e">−16384 ~ 16384</text>
-        <text x="311" y="58">力矩电流</text><text x="311" y="80" fill="#7b8a9e">±20 A（C620）</text>
-        <text x="527" y="58">力矩</text><text x="527" y="80" fill="#7b8a9e">K_T · I</text>
-        <text x="743" y="58">轮端力矩</text><text x="743" y="80" fill="#7b8a9e">× k_g ≈ 19.2</text>
-        <text x="959" y="58">机械功率</text><text x="959" y="80" fill="#7b8a9e">τ · ω</text>
-        <text x="1130" y="58" fill="#0d9488">电功率</text><text x="1130" y="80" fill="#0d9488">P_in</text>
+      <g class="lbl-sm" text-anchor="middle" fill="#f5f5f3">
+        <text x="95" y="58">CAN 报文</text><text x="95" y="80" fill="#6f7a6c">−16384 ~ 16384</text>
+        <text x="311" y="58">力矩电流</text><text x="311" y="80" fill="#6f7a6c">±20 A（C620）</text>
+        <text x="527" y="58">力矩</text><text x="527" y="80" fill="#6f7a6c">K_T · I</text>
+        <text x="743" y="58">轮端力矩</text><text x="743" y="80" fill="#6f7a6c">× k_g ≈ 19.2</text>
+        <text x="959" y="58">机械功率</text><text x="959" y="80" fill="#6f7a6c">τ · ω</text>
+        <text x="1130" y="58" fill="#69c8e0">电功率</text><text x="1130" y="80" fill="#69c8e0">P_in</text>
       </g>
-      <g stroke="#2563eb" stroke-width="2.4" fill="none" marker-end="url(#a4)">
+      <g stroke="#c5f76a" stroke-width="2.4" fill="none" marker-end="url(#a4)">
         <path d="M170,63 H234"/><path d="M386,63 H450"/><path d="M602,63 H666"/>
         <path d="M818,63 H882"/><path d="M1034,63 H1088"/>
       </g>
-      <g class="lbl-sm" text-anchor="middle" fill="#dc2626">
+      <g class="lbl-sm" text-anchor="middle" fill="#e8888a">
         <text x="202" y="50">/20/16384</text><text x="418" y="50">K_T</text>
         <text x="634" y="50">k_g</text><text x="850" y="50">· ω</text><text x="1061" y="50">/η</text>
       </g>
-      <text x="590" y="132" class="lbl-sm" text-anchor="middle" fill="#7b8a9e">
+      <text x="590" y="132" class="lbl-sm" text-anchor="middle" fill="#6f7a6c">
         每一步都是乘一个常数 —— 所以整条链路能写成一个闭式：P_in = f(I_cmd, ω)
       </text>
-      <rect x="20" y="152" width="1150" height="42" rx="10" fill="#f0f6ff" stroke="#d5e4ff"/>
-      <text x="42" y="179" class="lbl-sm" fill="#1e3a8a">方向：报文 → 电流 → 力矩 → 轮端 → 功率。反过来就是"反解"。</text>
+      <rect x="20" y="152" width="1150" height="42" rx="10" fill="#1a2410" stroke="#3d4a35"/>
+      <text x="42" y="179" class="lbl-sm" fill="#c5f76a">方向：报文 → 电流 → 力矩 → 轮端 → 功率。反过来就是"反解"。</text>
     </svg>
   </div>
   <div class="row" style="flex:1">
@@ -372,11 +368,11 @@ window.SLIDES = (window.SLIDES || []).concat([
         <text class="lbl-sm" x="40" y="36" text-anchor="end">+16384</text>
         <text class="lbl-sm" x="40" y="204" text-anchor="end">−16384</text>
         <path d="M60,116 C130,34 200,34 270,116 C340,198 410,198 480,116"
-              fill="none" stroke="#2563eb" stroke-width="3.4"/>
+              fill="none" stroke="#c5f76a" stroke-width="3.4"/>
         <path d="M60,116 C136,44 206,44 276,116 C346,188 416,188 486,116"
-              fill="none" stroke="#dc2626" stroke-width="3" stroke-dasharray="9 6"/>
-        <text x="100" y="56" class="lbl-sm" fill="#2563eb">give_current（发送值）</text>
-        <text x="100" y="182" class="lbl-sm" fill="#dc2626">given_current（回馈值）· 滞后</text>
+              fill="none" stroke="#e8888a" stroke-width="3" stroke-dasharray="9 6"/>
+        <text x="100" y="56" class="lbl-sm" fill="#c5f76a">give_current（发送值）</text>
+        <text x="100" y="182" class="lbl-sm" fill="#e8888a">given_current（回馈值）· 滞后</text>
       </svg>
     </div>
   </div>`
@@ -390,9 +386,7 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="col" style="flex:1.15">
       <div class="card p1">
         <div class="card-title"><span class="dot"></span>最终形式</div>
-        <div class="formula p1" style="white-space:normal;font-size:19px">
-          P_in = k₁ I² + C_T I ω + k₂ ω² + a
-        </div>
+        <div class="formula p1">$$ P_{\\mathrm{in}} = k_1 I^2 + C_T I \\omega + k_2 \\omega^2 + a $$</div>
         <p class="explain" style="margin-top:10px;font-size:15px">
           式中 <span class="var">P_in</span> 为输入功率（W）；<span class="var">I</span> 为力矩电流指令（±16384）；
           <span class="var">ω</span> 为转速（rpm）；<span class="var">k₁</span> 为铜损系数；
@@ -438,30 +432,30 @@ window.SLIDES = (window.SLIDES || []).concat([
       <div class="card p1">
         <div class="card-title"><span class="dot"></span>三步</div>
         <p style="font-size:16px"><b>① 写成线性回归</b>：把每个采样点的四项当回归量，系数当未知数。</p>
-        <div class="formula p1" style="font-size:16px;white-space:normal">y = Xθ + ε&nbsp;&nbsp;，&nbsp;&nbsp;θ = (k₁, k₂, a)ᵀ</div>
+        <div class="formula p1">$$ y = X\\theta + \\varepsilon,\\qquad \\theta = \\left(k_1,\\;k_2,\\;a\\right)^{\\mathsf{T}} $$</div>
         <p class="explain" style="font-size:14px;margin-top:8px">式中 <span class="var">y</span> 为实测功率（N×1）；
           <span class="var">X</span> 为设计矩阵，每行 <span class="var">[I², ω², 1]</span>（N×3）；
           <span class="var">θ</span> 为待估参数（3×1）；<span class="var">ε</span> 为残差（N×1）。</p>
         <p style="font-size:16px;margin-top:12px"><b>② 最小化残差平方和</b>，求导令零得<b>正规方程</b>：</p>
-        <div class="formula p1" style="font-size:15px">XᵀX θ = Xᵀy&nbsp;&nbsp;⟹&nbsp;&nbsp;θ = (XᵀX)⁻¹Xᵀy</div>
+        <div class="formula p1">$$ X^{\\mathsf{T}}X\\,\\theta = X^{\\mathsf{T}}y \\;\\;\\Longrightarrow\\;\\; \\theta = \\left(X^{\\mathsf{T}}X\\right)^{-1}X^{\\mathsf{T}}y $$</div>
         <p style="font-size:16px;margin-top:12px"><b>③ 解 3×3 方程组</b>。N 可能上万，但要求解的只有三个未知数。</p>
       </div>
     </div>
     <div class="col" style="flex:1">
       <div class="card flat" style="padding:8px">
         <svg viewBox="0 0 520 320" style="width:100%">
-          <path d="M120,240 L330,170 L490,232 L280,302 Z" fill="rgba(37,99,235,.10)" stroke="#2563eb" stroke-width="2"/>
-          <text x="410" y="196" font-size="14" fill="#2563eb" font-weight="700">col(X)</text>
-          <circle cx="170" cy="262" r="5" fill="#16202b"/>
-          <text x="156" y="282" font-size="13" fill="#7b8a9e">0</text>
-          <line x1="170" y1="262" x2="292" y2="66" stroke="#dc2626" stroke-width="3" marker-end="url(#a6)"/>
-          <text x="302" y="64" font-size="16" fill="#dc2626" font-weight="700">y</text>
-          <line x1="170" y1="262" x2="318" y2="208" stroke="#0d9488" stroke-width="3.2" marker-end="url(#a6)"/>
-          <text x="324" y="232" font-size="16" fill="#0d9488" font-weight="700">ŷ = Xθ̂</text>
-          <line x1="318" y1="208" x2="292" y2="66" stroke="#ea7317" stroke-width="2.8" stroke-dasharray="8 5" marker-end="url(#a6)"/>
-          <text x="330" y="140" font-size="15" fill="#ea7317" font-weight="700">ε</text>
-          <path d="M306,200 L318,212 L304,222" fill="none" stroke="#ea7317" stroke-width="2"/>
-          <text x="260" y="316" font-size="12" fill="#7b8a9e" text-anchor="middle">残差与列空间正交 ⟹ 这就是"最短距离"</text>
+          <path d="M120,240 L330,170 L490,232 L280,302 Z" fill="rgba(37,99,235,.10)" stroke="#c5f76a" stroke-width="2"/>
+          <text x="410" y="196" font-size="14" fill="#c5f76a" font-weight="700">col(X)</text>
+          <circle cx="170" cy="262" r="5" fill="#f5f5f3"/>
+          <text x="156" y="282" font-size="13" fill="#6f7a6c">0</text>
+          <line x1="170" y1="262" x2="292" y2="66" stroke="#e8888a" stroke-width="3" marker-end="url(#a6)"/>
+          <text x="302" y="64" font-size="16" fill="#e8888a" font-weight="700">y</text>
+          <line x1="170" y1="262" x2="318" y2="208" stroke="#69c8e0" stroke-width="3.2" marker-end="url(#a6)"/>
+          <text x="324" y="232" font-size="16" fill="#69c8e0" font-weight="700">ŷ = Xθ̂</text>
+          <line x1="318" y1="208" x2="292" y2="66" stroke="#f0b45e" stroke-width="2.8" stroke-dasharray="8 5" marker-end="url(#a6)"/>
+          <text x="330" y="140" font-size="15" fill="#f0b45e" font-weight="700">ε</text>
+          <path d="M306,200 L318,212 L304,222" fill="none" stroke="#f0b45e" stroke-width="2"/>
+          <text x="260" y="316" font-size="12" fill="#6f7a6c" text-anchor="middle">残差与列空间正交 ⟹ 这就是"最短距离"</text>
         </svg>
       </div>
       <div class="note" style="font-size:16px"><b>几何意义：</b>
@@ -480,13 +474,11 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="col" style="flex:1">
       <div class="card p1">
         <div class="card-title"><span class="dot"></span>把它当成关于 I 的二次方程</div>
-        <div class="formula p1" style="font-size:16px;white-space:normal">
-          k₁I² + C_T ω I + (k₂ω² + a − P*) = 0
-        </div>
+        <div class="formula p1">$$ k_1 I^2 + C_T \\omega\\, I + \\left(k_2\\omega^2 + a - P^{*}\\right) = 0 $$</div>
         <p class="explain" style="font-size:14px;margin-top:8px">
           记 <span class="var">A = k₁</span>、<span class="var">B = C_T ω</span>、
           <span class="var">C = k₂ω² + a − P*</span>，则</p>
-        <div class="formula p1" style="font-size:15px">I = ( −C_T ω ± √Δ ) / ( 2k₁ )&nbsp;&nbsp;，&nbsp;&nbsp;Δ = B² − 4AC</div>
+        <div class="formula p1">$$ I = \\frac{-C_T \\omega \\pm \\sqrt{\\Delta}}{2k_1},\\qquad \\Delta = B^2 - 4AC $$</div>
       </div>
       <div class="card p1">
         <div class="card-title"><span class="dot"></span>选根必须看符号</div>
@@ -544,11 +536,11 @@ window.SLIDES = (window.SLIDES || []).concat([
         <table class="tb" style="font-size:14px">
           <tr><th>方案</th><th>做法</th><th>致命问题</th></tr>
           <tr><td><b>① 均分</b></td><td>每台分 <span class="var">P_lim/4</span></td>
-              <td style="color:#dc2626">与转速耦合，破坏方向性→跑偏、正反馈</td></tr>
+              <td style="color:#e8888a">与转速耦合，破坏方向性→跑偏、正反馈</td></tr>
           <tr><td><b>② 统一缩放</b></td><td>指令同乘一个系数</td>
-              <td style="color:#b45309">缩的是指令不是功率，两者无线性关系</td></tr>
+              <td style="color:#f0b45e">缩的是指令不是功率，两者无线性关系</td></tr>
           <tr><td><b>③ 功率再分配</b></td><td>缩放<b>功率</b>再反解</td>
-              <td style="color:#16a34a">预算利用率最高，方向性也保持</td></tr>
+              <td style="color:#7ee787">预算利用率最高，方向性也保持</td></tr>
         </table>
       </div>
       <div class="okbox" style="font-size:16px"><b>核心区别：</b>
@@ -565,9 +557,7 @@ window.SLIDES = (window.SLIDES || []).concat([
     <div class="col" style="flex:1">
       <div class="card p1">
         <div class="card-title"><span class="dot"></span>闭环结构</div>
-        <div class="formula p1" style="font-size:16px;white-space:normal">
-          e = E_buf* − E_buf&nbsp;→&nbsp;u = K_p e + K_i∫e dt&nbsp;→&nbsp;P_lim = P_max − u
-        </div>
+        <div class="formula p1">$$ e = E_{\\mathrm{buf}}^{*} - E_{\\mathrm{buf}} \\;\\to\\; u = K_p e + K_i\\!\\int\\! e\\,dt \\;\\to\\; P_{\\lim} = P_{\\max} - u $$</div>
         <p class="explain" style="font-size:14px;margin-top:8px">式中 <span class="var">E_buf*</span> 为设定值（常见 30 J）；
           <span class="var">u</span> 为 PID 输出；<span class="var">P_lim</span> 为本周期功率预算。</p>
       </div>
