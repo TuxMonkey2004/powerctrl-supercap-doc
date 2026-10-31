@@ -3,75 +3,12 @@
    ============================================================ */
 window.SLIDES = (window.SLIDES || []).concat([
 
-/* ================================================================
-   开场
-   ================================================================ */
-{
-  id: 'cover', part: '开场', partKey: 'p0', title: '封面', cls: 'cover',
-  html: `<div class="cover-inner">
-    <div class="eyebrow">RoboMaster · 硬件组新人培训</div>
-    <h1>功率控制<br><span class="accent">与超级电容</span></h1>
-    <p class="lede">功率控制讲清楚"为什么"，超级电容讲清楚"怎么选、怎么调"。<br>
-       后半程会逐颗讲板子上的元器件：主控、栅极驱动、MOS、电感、采样、电源、保护。</p>
-    <div class="meta">
-      <div><b>两部分</b>功率控制（13 页）· 超级电容（38 页）</div>
-      <div><b>配套教材</b>《功率控制算法与超级电容技术文档》</div>
-      <div><b>操作</b>← → 翻页 · G 快速导航 · F 全屏</div>
-    </div>
-  </div>`
-},
-{
-  id: 'roadmap', part: '开场', partKey: 'p0', title: '今天讲什么',
-  sub: '前半程建概念，后半程拆板子',
-  html: `<div class="row grow">
-    <div class="card p1 grow">
-      <div class="card-title"><span class="dot"></span>Part I · 功率控制（13 页）</div>
-      <p class="tiny" style="color:var(--ink-3);margin-bottom:8px">核心问题：<b>怎样让四个轮子的总功率永远不超裁判给的那条线？</b></p>
-      <p class="tiny" style="font-size:15px">缓冲能量 → 力控底盘 → 力矩链路 → 功率模型<br>
-        → 参数辨识 → 反解 → 再分配 → 兜底闭环</p>
-      <div class="note" style="margin-top:14px;font-size:15px">
-        这部分<b>只讲清楚逻辑与公式的来由</b>，推导细节全在教材里。
-        台上不推导，回去自己推一遍就够。</div>
-    </div>
-    <div class="card p2 grow">
-      <div class="card-title"><span class="dot"></span>Part II · 超级电容（38 页）</div>
-      <p class="tiny" style="color:var(--ink-3);margin-bottom:8px">核心问题：<b>怎样把"超出去的功率"临时存在电容里，事后再还回去？</b></p>
-      <p class="tiny" style="font-size:15px">拓扑与波形 → <b>逐颗元器件选型</b> → 保护 → 电容组<br>
-        → 双环 → 状态机 → CAN → 代码与时序</p>
-      <div class="okbox" style="margin-top:14px;font-size:15px">
-        这部分是<b>重头戏</b>：每一颗器件都会回答三个问题——
-        <b>它要干什么、为什么选它、换成别的会怎样</b>。</div>
-    </div>
-  </div>
-  <div class="note" style="flex:0 0 auto">
-    <b>学习方法：</b>培训给地图，教材给细节。每讲完一小节，回教材对应小节把公式自己推一遍、把选型算一遍。
-  </div>`
-},
-{
-  id: 'core', part: '开场', partKey: 'p0', title: '先记住这五句话',
-  sub: '后面所有内容都围绕它们展开',
-  html: `<div class="col grow" style="justify-content:center;gap:13px">
-    <div class="card tight p1"><p style="font-size:21px"><b>① 功率是力矩乘转速。</b>
-      所以只有能直接控制<b>力矩</b>的底盘，才能反过来控制功率。</p></div>
-    <div class="card tight p1"><p style="font-size:21px"><b>② 功率必须"先算再发"。</b>
-      反馈式是"先超了再收"，永远滞后一个结算周期（100 ms）。</p></div>
-    <div class="card tight p2"><p style="font-size:21px"><b>③ 电容储能与电压平方成正比。</b>
-      放掉一半电压，只放出四分之三的能量。</p></div>
-    <div class="card tight p2"><p style="font-size:21px"><b>④ 选型是算出来的，不是抄来的。</b>
-      每个参数都要能对应到一条损耗、一条应力或一条裕量。</p></div>
-    <div class="card tight p2"><p style="font-size:21px"><b>⑤ 死区与保护不是可选项。</b>
-      上下管同时导通 = 把母线短路，瞬间炸管。</p></div>
-  </div>`
-},
-
-/* ================================================================
-   Part I
-   ================================================================ */
 {
   id: 'p1-divider', part: 'Part I', partKey: 'p1', title: '功率控制', cls: 'divider',
   html: `<div class="big-num">I</div>
     <h2>功率控制</h2>
-    <p>从裁判系统的缓冲能量，到四个轮子的力矩指令——<br>一条完整的"功率约束"链路。共 13 页。</p>`
+    <p>第 0 章已经把道理讲通了。<br>
+      这一章开始动手算：怎么把一个"不能超"的限制，变成能写进代码的公式。共 13 页。</p>`
 },
 
 /* ---------- 缓冲能量 ---------- */

@@ -84,6 +84,69 @@ window.SLIDES = (window.SLIDES || []).concat([
 },
 
 /* ---------- 能量与电压 ---------- */
+/* ---------- 电容 = 水桶（深一层，但仍然直观） ---------- */
+{
+  id: 'sc-bucket', part: 'Part II', partKey: 'p2', title: '电容像一个水桶',
+  sub: '11.3 · 把"存电"换成"存水"',
+  html: `<div class="row grow">
+    <div class="col" style="flex:1.1">
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>水桶上的三个量，对到电容上</div>
+        <table class="tb" style="font-size:15px">
+          <tr><th style="width:34%">水桶</th><th style="width:30%">电容</th><th>符号</th></tr>
+          <tr><td>桶有多粗</td><td><b>容量</b></td><td><span class="var">C</span>（法拉 F）</td></tr>
+          <tr><td>水位有多高</td><td><b>电压</b></td><td><span class="var">U</span>（伏特 V）</td></tr>
+          <tr><td>装了多少水</td><td><b>电荷量</b></td><td><span class="var">Q</span>（库仑 C）</td></tr>
+        </table>
+        <div class="formula p2" style="margin-top:12px">$$ Q = C \\times U $$</div>
+        <p class="explain" style="margin-top:8px">
+          和"水量 = 桶粗 × 水位"是一回事：桶越粗、水位越高，装的水越多。</p>
+      </div>
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>那"能量"是多少</div>
+        <p style="font-size:15.5px">把水一桶一桶往外倒，倒的时候水位在下降，
+          所以后面倒出来的水"落差"更小、更有劲。
+          把落差算平均，正好是<b>最高落差的一半</b>：</p>
+        <div class="formula p2" style="margin-top:8px">$$ E = \\tfrac{1}{2}\\,C\\,U^{2} $$</div>
+      </div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="card flat" style="padding:10px">
+        <svg viewBox="0 0 460 320" style="width:100%">
+          <!-- 满桶 -->
+          <path d="M60,58 L52,200 Q52,214 66,214 L166,214 Q180,214 180,200 L172,58 Z"
+                fill="rgba(105,200,224,.10)" stroke="#69c8e0" stroke-width="2.4"/>
+          <path d="M57,110 L175,110 L170,200 Q170,210 164,210 L68,210 Q62,210 62,200 Z"
+                fill="rgba(105,200,224,.34)"/>
+          <text x="116" y="42" text-anchor="middle" font-size="12" fill="#a8aea5">满桶 U_max</text>
+          <text x="116" y="164" text-anchor="middle" font-size="12" fill="#c2e6f2" font-weight="700">能量 100%</text>
+          <line x1="60" y1="110" x2="172" y2="110" stroke="#69c8e0" stroke-width="1.6"/>
+
+          <!-- 半桶 -->
+          <path d="M270,58 L262,200 Q262,214 276,214 L376,214 Q390,214 390,200 L382,58 Z"
+                fill="rgba(105,200,224,.10)" stroke="#69c8e0" stroke-width="2.4"/>
+          <path d="M266,154 L386,154 L382,200 Q382,210 376,210 L276,210 Q270,210 270,200 Z"
+                fill="rgba(105,200,224,.34)"/>
+          <text x="326" y="42" text-anchor="middle" font-size="12" fill="#a8aea5">半桶 U_max/2</text>
+          <text x="326" y="186" text-anchor="middle" font-size="12" fill="#c2e6f2" font-weight="700">还剩 75%</text>
+          <line x1="270" y1="154" x2="386" y2="154" stroke="#69c8e0" stroke-width="1.6"/>
+
+          <text x="230" y="252" text-anchor="middle" font-size="13.5" fill="#c5f76a" font-weight="700">
+            水位减一半，只放掉了 1/4 的能量</text>
+          <text x="230" y="278" text-anchor="middle" font-size="12.5" fill="#6f7a6c">
+            因为能量和水位是"平方"关系，不是"正比"</text>
+          <text x="230" y="304" text-anchor="middle" font-size="12.5" fill="#f0b45e" font-weight="700">
+            所以：电压窗口比容量更值钱</text>
+        </svg>
+      </div>
+      <div class="okbox" style="font-size:16px">
+        <b>这条"平方关系"后面会反复用到。</b>它带来两个直接的结论：<br>
+        ① 提高电压比增大容量更划算；<br>
+        ② 放电不要放太狠——越往下放，剩下的电越"不值钱"。</div>
+    </div>
+  </div>`
+},
+
 {
   id: 'sc-energy', part: 'Part II', partKey: 'p2', title: '能量与电压：为什么电压窗口这么重要',
   sub: '11.3 · E = ½CU²',
@@ -126,6 +189,181 @@ window.SLIDES = (window.SLIDES || []).concat([
 
 /* ---------- 三种基本变换器 ---------- */
 {
+  id: 'sc-whyconverter', part: 'Part II', partKey: 'p2', title: '两侧电压对不上，怎么办',
+  sub: '12.1 · 先看清问题，再想电路',
+  html: `<div class="row grow">
+    <div class="col" style="flex:1">
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>问题一：两侧电压不一样</div>
+        <p style="font-size:15.5px">电池那边基本稳定在 <b>24 V 左右</b>；
+          而电容这边，充放电时电压会从 <b>0 V 一路变到 30 V</b>。</p>
+        <p style="font-size:15.5px;margin-top:8px">
+          两边电压<b>对不上</b>，就不能直接接在一起。</p>
+      </div>
+      <div class="card warn">
+        <div class="card-title"><span class="dot"></span>问题二：直接并联会出事</div>
+        <p style="font-size:15.5px">如果拿一根粗导线把 24 V 的电池和一只<b>空电容（0 V）</b>直接并起来——
+          那一瞬间相当于<b>把电池短路</b>：电流会大到把导线烧红、把电容炸开。</p>
+        <p style="font-size:15.5px;margin-top:8px">
+          这不是夸张，是超级电容最危险的操作之一。</p>
+      </div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>所以需要一段"中间环节"</div>
+        <p style="font-size:15.5px">它要做两件事：</p>
+        <ul style="font-size:15.5px;margin-top:6px">
+          <li><b>能升压</b>——电容电压低时，把 24 V 抬上去给它充电</li>
+          <li><b>能降压</b>——电容电压高时，把 30 V 降下来供给底盘</li>
+          <li>而且<b>两个方向都要能走</b>（充进去、放出来）</li>
+        </ul>
+        <div class="okbox" style="margin-top:10px;font-size:15.5px">
+          这个"中间环节"叫 <b>双向 DC–DC 变换器</b>。<br>
+          "DC" 是直流，"DC–DC" 就是"直流变直流"——改的是<b>电压高低</b>，不是交流变直流。</div>
+      </div>
+      <div class="card flat" style="padding:8px">
+        <svg viewBox="0 0 500 108" style="width:100%">
+          <rect x="8" y="22" width="112" height="62" rx="9" fill="#1b241b" stroke="#4a5642" stroke-width="2"/>
+          <text x="64" y="48" text-anchor="middle" font-size="12.5" fill="#dfe6da" font-weight="700">电池</text>
+          <text x="64" y="68" text-anchor="middle" font-size="11.5" fill="#a8aea5">≈ 24 V 固定</text>
+
+          <rect x="170" y="16" width="160" height="74" rx="9" fill="#12222a" stroke="#69c8e0" stroke-width="2.4"/>
+          <text x="250" y="44" text-anchor="middle" font-size="12.5" fill="#c2e6f2" font-weight="700">双向 DC–DC</text>
+          <text x="250" y="64" text-anchor="middle" font-size="11.5" fill="#8fc7d6">能升 · 能降 · 双向</text>
+
+          <rect x="380" y="22" width="112" height="62" rx="9" fill="#1b241b" stroke="#4a5642" stroke-width="2"/>
+          <text x="436" y="48" text-anchor="middle" font-size="12.5" fill="#dfe6da" font-weight="700">超级电容</text>
+          <text x="436" y="68" text-anchor="middle" font-size="11.5" fill="#a8aea5">0 ~ 30 V 变化</text>
+
+          <path d="M120,53 H166" stroke="#c5f76a" stroke-width="3" marker-end="url(#a7)"/>
+          <path d="M334,53 H376" stroke="#69c8e0" stroke-width="3" marker-end="url(#a10)"/>
+          <path d="M376,68 H334" stroke="#c5f76a" stroke-width="3" marker-end="url(#a7)"/>
+        </svg>
+      </div>
+    </div>
+  </div>`
+},
+
+{
+  id: 'sc-inductor', part: 'Part II', partKey: 'p2', title: '电感：电流的"惯性"',
+  sub: '12.1 · 讲升降压之前，必须先认识它',
+  html: `<div class="row grow">
+    <div class="col" style="flex:1.05">
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>先给一个类比</div>
+        <p style="font-size:15.5px">一列很重的火车：<b>想让起步很难，想让它停下也很难</b>。
+          它的速度不会突变。</p>
+        <p style="font-size:15.5px;margin-top:8px">
+          <b>电感就是电流的"火车"</b>：电流想突然变大，它拦着；
+          电流想突然变小，它也拦着。<b>电流不能瞬间改变。</b></p>
+        <div class="note" style="margin-top:10px;font-size:15px">
+          <b>注意区别：</b>电容"抵抗<b>电压</b>突变"，电感"抵抗<b>电流</b>突变"。
+          一个存的是电压（电荷），一个存的是电流。</div>
+      </div>
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>写成式子</div>
+        <div class="formula p2">$$ U_{L} = L\\,\\frac{di}{dt} $$</div>
+        <p class="explain" style="margin-top:8px">式中 <span class="var">U_L</span> 为电感两端电压（V）；
+          <span class="var">L</span> 为电感量（H，亨利）；
+          <span class="var">di/dt</span> 为电流的<b>变化速度</b>（A/s）。
+          <br>它说的就是：<b>想让电流变得越快，需要的电压就越大</b>。</p>
+      </div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="card flat" style="padding:8px">
+        <svg viewBox="0 0 480 220" style="width:100%">
+          <text x="240" y="20" text-anchor="middle" font-size="12.5" fill="#a8aea5">电流想突变，电感不让</text>
+          <path class="axis" d="M56,180 H450"/><path class="axis" d="M56,34 V180"/>
+          <text x="440" y="200" font-size="11.5" fill="#a8aea5" text-anchor="end">时间 →</text>
+          <text x="46" y="42" font-size="11.5" fill="#a8aea5" text-anchor="end">电流 i</text>
+          <path d="M56,180 L56,150 L120,150 L120,110 L190,110 L190,76 L450,76"
+                fill="none" stroke="#e8888a" stroke-width="2.6" stroke-dasharray="7 5"/>
+          <text x="300" y="62" font-size="11.5" fill="#e8888a">理想开关：瞬间跳变</text>
+          <path d="M56,180 C130,176 190,150 260,120 C330,90 380,80 450,78"
+                fill="none" stroke="#69c8e0" stroke-width="3.2"/>
+          <text x="270" y="146" font-size="11.5" fill="#69c8e0" font-weight="700">真实电感：只能慢慢爬</text>
+        </svg>
+      </div>
+      <div class="okbox" style="font-size:15.5px">
+        <b>这个"慢"恰恰是好事。</b>
+        正因为电流不能突变，我们才能用开关把电压"切"来"切"去，
+        而电流仍然是连续的、平稳的——这正是所有开关电源能工作的前提。</div>
+    </div>
+  </div>`
+},
+
+{
+  id: 'sc-inductor-boost', part: 'Part II', partKey: 'p2', title: '电感怎么把电压"顶"上去',
+  sub: '12.1 · 升降压的全部秘密就在这两步',
+  html: `<div class="row grow">
+    <div class="col" style="flex:1.15">
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>第一步：给电感通电储能</div>
+        <p style="font-size:15.5px">把开关合上，电流流过电感，慢慢往上涨。
+          能量被<b>存进电感</b>（变成磁场）。</p>
+        <p style="font-size:15.5px;margin-top:6px">
+          这时候电感两端电压很小，它只是在"攒劲"。</p>
+      </div>
+      <div class="card warn">
+        <div class="card-title"><span class="dot"></span>第二步：把开关断开</div>
+        <p style="font-size:15.5px">电流想继续流，但电路断了。
+          <b>电感不会让电流瞬间归零</b>——它会自己"顶"出一个很高的电压，
+          硬是把电流推出去。</p>
+        <p style="font-size:15.5px;margin-top:8px">
+          断开得越快，顶出来的电压越高。这就是 \\(U_L = L\,di/dt\\) 在说的事：
+          <b>电流变化越快，电压越大</b>。</p>
+      </div>
+      <div class="okbox" style="font-size:15.5px">
+        <b>生活里你见过它：</b>拔掉电风扇插头时会打一个小火花、汽车点火线圈能产生上万伏——
+        都是电感在"顶"电压。</div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="card flat" style="padding:8px">
+        <svg viewBox="0 0 460 340" style="width:100%">
+          <!-- 第一步 -->
+          <text x="20" y="20" font-size="12.5" fill="#c5f76a" font-weight="700">① 开关合上：电感储能</text>
+          <path class="wire" d="M40,50 H180" stroke="#c2ccbe"/>
+          <rect x="86" y="38" width="46" height="24" rx="4" fill="#1e3a1f" stroke="#7ee787" stroke-width="2"/>
+          <text x="109" y="55" text-anchor="middle" font-size="11" fill="#9df2a4" font-weight="700">S 合</text>
+          <path d="M180,50 v18" stroke="#c2ccbe" stroke-width="2.2"/>
+          <path d="M180,68 a11,11 0 0 0 22,0 a11,11 0 0 0 22,0 a11,11 0 0 0 22,0"
+                fill="none" stroke="#69c8e0" stroke-width="2.6"/>
+          <path d="M246,68 v14 H40 v-32" fill="none" stroke="#c2ccbe" stroke-width="2.2"/>
+          <path d="M40,80 H246" stroke="#c5f76a" stroke-width="4" stroke-dasharray="10 8" marker-end="url(#a7)"/>
+          <text x="150" y="102" text-anchor="middle" font-size="11.5" fill="#c5f76a">电流慢慢上升，能量存进电感</text>
+
+          <!-- 第二步 -->
+          <text x="20" y="146" font-size="12.5" fill="#e8888a" font-weight="700">② 开关断开：电感顶出高压</text>
+          <path class="wire" d="M40,176 H180" stroke="#c2ccbe"/>
+          <rect x="86" y="164" width="46" height="24" rx="4" fill="#1c231c" stroke="#55614f" stroke-width="2"/>
+          <text x="109" y="181" text-anchor="middle" font-size="11" fill="#78846f" font-weight="700">S 断</text>
+          <path d="M180,176 v18" stroke="#c2ccbe" stroke-width="2.2"/>
+          <path d="M180,194 a11,11 0 0 0 22,0 a11,11 0 0 0 22,0 a11,11 0 0 0 22,0"
+                fill="none" stroke="#69c8e0" stroke-width="2.6"/>
+          <path d="M246,194 v14 H40 v-32" fill="none" stroke="#c2ccbe" stroke-width="2.2"/>
+          <path d="M40,206 H246" stroke="#e8888a" stroke-width="4" stroke-dasharray="10 8" marker-end="url(#a1)"/>
+          <text x="150" y="228" text-anchor="middle" font-size="11.5" fill="#e8888a">电流不能被切断 → 电压被顶高</text>
+
+          <!-- 电压对比 -->
+          <text x="20" y="262" font-size="12.5" fill="#a8aea5" font-weight="700">结果</text>
+          <rect x="40" y="274" width="90" height="34" rx="6" fill="#1b241b" stroke="#4a5642" stroke-width="2"/>
+          <text x="85" y="296" text-anchor="middle" font-size="12.5" fill="#dfe6da" font-weight="700">输入 24 V</text>
+          <path d="M140,291 H196" stroke="#a8aea5" stroke-width="2.4" marker-end="url(#a1)"/>
+          <text x="168" y="282" text-anchor="middle" font-size="11" fill="#6f7a6c">切一下</text>
+          <rect x="206" y="274" width="150" height="34" rx="6" fill="#2a1618" stroke="#e8888a" stroke-width="2.2"/>
+          <text x="281" y="296" text-anchor="middle" font-size="12.5" fill="#f0a7a9" font-weight="700">可以得到更高电压</text>
+          <text x="376" y="296" font-size="12" fill="#6f7a6c">← 这就是升压</text>
+        </svg>
+      </div>
+      <div class="warnbox" style="font-size:15.5px">
+        <b>但"顶出来"的电压不受控是很危险的。</b>
+        所以真实的电路里必须给这个电流一条<b>可控的出路</b>
+        ——后面看到的那个"续流管"，就是干这个的。</div>
+    </div>
+  </div>`
+},
+
+{
   id: 'converters', part: 'Part II', partKey: 'p2', title: '三种基本变换器',
   sub: '12.1 · 为什么最后选"四开关"',
   html: `<div class="col grow" style="justify-content:center;gap:14px">
@@ -159,6 +397,82 @@ window.SLIDES = (window.SLIDES || []).concat([
 
 /* ---------- Buck 动画 ---------- */
 {
+  id: 'sc-buck-steps', part: 'Part II', partKey: 'p2', title: 'Buck 降压：分三步看',
+  sub: '12.1.1 · 一个开关加一个电感就够了',
+  html: `<div class="row grow">
+    <div class="col" style="flex:1.2">
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>目标：把 30 V 变成能用的更低电压</div>
+        <p style="font-size:15px">做法很朴素：<b>把一个开关快速地开开关关</b>，
+          再用电感把"碎掉的"电流抹平。分三步看：</p>
+      </div>
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>① 开关合上（导通）</div>
+        <p style="font-size:15px">输入通过电感直接向输出供电，同时<b>电感储能</b>、电流上升。</p>
+      </div>
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>② 开关断开（续流）</div>
+        <p style="font-size:15px">输入断开。电感不肯让电流停，于是经<b>续流管</b>
+          继续把电送给输出——所以输出<b>从没断电</b>。</p>
+      </div>
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>③ 不停地重复</div>
+        <p style="font-size:15px">输出电容把这一开一关"抹平"。
+          输出电压就约等于输入电压乘以<b>开关合上的时间占比</b>：</p>
+        <div class="formula p2" style="margin-top:8px">$$ U_{2} = D \\cdot U_{1} $$</div>
+        <p class="explain" style="margin-top:6px">式中 <span class="var">D</span> 为<b>占空比</b>——
+          一个周期里开关合上的时间比例。\\(D=0.5\\) 时输出约为输入的一半。</p>
+      </div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="card flat" style="padding:8px">
+        <svg viewBox="0 0 470 400" style="width:100%">
+          <!-- 步骤1 -->
+          <text x="16" y="18" font-size="12" fill="#7ee787" font-weight="700">① 开关合上</text>
+          <path class="wire" d="M30,44 H170" stroke="#c2ccbe"/>
+          <rect x="70" y="32" width="40" height="22" rx="4" fill="#1e3a1f" stroke="#7ee787" stroke-width="2"/>
+          <text x="90" y="48" text-anchor="middle" font-size="10.5" fill="#9df2a4" font-weight="700">合</text>
+          <path d="M170,44 v20" stroke="#c2ccbe" stroke-width="2"/>
+          <path d="M170,64 a10,10 0 0 0 20,0 a10,10 0 0 0 20,0 a10,10 0 0 0 20,0"
+                fill="none" stroke="#69c8e0" stroke-width="2.4"/>
+          <path d="M230,64 v14 H400" fill="none" stroke="#c2ccbe" stroke-width="2"/>
+          <text x="300" y="70" font-size="11" fill="#a8aea5">→ 输出</text>
+          <path d="M230,78 H400" stroke="#c5f76a" stroke-width="3.6" stroke-dasharray="9 7" marker-end="url(#a7)"/>
+          <path d="M30,44 v34 H230" fill="none" stroke="#c2ccbe" stroke-width="2"/>
+          <text x="120" y="96" font-size="10.5" fill="#c5f76a">电感储能，电流上升</text>
+
+          <!-- 步骤2 -->
+          <text x="16" y="146" font-size="12" fill="#f0b45e" font-weight="700">② 开关断开（续流）</text>
+          <path class="wire" d="M30,172 H170" stroke="#c2ccbe"/>
+          <rect x="70" y="160" width="40" height="22" rx="4" fill="#1c231c" stroke="#55614f" stroke-width="2"/>
+          <text x="90" y="176" text-anchor="middle" font-size="10.5" fill="#78846f" font-weight="700">断</text>
+          <path d="M170,172 v20" stroke="#c2ccbe" stroke-width="2"/>
+          <path d="M170,192 a10,10 0 0 0 20,0 a10,10 0 0 0 20,0 a10,10 0 0 0 20,0"
+                fill="none" stroke="#69c8e0" stroke-width="2.4"/>
+          <path d="M230,192 v14 H400" fill="none" stroke="#c2ccbe" stroke-width="2"/>
+          <text x="300" y="198" font-size="11" fill="#a8aea5">→ 输出</text>
+          <path d="M230,206 H400" stroke="#f0b45e" stroke-width="3.6" stroke-dasharray="9 7" marker-end="url(#a3)"/>
+          <!-- 续流回路 -->
+          <path d="M230,206 H170 v-14" fill="none" stroke="#c2ccbe" stroke-width="2"/>
+          <rect x="118" y="184" width="34" height="20" rx="3" fill="#1b241b" stroke="#69c8e0" stroke-width="1.8"/>
+          <text x="135" y="198" text-anchor="middle" font-size="9.5" fill="#69c8e0" font-weight="700">续流管</text>
+          <text x="120" y="228" font-size="10.5" fill="#f0b45e">电感经续流管继续供电</text>
+
+          <!-- 步骤3 -->
+          <text x="16" y="272" font-size="12" fill="#69c8e0" font-weight="700">③ 波形：被"抹平"</text>
+          <path class="axis" d="M30,360 H440"/><path class="axis" d="M30,296 V360"/>
+          <path d="M30,320 L90,320 L90,344 L150,344 L150,320 L210,320 L210,344 L270,344 L270,320 L330,320 L330,344 L390,344 L390,320 L440,320"
+                fill="none" stroke="#69c8e0" stroke-width="2.2"/>
+          <line x1="30" y1="332" x2="440" y2="332" stroke="#c5f76a" stroke-width="2.6" stroke-dasharray="8 6"/>
+          <text x="400" y="326" font-size="10.5" fill="#c5f76a" text-anchor="end">平均值 = 输出</text>
+          <text x="30" y="384" font-size="10.5" fill="#6f7a6c">输出电容把这个方波抹成平稳的直流</text>
+        </svg>
+      </div>
+    </div>
+  </div>`
+},
+
+{
   id: 'buck-anim', part: 'Part II', partKey: 'p2', title: 'Buck 工作原理：看电流怎么走',
   sub: '12.1.1 · 四个管子里，右边两个是"固定"的',
   html: `<div class="row grow" style="align-items:stretch">
@@ -188,6 +502,87 @@ window.SLIDES = (window.SLIDES || []).concat([
 },
 
 /* ---------- Boost 动画 ---------- */
+{
+  id: 'sc-boost-steps', part: 'Part II', partKey: 'p2', title: 'Boost 升压：把三步换个顺序',
+  sub: '12.1.2 · 电感储能的位置变了，结果就反过来了',
+  html: `<div class="row grow">
+    <div class="col" style="flex:1.2">
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>和 Buck 只差一件事</div>
+        <p style="font-size:15px">Buck 是"<b>先给输出，再储能</b>"；
+          Boost 是"<b>先储能，再和电源一起给输出</b>"。
+          同样的两个器件，换个接法，效果就反过来了。</p>
+      </div>
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>① 开关合上：把电感"短路"</div>
+        <p style="font-size:15px">开关合上时，电感被直接接到电源两端，
+          <b>电流快速上升、拼命储能</b>，而输出这一侧靠电容自己顶着。</p>
+      </div>
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>② 开关断开：电源 + 电感 串联</div>
+        <p style="font-size:15px">这是关键的一步。此时电感<b>串在电源后面</b>，
+          它顶出的电压和电源电压<b>叠加</b>在一起送向输出——
+          所以输出比输入<b>更高</b>。</p>
+      </div>
+      <div class="card p2">
+        <div class="card-title"><span class="dot"></span>③ 结论</div>
+        <div class="formula p2">$$ U_{2} = \\frac{U_{1}}{1 - D} $$</div>
+        <p class="explain" style="margin-top:6px">占空比 <span class="var">D</span> 越大，
+          输出越高；<span class="var">D</span> 越接近 1，输出越接近"无穷大"（实际做不到）。
+          <b>这就是为什么升压比降压更难做。</b></p>
+      </div>
+    </div>
+    <div class="col" style="flex:1">
+      <div class="card flat" style="padding:8px">
+        <svg viewBox="0 0 470 400" style="width:100%">
+          <!-- 步骤1 -->
+          <text x="16" y="18" font-size="12" fill="#7ee787" font-weight="700">① 开关合上：电感储能</text>
+          <path class="wire" d="M30,44 H400" stroke="#c2ccbe"/>
+          <path d="M120,44 v20" stroke="#c2ccbe" stroke-width="2"/>
+          <path d="M120,64 a10,10 0 0 0 20,0 a10,10 0 0 0 20,0 a10,10 0 0 0 20,0"
+                fill="none" stroke="#69c8e0" stroke-width="2.4"/>
+          <path d="M180,64 v14 v-34" fill="none" stroke="none"/>
+          <path d="M180,78 v-34" fill="none" stroke="none"/>
+          <path d="M180,78 V44" fill="none" stroke="none"/>
+          <rect x="196" y="32" width="40" height="22" rx="4" fill="#1e3a1f" stroke="#7ee787" stroke-width="2"/>
+          <text x="216" y="48" text-anchor="middle" font-size="10.5" fill="#9df2a4" font-weight="700">合</text>
+          <path d="M180,78 H196" stroke="#c2ccbe" stroke-width="2"/>
+          <path d="M236,44 H400" stroke="#c2ccbe" stroke-width="2"/>
+          <path d="M120,44 v34 H180" fill="none" stroke="#c2ccbe" stroke-width="2"/>
+          <path d="M40,78 H180" stroke="#c5f76a" stroke-width="3.6" stroke-dasharray="9 7" marker-end="url(#a7)"/>
+          <text x="250" y="94" font-size="10.5" fill="#c5f76a">电流在电感里打转，储能</text>
+          <text x="330" y="62" font-size="10.5" fill="#a8aea5">输出靠电容顶住</text>
+
+          <!-- 步骤2 -->
+          <text x="16" y="146" font-size="12" fill="#f0b45e" font-weight="700">② 开关断开：电源 + 电感 叠加</text>
+          <path class="wire" d="M30,172 H400" stroke="#c2ccbe"/>
+          <path d="M120,172 v20" stroke="#c2ccbe" stroke-width="2"/>
+          <path d="M120,192 a10,10 0 0 0 20,0 a10,10 0 0 0 20,0 a10,10 0 0 0 20,0"
+                fill="none" stroke="#69c8e0" stroke-width="2.4"/>
+          <rect x="196" y="160" width="40" height="22" rx="4" fill="#1c231c" stroke="#55614f" stroke-width="2"/>
+          <text x="216" y="176" text-anchor="middle" font-size="10.5" fill="#78846f" font-weight="700">断</text>
+          <path d="M236,172 H400" stroke="#c2ccbe" stroke-width="2"/>
+          <path d="M120,172 v34 H180" fill="none" stroke="#c2ccbe" stroke-width="2"/>
+          <path d="M40,206 H400" stroke="#f0b45e" stroke-width="3.6" stroke-dasharray="9 7" marker-end="url(#a3)"/>
+          <text x="250" y="222" font-size="10.5" fill="#f0b45e">电源电压 + 电感顶出的电压，一起送向输出</text>
+
+          <!-- 电压叠加图 -->
+          <text x="16" y="262" font-size="12" fill="#a8aea5" font-weight="700">③ 电压是"叠"起来的</text>
+          <rect x="30" y="276" width="100" height="30" rx="5" fill="#1b241b" stroke="#4a5642" stroke-width="1.8"/>
+          <text x="80" y="296" text-anchor="middle" font-size="11" fill="#dfe6da">电源 24 V</text>
+          <rect x="30" y="310" width="76" height="30" rx="5" fill="#14293a" stroke="#69c8e0" stroke-width="1.8"/>
+          <text x="68" y="330" text-anchor="middle" font-size="11" fill="#c2e6f2">电感 +16 V</text>
+          <path d="M150,294 H188" stroke="#a8aea5" stroke-width="2" marker-end="url(#a1)"/>
+          <rect x="198" y="288" width="130" height="40" rx="6" fill="#1e3a1f" stroke="#7ee787" stroke-width="2.2"/>
+          <text x="263" y="314" text-anchor="middle" font-size="12.5" fill="#9df2a4" font-weight="700">输出 40 V</text>
+          <text x="344" y="314" font-size="11" fill="#6f7a6c">← 比输入高</text>
+          <text x="30" y="368" font-size="10.5" fill="#6f7a6c">所以升压的本质：先存起来，再叠上去</text>
+        </svg>
+      </div>
+    </div>
+  </div>`
+},
+
 {
   id: 'boost-anim', part: 'Part II', partKey: 'p2', title: 'Boost 工作原理：反过来看',
   sub: '12.1.2 · 左边两个固定，右边两个开关',
